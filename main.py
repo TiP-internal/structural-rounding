@@ -46,6 +46,10 @@ def run_lift(lift, graph, n, octset, partial):
     return avgtime, minsol, maxsol
 
 def main():
+    config_args= []
+    if (len(sys.argv) > 2):
+        config_args = read_config(sys.argv[2])
+
     filepath = sys.argv[1]
     directory = True;
     if filepath[len(filepath)-1] != '/':
@@ -161,6 +165,20 @@ def main():
             del graph
 
             print()
+
+def read_config(name):
+    if not os.path.isfile(name):
+        print("config file error")
+        exit(1)
+
+    args = []
+    with open(name) as infile:
+        for line in infile:
+            if len(line) > 0:
+                args.append(line[0:line.rfind(" ")])
+
+    infile.close()
+    return args
 
 if __name__ == "__main__":
     # cProfile.run("main()")

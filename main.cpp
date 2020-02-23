@@ -1,6 +1,6 @@
 
 #include <dirent.h>
-//#include <fstream>
+#include <fstream>
 #include <iostream>
 #include <vector>
 
@@ -16,9 +16,10 @@
 
 // helper function declarations ////////////////////////////////////////////////
 
-double sum(double* vals, int len);
 int min(int* vals, int len);
 int max(int* vals, int len);
+double sum(double* vals, int len);
+void read_config(char* name, std::vector<std::string>& args);
 void read_directory(const std::string& name, std::vector<std::string>& v);
 
 // main.py functions ///////////////////////////////////////////////////////////
@@ -59,6 +60,10 @@ double run_lift(Set* (*lift)(Graph*, Set*, Set*), Graph* graph, int n, Set* octs
 }
 
 int main(int argc, char* argv[]) {
+	std::vector<std::string> config_args;
+	if (argc > 2)
+		read_config(argv[2], config_args);
+
 	std::string filepath = argv[1];
 	bool directory = true;
 	if (filepath[filepath.size()-1] != '/') {
@@ -184,6 +189,23 @@ int max(int* vals, int len) {
 		if (vals[i] < max)
 			max = vals[i];
 	return max;
+}
+
+void read_config(char* name, std::vector<std::string>& args) {
+	std::ifstream infile;
+	infile.open(name);
+	if (!infile) {
+		printf("config file error\n");
+		exit(1);
+	}
+
+	char str[255];
+	while (infile) {
+		infile.getline(str, 255);
+		if (infile) args.push_back(str);
+	}
+	infile.close();
+	return;
 }
 
 // borrowed helper functions ///////////////////////////////////////////////////
