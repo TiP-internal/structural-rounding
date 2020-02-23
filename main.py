@@ -47,8 +47,13 @@ def run_lift(lift, graph, n, octset, partial):
 
 def main():
     filepath = sys.argv[1]
-    if (filepath[len(filepath)-1] != '/'):
-        filepath += "/";
+    directory = True;
+    if filepath[len(filepath)-1] != '/':
+        if (filepath[len(filepath)-3] == '.' and filepath[len(filepath)-2] == 's'
+            and filepath[len(filepath)-1] == '6'):
+            directory = False;
+        else:
+            filepath += "/";
     n = 1
 
     results_dir = os.path.join(os.getcwd(),"results")
@@ -60,13 +65,24 @@ def main():
         results = DictWriter(f, header)
         results.writeheader()
 
-        for filename in os.listdir(filepath):
-            if not filename.endswith(".s6"):
-                continue
+        graph_files = []
+        if directory:
+            if os.access(filepath, os.W_OK):
+                for filename in os.listdir(filepath):
+                    if filename.endswith(".s6"):
+                        graph_files.append(filename)
+        else:
+            if not "/" in filepath:
+                graph_files.append(filepath)
+                filepath = ""
+            else:
+                graph_files.append(filepath[filepath.rfind("/")+1:len(filepath)])
+                filepath = filepath[0:filepath.rfind("/")+1]
 
+        for filename in graph_files:
             res = {}
 
-            graphname = filename.split(".s6")[0]
+            graphname = filename[0:len(filename)-3]
             print(graphname)
             res["name"] = graphname
 

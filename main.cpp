@@ -79,7 +79,7 @@ int main(int argc, char* argv[]) {
 			filepath = "";
 		}
 		else {
-			graph_files.push_back(filepath.substr(filepath.rfind("/")+1, filepath.length()-2));
+			graph_files.push_back(filepath.substr(filepath.rfind("/")+1, filepath.length()));
 			filepath = filepath.substr(0, filepath.rfind("/")+1);
 		}
 	}
@@ -90,7 +90,8 @@ int main(int argc, char* argv[]) {
 		if (filename.find(".s6") == std::string::npos)
 			continue;
 
-		printf("%s\n", (filename.substr(0, filename.length()-3)).c_str());
+		std::string graphname = filename.substr(0, filename.length()-3).c_str();
+		printf("%s\n", graphname.c_str());
 
 		clock_t start = clock();
 		Graph* graph = read_sparse6((filepath + filename).c_str());
@@ -190,6 +191,8 @@ int max(int* vals, int len) {
 /* http://www.martinbroadhurst.com/list-the-files-in-a-directory-in-c.html */
 void read_directory(const std::string& name, std::vector<std::string>& v) {
     DIR* dirp = opendir(name.c_str());
+	if (dirp == NULL)
+		return;
     struct dirent * dp;
     while ((dp = readdir(dirp)) != NULL) {
         v.push_back(dp->d_name);
