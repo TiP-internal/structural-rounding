@@ -265,11 +265,11 @@ def parse_config():
 
 
 def is_yaml(file):
-    return file.lower().endswith(('.yaml'))
+    return file.lower().endswith('.yaml')
 
 
 def is_s6(file):
-    return file.lower().endswith(('.s6'))
+    return file.lower().endswith('.s6')
 
 
 if __name__ == "__main__":
