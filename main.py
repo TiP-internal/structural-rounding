@@ -230,6 +230,7 @@ def parse_config():
         print(usage_error(parser, '-p/--problem', 'expected one argument'))
         exit(1)
     if config_args.problem is not None and config_args.problem != 'vertex_cover':
+        print('foobar')
         # print(usage_error(parser, '-p/--problem', 'invalid choice', problems))
         # print('usage: ' + parser.prog + '\n' + parser.prog + ': error: argument -p/--problem: invalid choice: \'' + config_args.problem + '\' (choose from \'vertex_cover\')')
         exit(1)
