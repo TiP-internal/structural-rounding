@@ -1,0 +1,11 @@
+# Structural Rounding - Experimental Harness
+# Alpha v1.0
+---
+problem: vertex_cover
+class:   bipartite
+edit:    remove_octset
+lift:    naive
+approx:  std
+graph:   graphs/small/a.s6
+results: results.csv
+...

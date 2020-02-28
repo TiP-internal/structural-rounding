@@ -1,7 +1,7 @@
 
 import cProfile
 
-import sys, os, random
+import os, random, argparse, yaml
 from time import time
 from csv import DictWriter
 
@@ -12,6 +12,7 @@ from sr_apx.octset import prescribed_octset, find_octset, verify_bip
 from sr_apx.vc.apx import dfs_apx, std_apx, heuristic_apx
 from sr_apx.vc.exact import bip_exact
 from sr_apx.vc.lift import naive_lift, greedy_lift
+
 
 def run_apx(apx, graph, n):
     times = []
@@ -29,6 +30,7 @@ def run_apx(apx, graph, n):
     maxsol = max(sols)
     return avgtime, minsol, maxsol
 
+
 def run_lift(lift, graph, n, octset, partial):
     times = []
     sols = []
@@ -45,44 +47,51 @@ def run_lift(lift, graph, n, octset, partial):
     maxsol = max(sols)
     return avgtime, minsol, maxsol
 
+
 def main():
-    config_args= []
-    if (len(sys.argv) > 2):
-        config_args = read_config(sys.argv[2])
+    # parse config
+    config_args = parse_config()
 
-    filepath = sys.argv[1]
-    directory = True;
+    # format filepath
+    filepath = config_args.graph
+    directory = True
     if filepath[len(filepath)-1] != '/':
-        if (filepath[len(filepath)-3] == '.' and filepath[len(filepath)-2] == 's'
-            and filepath[len(filepath)-1] == '6'):
-            directory = False;
+        if is_s6(filepath):
+            directory = False
+        elif os.path.isdir(os.path.join(os.getcwd(), filepath)):
+            filepath += '/'
+        elif os.path.isfile(os.path.join(os.getcwd(), filepath)):
+            if is_s6(filepath):
+                directory = False
+            else:
+                print('error: ' + filepath + ' isn\'t a supported graph file type')
+                exit(1)
         else:
-            filepath += "/";
-    n = 1
+            print('error: ' + filepath + ' isn\'t a graph file nor a directory')
+            exit(1)
 
-    results_dir = os.path.join(os.getcwd(),"results")
-    if not os.path.exists(results_dir):
-        os.mkdir(results_dir)
-
-    with open("results/results.csv", "w") as f:
+    #write to results file
+    with open(config_args.results, "w") as f:
         header = ["name","n","m","dfs time","dfs size","heuristic time","heuristic size","std time","std size","stdrev time","stdrev size","oct size","partial","bip time","naive time","naive size","apx time","apx size","greedy time","greedy size","octfirst time","octfirst size","octfirst break","bipfirst time","bipfirst size","bipfirst break","rec time","rec size","rec break","recoct time","recoct size","recoct break","recbip time","recbip size","recbip break"]
         results = DictWriter(f, header)
         results.writeheader()
 
+        # append graph_files
         graph_files = []
         if directory:
             if os.access(filepath, os.W_OK):
                 for filename in os.listdir(filepath):
-                    if filename.endswith(".s6"):
+                    if filename.endswith('.s6'):
                         graph_files.append(filename)
         else:
-            if not "/" in filepath:
+            if '/' not in filepath:
                 graph_files.append(filepath)
-                filepath = ""
+                filepath = ''
             else:
-                graph_files.append(filepath[filepath.rfind("/")+1:len(filepath)])
-                filepath = filepath[0:filepath.rfind("/")+1]
+                graph_files.append(filepath[filepath.rfind('/')+1:len(filepath)])
+                filepath = filepath[0:filepath.rfind('/')+1]
 
+        # iterate over graph_files
         for filename in graph_files:
             res = {}
 
@@ -91,94 +100,166 @@ def main():
             res["name"] = graphname
 
             start = time()
-            graph = read_sparse6("{}{}".format(filepath, filename))
+            if is_s6(filename):
+                graph = read_sparse6("{}{}".format(filepath, filename))
             end = time()
             print("n: {}".format(len(graph)))
             print("time: {}".format(round(end - start, 4)))
             res["n"] = len(graph)
 
-            t, minsol, maxsol = run_apx(heuristic_apx, graph, n)
-            print("heuristic apx")
-            print("\tavg time: {}".format(t))
-            print("\tmin size: {}".format(minsol))
-            print("\tmax size: {}".format(maxsol))
-            res["heuristic time"] = t
-            res["heuristic size"] = minsol
+            # problem
+            if config_args.problem == 'vertex_cover':
+                n = 1
+                # approx sol to problem
+                if config_args.approx is not None:
+                    if config_args.approx == 'heuristic':
+                        t, minsol, maxsol = run_apx(heuristic_apx, graph, n)
+                        print("heuristic apx")
+                        print("\tavg time: {}".format(t))
+                        print("\tmin size: {}".format(minsol))
+                        print("\tmax size: {}".format(maxsol))
+                        res["heuristic time"] = t
+                        res["heuristic size"] = minsol
+                    elif config_args.approx == 'dfs':
+                        t, minsol, maxsol = run_apx(dfs_apx, graph, n)
+                        print("dfs apx")
+                        print("\tavg time: {}".format(t))
+                        print("\tmin size: {}".format(minsol))
+                        print("\tmax size: {}".format(maxsol))
+                        res["dfs time"] = t
+                        res["dfs size"] = minsol
+                    elif config_args.approx == 'std':
+                        t, minsol, maxsol = run_apx(std_apx, graph, n)
+                        print("std apx")
+                        print("\tavg time: {}".format(t))
+                        print("\tmin size: {}".format(minsol))
+                        res["std time"] = t
+                        res["std size"] = minsol
 
-            t, minsol, maxsol = run_apx(dfs_apx, graph, n)
-            print("dfs apx")
-            print("\tavg time: {}".format(t))
-            print("\tmin size: {}".format(minsol))
-            print("\tmax size: {}".format(maxsol))
-            res["dfs time"] = t
-            res["dfs size"] = minsol
+                # class
+                if config_args.gclass == 'bipartite':
+                    # edit algorithm
+                    if config_args.edit == 'remove_octset':
+                        start = time()
+                        left, right, octset = find_octset(graph)
 
-            t, minsol, maxsol = run_apx(std_apx, graph, n)
-            print("std apx")
-            print("\tavg time: {}".format(t))
-            print("\tmin size: {}".format(minsol))
-            res["std time"] = t
-            res["std size"] = minsol
+                        bippart = Set()
+                        for v in left:
+                            bippart.add(v)
+                        for v in right:
+                            bippart.add(v)
 
-            # left, right, octset = prescibed_octset(graph, "{}{}.oct".format(filepath, graphname))
+                        partial = bip_exact(graph.subgraph(bippart))
+                        end = time()
 
-            start = time()
-            left, right, octset = find_octset(graph)
-            # left, right, octset = verify_bip(graph, set())
+                        print("bip solve")
+                        print("\tavg time: {}".format(round(end - start, 4)))
+                        print(len(partial))
 
-            bippart = Set()
-            for v in left:
-                bippart.add(v)
-            for v in right:
-                bippart.add(v)
+                        res["oct size"] = len(octset)
+                        res["bip time"] = round(end - start, 4)
+                        res["partial"] = len(partial)
+
+                        # lift algorithm
+                        if config_args.lift is not None:
+                            if config_args.lift == 'greedy':
+                                t, minsol, maxsol = run_lift(greedy_lift, graph, n, octset, partial)
+                                print("greedy lift")
+                                print("\tavg time: {}".format(t))
+                                print("\tmin size: {}".format(minsol))
+                                print("\tmax size: {}".format(maxsol))
+                                res["greedy time"] = t
+                                res["greedy size"] = minsol
+                            elif config_args.lift == 'naive':
+                                t, minsol, maxsol = run_lift(naive_lift, graph, n, octset, partial)
+                                print("naive lift")
+                                print("\tavg time: {}".format(t))
+                                print("\tmin size: {}".format(minsol))
+                                print("\tmax size: {}".format(maxsol))
+                                res["naive time"] = t
+                                res["naive size"] = minsol
+
+                results.writerow(res)
+                del graph
+                print()
 
 
-            partial = bip_exact(graph.subgraph(bippart))
-            end = time()
+def parse_config():
+    parser = argparse.ArgumentParser(prog='main.py', usage='%(prog)s',
+        description='Structural Rounding - Experimental Harness',
+        epilog='')
+    parser.add_argument('-p', '--problem', choices=['vertex_cover'], help='the problem')
+    parser.add_argument('-c', '--class', dest='gclass', choices=['bipartite'], help='the graph class to edit to')
+    parser.add_argument('-e', '--edit', choices=['remove_octset'], help='the editing algorithm')
+    parser.add_argument('-l', '--lift', choices=['greedy', 'naive'], help='the lifting algorithm')
+    parser.add_argument('-a', '--approx', choices=['dfs', 'heuristic', 'std'], help='an approximation for the problem')
+    parser.add_argument('-g', '--graph', help='the graph file/dir')
+    parser.add_argument('-s', '--spec', nargs='?', const='config.yaml', help='the optional config (.yaml) file')
+    parser.add_argument('-r', '--results', nargs='?', const='results.csv', help='the results (.csv) file')
+    parser.add_argument('-v', '--version', action='version', version='%(prog)s Alpha v1.0')
+    config_args = parser.parse_args()
 
-            print("bip solve")
-            print("\tavg time: {}".format(round(end - start, 4)))
+    if config_args.spec is not None:
+        if is_yaml(config_args.spec):
+            stream = open(config_args.spec, 'r')
+            config = yaml.safe_load(stream)
+            if config_args.problem is None: config_args.problem = config.get('problem')
+            if config_args.gclass is None: config_args.gclass = config.get('class')
+            if config_args.edit is None: config_args.edit = config.get('edit')
+            if config_args.lift is None: config_args.lift = config.get('lift')
+            if config_args.approx is None: config_args.approx = config.get('approx')
+            if config_args.graph is None: config_args.graph = config.get('graph')
+            if config_args.results is None: config_args.results = config.get('results')
+        else:
+            print('error: ' + config_args.spec + ' isn\'t a correctly formed (.yaml) file')
+            exit(1)
 
-            print(len(partial))
-
-            res["oct size"] = len(octset)
-            res["partial"] = len(partial)
-            res["bip time"] = round(end - start, 4)
-
-            t, minsol, maxsol = run_lift(naive_lift, graph, n, octset, partial)
-            print("naive lift")
-            print("\tavg time: {}".format(t))
-            print("\tmin size: {}".format(minsol))
-            print("\tmax size: {}".format(maxsol))
-            res["naive time"] = t
-            res["naive size"] = minsol
-
-            t, minsol, maxsol = run_lift(greedy_lift, graph, n, octset, partial)
-            print("greedy lift")
-            print("\tavg time: {}".format(t))
-            print("\tmin size: {}".format(minsol))
-            print("\tmax size: {}".format(maxsol))
-            res["greedy time"] = t
-            res["greedy size"] = minsol
-
-            results.writerow(res)
-            del graph
-
-            print()
-
-def read_config(name):
-    if not os.path.isfile(name):
-        print("config file error")
+    # check that required arguments exist
+    if config_args.problem is None:
+        print('usage: ' + parser.prog + '\n' + parser.prog + ': error: argument -p/--problem: expected one argument')
+        exit(1)
+    if config_args.graph is None:
+        print('usage: ' + parser.prog + '\n' + parser.prog + ': error: argument -g/--graph: expected one argument')
+        exit(1)
+    if config_args.results is None:
+        print('usage: ' + parser.prog + '\n' + parser.prog + ': error: argument -r/--results: expected one argument')
         exit(1)
 
-    args = []
-    with open(name) as infile:
-        for line in infile:
-            if len(line) > 0:
-                args.append(line[0:line.rfind(" ")])
+    # check that optional arguments are within their choices
+    if config_args.problem is not None and config_args.problem != 'vertex_cover':
+        print('usage: ' + parser.prog + '\n' + parser.prog + ': error: argument -p/--problem: invalid choice: \'' + config_args.problem + '\' (choose from \'vertex_cover\')')
+        exit(1)
+    if config_args.gclass is not None and config_args.gclass != 'bipartite':
+        print('usage: ' + parser.prog + '\n' + parser.prog + ': error: argument -c/--class: invalid choice: \'' + config_args.gclass + '\' (choose from \'bipartite\')')
+        exit(1)
+    if config_args.edit is not None and config_args.edit != 'remove_octset':
+        print('usage: ' + parser.prog + '\n' + parser.prog + ': error: argument -e/--edit: invalid choice: \'' + config_args.edit + '\' (choose from \'remove_octset\')')
+        exit(1)
+    if config_args.lift is not None and config_args.lift != 'greedy' and config_args.lift != 'naive':
+        print('usage: ' + parser.prog + '\n' + parser.prog + ': error: argument -l/--lift: invalid choice: \'' + config_args.lift + '\' (choose from \'greedy\', \'naive\')')
+        exit(1)
+    if config_args.approx is not None and config_args.approx != 'dfs' and config_args.approx != 'heuristic' and config_args.approx != 'std':
+        print('usage: ' + parser.prog + '\n' + parser.prog + ': error: argument -a/--approx: invalid choice: \'' + config_args.approx + '\' (choose from \'dfs\', \'heuristic\', \'std\')')
+        exit(1)
 
-    infile.close()
-    return args
+    return config_args
+
+
+def is_yaml(file):
+    if len(file) < 6:
+        return False
+    if file[len(file)-5] == '.' and file[len(file)-4] == 'y' and file[len(file)-3] == 'a' and file[len(file)-2] == 'm' and file[len(file)-1] == 'l':
+        return True
+    return False
+
+
+def is_s6(file):
+    if len(file) < 4:
+        return False
+    if file[len(file)-3] == '.' and file[len(file) - 2] == 's' and file[len(file) - 1] == '6':
+        return True
+    return False
+
 
 if __name__ == "__main__":
     # cProfile.run("main()")
