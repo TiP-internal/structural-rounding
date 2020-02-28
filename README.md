@@ -22,15 +22,15 @@ You can also create different sizes of graphs using ```./create_graphs.sh custom
 ## Running Experiments
 - **Python** Once compiled, run ```python main.py ...optional arguments...```
     Furhter information on our optional arguments:
-    &nbsp;&nbsp;&nbsp;&nbsp; ```-h, --help``` show this message and exit
-    &nbsp;&nbsp;&nbsp;&nbsp; ```-p, --problem``` **required** the problem to solve: [vertex_cover]
-    &nbsp;&nbsp;&nbsp;&nbsp; ```-c, --class``` the graph class to edit to: [bipartite]
-    &nbsp;&nbsp;&nbsp;&nbsp; ```-e, --edit``` the editing algorithm [remove_octset]
-    &nbsp;&nbsp;&nbsp;&nbsp; ```-l, --lift``` the lifting algorithm [greedy, nieve]
-    &nbsp;&nbsp;&nbsp;&nbsp; ```-a, --approx``` accessory approximation algorithms for the problem [dfs, heuristic, std]
-    &nbsp;&nbsp;&nbsp;&nbsp; ```-g, --graph``` **required** the path to the graph file/dir
-    &nbsp;&nbsp;&nbsp;&nbsp; ```-s, --spec``` the (optional) config file (.yaml) where these arguments can also be assigned
-    &nbsp;&nbsp;&nbsp;&nbsp; ```-r, --results``` **required** the results file (.csv) where results are printed to
+    ```-h, --help``` show this message and exit
+    ```-p, --problem``` **required** the problem to solve: [vertex_cover]
+    ```-c, --class``` the graph class to edit to: [bipartite]
+    ```-e, --edit``` the editing algorithm [remove_octset]
+    ```-l, --lift``` the lifting algorithm [greedy, nieve]
+    ```-a, --approx``` accessory approximation algorithms for the problem [dfs, heuristic, std]
+    ```-g, --graph``` **required** the path to the graph file/dir
+    ```-s, --spec``` the (optional) config file (.yaml) where these arguments can also be assigned
+    ```-r, --results``` **required** the results file (.csv) where results are printed to
 
     - Arguments set in the command line have precedent over those set in the config file.
     - Putting -s alone as an argument will look for *config.yaml* by default.
