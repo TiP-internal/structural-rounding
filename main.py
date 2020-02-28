@@ -1,7 +1,7 @@
 
 import cProfile
 
-import os, random, argparse, yaml
+import os, argparse, yaml
 from time import time
 from csv import DictWriter
 
@@ -17,8 +17,7 @@ from sr_apx.vc.lift import naive_lift, greedy_lift
 def run_apx(apx, graph, n):
     times = []
     sols = []
-    for i in range(n):
-        random.seed(i)
+    for _ in range(n):
         start = time()
         cover = apx(graph)
         end = time()
@@ -34,8 +33,7 @@ def run_apx(apx, graph, n):
 def run_lift(lift, graph, n, octset, partial):
     times = []
     sols = []
-    for i in range(n):
-        random.seed(i)
+    for _ in range(n):
         start = time()
         cover = lift(graph, octset, partial)
         end = time()
@@ -184,15 +182,28 @@ def main():
                 print()
 
 
+def usage_error(parser, argument, info, choices=None):
+    if choices is None:
+        return parser.prog + ': error: argument ' + argument + ': ' + info
+    else:
+        return parser.prog + ': error: argument ' + argument + ': ' + info + ' (choose from ' + choices + ')'
+
+
 def parse_config():
+    problems = ['vertex_cover']
+    classes = ['bipartite']
+    edits = ['remove_octset']
+    lifts = ['greedy', 'naive']
+    approx = ['dfs', 'heuristic', 'std']
+
     parser = argparse.ArgumentParser(prog='main.py', usage='%(prog)s',
         description='Structural Rounding - Experimental Harness',
         epilog='')
-    parser.add_argument('-p', '--problem', choices=['vertex_cover'], help='the problem')
-    parser.add_argument('-c', '--class', dest='gclass', choices=['bipartite'], help='the graph class to edit to')
-    parser.add_argument('-e', '--edit', choices=['remove_octset'], help='the editing algorithm')
-    parser.add_argument('-l', '--lift', choices=['greedy', 'naive'], help='the lifting algorithm')
-    parser.add_argument('-a', '--approx', choices=['dfs', 'heuristic', 'std'], help='an approximation for the problem')
+    parser.add_argument('-p', '--problem', choices=problems, help='the problem')
+    parser.add_argument('-c', '--class', dest='gclass', choices=classes, help='the graph class to edit to')
+    parser.add_argument('-e', '--edit', choices=edits, help='the editing algorithm')
+    parser.add_argument('-l', '--lift', choices=lifts, help='the lifting algorithm')
+    parser.add_argument('-a', '--approx', choices=approx, help='an approximation for the problem')
     parser.add_argument('-g', '--graph', help='the graph file/dir')
     parser.add_argument('-s', '--spec', nargs='?', const='config.yaml', help='the optional config (.yaml) file')
     parser.add_argument('-r', '--results', nargs='?', const='results.csv', help='the results (.csv) file')
@@ -216,8 +227,14 @@ def parse_config():
 
     # check that required arguments exist
     if config_args.problem is None:
-        print('usage: ' + parser.prog + '\n' + parser.prog + ': error: argument -p/--problem: expected one argument')
+        print(usage_error(parser, '-p/--problem', 'expected one argument'))
         exit(1)
+    if config_args.problem is not None and config_args.problem != 'vertex_cover':
+        # print(usage_error(parser, '-p/--problem', 'invalid choice', problems))
+        # print('usage: ' + parser.prog + '\n' + parser.prog + ': error: argument -p/--problem: invalid choice: \'' + config_args.problem + '\' (choose from \'vertex_cover\')')
+        exit(1)
+
+
     if config_args.graph is None:
         print('usage: ' + parser.prog + '\n' + parser.prog + ': error: argument -g/--graph: expected one argument')
         exit(1)
@@ -227,7 +244,8 @@ def parse_config():
 
     # check that optional arguments are within their choices
     if config_args.problem is not None and config_args.problem != 'vertex_cover':
-        print('usage: ' + parser.prog + '\n' + parser.prog + ': error: argument -p/--problem: invalid choice: \'' + config_args.problem + '\' (choose from \'vertex_cover\')')
+        # print(usage_error(parser, '-p/--problem', 'invalid choice', problems))
+        # print('usage: ' + parser.prog + '\n' + parser.prog + ': error: argument -p/--problem: invalid choice: \'' + config_args.problem + '\' (choose from \'vertex_cover\')')
         exit(1)
     if config_args.gclass is not None and config_args.gclass != 'bipartite':
         print('usage: ' + parser.prog + '\n' + parser.prog + ': error: argument -c/--class: invalid choice: \'' + config_args.gclass + '\' (choose from \'bipartite\')')
@@ -246,19 +264,11 @@ def parse_config():
 
 
 def is_yaml(file):
-    if len(file) < 6:
-        return False
-    if file[len(file)-5] == '.' and file[len(file)-4] == 'y' and file[len(file)-3] == 'a' and file[len(file)-2] == 'm' and file[len(file)-1] == 'l':
-        return True
-    return False
+    return file.lower().endswith(('.yaml'))
 
 
 def is_s6(file):
-    if len(file) < 4:
-        return False
-    if file[len(file)-3] == '.' and file[len(file) - 2] == 's' and file[len(file) - 1] == '6':
-        return True
-    return False
+    return file.lower().endswith(('.s6'))
 
 
 if __name__ == "__main__":
