@@ -46,6 +46,14 @@ def run_lift(lift, graph, n, octset, partial):
     return avgtime, minsol, maxsol
 
 
+def is_yaml(file):
+    return file.lower().endswith('.yaml')
+
+
+def is_s6(file):
+    return file.lower().endswith('.s6')
+
+
 def main():
     # parse config
     config_args = parse_config()
@@ -196,11 +204,8 @@ def parse_config():
     lifts = ['greedy', 'naive']
     approx = ['dfs', 'heuristic', 'std']
 
-    print(1)
-
     parser = argparse.ArgumentParser(prog='main.py', usage='%(prog)s',
-        description='Structural Rounding - Experimental Harness',
-        epilog='')
+        description='Structural Rounding - Experimental Harness')
     parser.add_argument('-p', '--problem', choices=problems, help='the problem')
     parser.add_argument('-c', '--class', dest='gclass', choices=classes, help='the graph class to edit to')
     parser.add_argument('-e', '--edit', choices=edits, help='the editing algorithm')
@@ -210,10 +215,7 @@ def parse_config():
     parser.add_argument('-s', '--spec', nargs='?', const='config.yaml', help='the optional config (.yaml) file')
     parser.add_argument('-r', '--results', nargs='?', const='results.csv', help='the results (.csv) file')
     parser.add_argument('-v', '--version', action='version', version='%(prog)s Alpha v1.0')
-    print(2)
     config_args = parser.parse_args()
-
-    print(3)
 
     if config_args.spec is not None:
         if is_yaml(config_args.spec):
@@ -241,32 +243,7 @@ def parse_config():
         print(usage_error(parser, '-r/--results', 'expected one argument'))
         exit(1)
 
-    # check that optional arguments are within their choices
-    if config_args.problem not in problems:
-        print(usage_error(parser, '-p/--problem', 'invalid choice', problems))
-        exit(1)
-    if config_args.gclass not in classes:
-        print(usage_error(parser, '-c/--class', 'invalid choice', classes))
-        exit(1)
-    if config_args.edit not in edits:
-        print(usage_error(parser, '-e/--edit', 'invalid choice', edits))
-        exit(1)
-    if config_args.lift not in lifts:
-        print(usage_error(parser, '-l/--lift', 'invalid choice', lifts))
-        exit(1)
-    if config_args.approx not in approx:
-        print(usage_error(parser, '-a/--approx', 'invalid choice', approx))
-        exit(1)
-
     return config_args
-
-
-def is_yaml(file):
-    return file.lower().endswith('.yaml')
-
-
-def is_s6(file):
-    return file.lower().endswith('.s6')
 
 
 if __name__ == "__main__":
