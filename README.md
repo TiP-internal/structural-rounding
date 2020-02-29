@@ -22,14 +22,23 @@ You can also create different sizes of graphs using ```./create_graphs.sh custom
 ## Running Experiments
 - **Python** Once compiled, run ```python main.py ...optional arguments...```
     Furhter information on our optional arguments:
+    
     ```-h, --help``` show this message and exit
+    
     ```-p, --problem``` **required** the problem to solve: [vertex_cover]
+    
     ```-c, --class``` the graph class to edit to: [bipartite]
+    
     ```-e, --edit``` the editing algorithm [remove_octset]
+    
     ```-l, --lift``` the lifting algorithm [greedy, nieve]
+    
     ```-a, --approx``` accessory approximation algorithms for the problem [dfs, heuristic, std]
+    
     ```-g, --graph``` **required** the path to the graph file/dir
+    
     ```-s, --spec``` the (optional) config file (.yaml) where these arguments can also be assigned
+    
     ```-r, --results``` **required** the results file (.csv) where results are printed to
 
     - Arguments set in the command line have precedent over those set in the config file.
