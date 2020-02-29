@@ -190,11 +190,8 @@ def main():
                 print()
 
 
-def usage_error(parser, argument, info, choices=None):
-    if choices is None:
-        return parser.prog + ': error: argument ' + argument + ': ' + info
-    else:
-        return parser.prog + ': error: argument ' + argument + ': ' + info + ' (choose from ' + str(choices) + ')'
+def one_arg_err(parser, argument):
+    return 'usage: ' + parser.prog + '\n' + parser.prog + ': error: argument ' + argument + ': expected one argument'
 
 
 def parse_config():
@@ -234,13 +231,13 @@ def parse_config():
 
     # check that required arguments exist
     if config_args.problem is None:
-        print(usage_error(parser, '-p/--problem', 'expected one argument'))
+        print(one_arg_err(parser, '-p/--problem'))
         exit(1)
     if config_args.graph is None:
-        print(usage_error(parser, '-g/--graph', 'expected one argument'))
+        print(one_arg_err(parser, '-g/--graph'))
         exit(1)
     if config_args.results is None:
-        print(usage_error(parser, '-r/--results', 'expected one argument'))
+        print(one_arg_err(parser, '-r/--results'))
         exit(1)
 
     return config_args
