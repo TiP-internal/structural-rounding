@@ -186,7 +186,7 @@ def usage_error(parser, argument, info, choices=None):
     if choices is None:
         return parser.prog + ': error: argument ' + argument + ': ' + info
     else:
-        return parser.prog + ': error: argument ' + argument + ': ' + info + ' (choose from ' + choices + ')'
+        return parser.prog + ': error: argument ' + argument + ': ' + info + ' (choose from ' + str(choices) + ')'
 
 
 def parse_config():
@@ -195,6 +195,8 @@ def parse_config():
     edits = ['remove_octset']
     lifts = ['greedy', 'naive']
     approx = ['dfs', 'heuristic', 'std']
+
+    print(1)
 
     parser = argparse.ArgumentParser(prog='main.py', usage='%(prog)s',
         description='Structural Rounding - Experimental Harness',
@@ -208,7 +210,10 @@ def parse_config():
     parser.add_argument('-s', '--spec', nargs='?', const='config.yaml', help='the optional config (.yaml) file')
     parser.add_argument('-r', '--results', nargs='?', const='results.csv', help='the results (.csv) file')
     parser.add_argument('-v', '--version', action='version', version='%(prog)s Alpha v1.0')
+    print(2)
     config_args = parser.parse_args()
+
+    print(3)
 
     if config_args.spec is not None:
         if is_yaml(config_args.spec):
@@ -229,36 +234,28 @@ def parse_config():
     if config_args.problem is None:
         print(usage_error(parser, '-p/--problem', 'expected one argument'))
         exit(1)
-    if config_args.problem is not None and config_args.problem != 'vertex_cover':
-        print('foobar')
-        # print(usage_error(parser, '-p/--problem', 'invalid choice', problems))
-        # print('usage: ' + parser.prog + '\n' + parser.prog + ': error: argument -p/--problem: invalid choice: \'' + config_args.problem + '\' (choose from \'vertex_cover\')')
-        exit(1)
-
-
     if config_args.graph is None:
-        print('usage: ' + parser.prog + '\n' + parser.prog + ': error: argument -g/--graph: expected one argument')
+        print(usage_error(parser, '-g/--graph', 'expected one argument'))
         exit(1)
     if config_args.results is None:
-        print('usage: ' + parser.prog + '\n' + parser.prog + ': error: argument -r/--results: expected one argument')
+        print(usage_error(parser, '-r/--results', 'expected one argument'))
         exit(1)
 
     # check that optional arguments are within their choices
-    if config_args.problem is not None and config_args.problem != 'vertex_cover':
-        # print(usage_error(parser, '-p/--problem', 'invalid choice', problems))
-        # print('usage: ' + parser.prog + '\n' + parser.prog + ': error: argument -p/--problem: invalid choice: \'' + config_args.problem + '\' (choose from \'vertex_cover\')')
+    if config_args.problem not in problems:
+        print(usage_error(parser, '-p/--problem', 'invalid choice', problems))
         exit(1)
-    if config_args.gclass is not None and config_args.gclass != 'bipartite':
-        print('usage: ' + parser.prog + '\n' + parser.prog + ': error: argument -c/--class: invalid choice: \'' + config_args.gclass + '\' (choose from \'bipartite\')')
+    if config_args.gclass not in classes:
+        print(usage_error(parser, '-c/--class', 'invalid choice', classes))
         exit(1)
-    if config_args.edit is not None and config_args.edit != 'remove_octset':
-        print('usage: ' + parser.prog + '\n' + parser.prog + ': error: argument -e/--edit: invalid choice: \'' + config_args.edit + '\' (choose from \'remove_octset\')')
+    if config_args.edit not in edits:
+        print(usage_error(parser, '-e/--edit', 'invalid choice', edits))
         exit(1)
-    if config_args.lift is not None and config_args.lift != 'greedy' and config_args.lift != 'naive':
-        print('usage: ' + parser.prog + '\n' + parser.prog + ': error: argument -l/--lift: invalid choice: \'' + config_args.lift + '\' (choose from \'greedy\', \'naive\')')
+    if config_args.lift not in lifts:
+        print(usage_error(parser, '-l/--lift', 'invalid choice', lifts))
         exit(1)
-    if config_args.approx is not None and config_args.approx != 'dfs' and config_args.approx != 'heuristic' and config_args.approx != 'std':
-        print('usage: ' + parser.prog + '\n' + parser.prog + ': error: argument -a/--approx: invalid choice: \'' + config_args.approx + '\' (choose from \'dfs\', \'heuristic\', \'std\')')
+    if config_args.approx not in approx:
+        print(usage_error(parser, '-a/--approx', 'invalid choice', approx))
         exit(1)
 
     return config_args
