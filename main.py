@@ -190,8 +190,12 @@ def main():
                 print()
 
 
-def one_arg_err(parser, argument):
-    return 'usage: ' + parser.prog + '\n' + parser.prog + ': error: argument ' + argument + ': expected one argument'
+def usage_error(parser, argument, choice=None, lists=[]):
+    res = 'usage: ' + parser.prog + '\n' + parser.prog + ': error: argument ' + argument
+    if choice is None:
+        return res + ': expected one argument'
+    else:
+        return res + ': invalid choice: \'' + choice + '\' (choose from ' + str(lists)[1:-1] + ')'
 
 
 def parse_config():
@@ -231,13 +235,30 @@ def parse_config():
 
     # check that required arguments exist
     if config_args.problem is None:
-        print(one_arg_err(parser, '-p/--problem'))
+        print(usage_error(parser, '-p/--problem'))
         exit(1)
     if config_args.graph is None:
-        print(one_arg_err(parser, '-g/--graph'))
+        print(usage_error(parser, '-g/--graph'))
         exit(1)
     if config_args.results is None:
-        print(one_arg_err(parser, '-r/--results'))
+        print(usage_error(parser, '-r/--results'))
+        exit(1)
+
+    # check that optional arguments are within their choices
+    if config_args.problem not in problems:
+        print(usage_error(parser, '-p/--problem', config_args.problem, problems))
+        exit(1)
+    if config_args.gclass not in classes:
+        print(usage_error(parser, '-c/--class', config_args.gclass, classes))
+        exit(1)
+    if config_args.approx not in approx:
+        print(usage_error(parser, '-a/--approx', config_args.approx, approx))
+        exit(1)
+    if config_args.edit not in edits:
+        print(usage_error(parser, '-e/--edit', config_args.edit, edits))
+        exit(1)
+    if config_args.lift not in lifts:
+        print(usage_error(parser, '-l/--lift', config_args.lift, lifts))
         exit(1)
 
     return config_args
