@@ -54,6 +54,12 @@ def is_s6(file):
     return file.lower().endswith('.s6')
 
 
+def print_results(algo, time, min_sol, max_sol):
+    print(algo)
+    print("\tavg time: {}\n\tmin size: {}\n\tmax size: {}"
+        .format(time, min_sol, max_sol))
+
+
 def main():
     # parse config
     config_args = parse_config()
@@ -116,25 +122,17 @@ def main():
             if config_args.solve is not None:
                 if config_args.solve == 'heuristic':
                     t, minsol, maxsol = run_apx(heuristic_apx, graph, n)
-                    print("heuristic apx")
-                    print("\tavg time: {}".format(t))
-                    print("\tmin size: {}".format(minsol))
-                    print("\tmax size: {}".format(maxsol))
+                    print_results('heur apx', t, minsol, maxsol)
                     res["heuristic time"] = t
                     res["heuristic size"] = minsol
                 elif config_args.solve == 'dfs':
                     t, minsol, maxsol = run_apx(dfs_apx, graph, n)
-                    print("dfs apx")
-                    print("\tavg time: {}".format(t))
-                    print("\tmin size: {}".format(minsol))
-                    print("\tmax size: {}".format(maxsol))
+                    print_results('dfs apx', t, minsol, maxsol)
                     res["dfs time"] = t
                     res["dfs size"] = minsol
                 elif config_args.solve == 'std':
                     t, minsol, maxsol = run_apx(std_apx, graph, n)
-                    print("std apx")
-                    print("\tavg time: {}".format(t))
-                    print("\tmin size: {}".format(minsol))
+                    print_results('std apx', t, minsol, maxsol)
                     res["std time"] = t
                     res["std size"] = minsol
 
@@ -164,24 +162,17 @@ def main():
                     if config_args.lift is not None:
                         if config_args.lift == 'greedy':
                             t, minsol, maxsol = run_lift(greedy_lift, graph, n, octset, partial)
-                            print("greedy lift")
-                            print("\tavg time: {}".format(t))
-                            print("\tmin size: {}".format(minsol))
-                            print("\tmax size: {}".format(maxsol))
+                            print_results('greedy lift', t, minsol, maxsol)
                             res["greedy time"] = t
                             res["greedy size"] = minsol
                         elif config_args.lift == 'naive':
                             t, minsol, maxsol = run_lift(naive_lift, graph, n, octset, partial)
-                            print("naive lift")
-                            print("\tavg time: {}".format(t))
-                            print("\tmin size: {}".format(minsol))
-                            print("\tmax size: {}".format(maxsol))
+                            print_results('naive lift', t, minsol, maxsol)
                             res["naive time"] = t
                             res["naive size"] = minsol
 
             results.writerow(res)
             del graph
-            print()
 
 
 def usage_error_exit(parser, argument, choice=None, list=[]):
