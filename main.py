@@ -1,7 +1,7 @@
 
 import cProfile
 
-import os, argparse, yaml
+import sys, os, argparse, yaml
 from time import time
 from csv import DictWriter
 
@@ -61,10 +61,8 @@ def main():
     # format filepath
     filepath = config_args.graph
     directory = True
-    if filepath[len(filepath)-1] != '/':
-        if is_s6(filepath):
-            directory = False
-        elif os.path.isdir(os.path.join(os.getcwd(), filepath)):
+    if not filepath.endswith('/'):
+        if os.path.isdir(os.path.join(os.getcwd(), filepath)):
             filepath += '/'
         elif os.path.isfile(os.path.join(os.getcwd(), filepath)):
             if is_s6(filepath):
@@ -190,12 +188,13 @@ def main():
                 print()
 
 
-def usage_error(parser, argument, choice=None, lists=[]):
+def usage_error(parser, argument, choice=None, list=[]):
     res = 'usage: ' + parser.prog + '\n' + parser.prog + ': error: argument ' + argument
     if choice is None:
-        return res + ': expected one argument'
+        print(res + ': expected one argument')
     else:
-        return res + ': invalid choice: \'' + choice + '\' (choose from ' + str(lists)[1:-1] + ')'
+        print(res + ': invalid choice: \'' + choice + '\' (choose from ' + str(list)[1:-1] + ')')
+    exit(1)
 
 
 def parse_config():
@@ -205,8 +204,9 @@ def parse_config():
     lifts = ['greedy', 'naive']
     approx = ['dfs', 'heuristic', 'std']
 
-    parser = argparse.ArgumentParser(prog='main.py', usage='%(prog)s',
-        description='Structural Rounding - Experimental Harness')
+    parser = argparse.ArgumentParser(prog=sys.argv[0], usage='%(prog)s',
+        description='Structural Rounding - Experimental Harness',
+        epilog='')
     parser.add_argument('-p', '--problem', choices=problems, help='the problem')
     parser.add_argument('-c', '--class', dest='gclass', choices=classes, help='the graph class to edit to')
     parser.add_argument('-e', '--edit', choices=edits, help='the editing algorithm')
@@ -215,7 +215,7 @@ def parse_config():
     parser.add_argument('-g', '--graph', help='the graph file/dir')
     parser.add_argument('-s', '--spec', nargs='?', const='config.yaml', help='the optional config (.yaml) file')
     parser.add_argument('-r', '--results', nargs='?', const='results.csv', help='the results (.csv) file')
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s Alpha v1.0')
+    parser.add_argument('-v', '--version', action='version', version='Structural Rounding - Experimental Harness Alpha v1.0')
     config_args = parser.parse_args()
 
     if config_args.spec is not None:
@@ -235,31 +235,23 @@ def parse_config():
 
     # check that required arguments exist
     if config_args.problem is None:
-        print(usage_error(parser, '-p/--problem'))
-        exit(1)
+        usage_error(parser, '-p/--problem')
     if config_args.graph is None:
-        print(usage_error(parser, '-g/--graph'))
-        exit(1)
+        usage_error(parser, '-g/--graph')
     if config_args.results is None:
-        print(usage_error(parser, '-r/--results'))
-        exit(1)
+        usage_error(parser, '-r/--results')
 
-    # check that optional arguments are within their choices
+    # check that optional arguments (if from config) are within their choices
     if config_args.problem not in problems:
-        print(usage_error(parser, '-p/--problem', config_args.problem, problems))
-        exit(1)
+        usage_error(parser, '-p/--problem', config_args.problem, problems)
     if config_args.gclass not in classes:
-        print(usage_error(parser, '-c/--class', config_args.gclass, classes))
-        exit(1)
+        usage_error(parser, '-c/--class', config_args.gclass, classes)
     if config_args.approx not in approx:
-        print(usage_error(parser, '-a/--approx', config_args.approx, approx))
-        exit(1)
+        usage_error(parser, '-a/--approx', config_args.approx, approx)
     if config_args.edit not in edits:
-        print(usage_error(parser, '-e/--edit', config_args.edit, edits))
-        exit(1)
+        usage_error(parser, '-e/--edit', config_args.edit, edits)
     if config_args.lift not in lifts:
-        print(usage_error(parser, '-l/--lift', config_args.lift, lifts))
-        exit(1)
+        usage_error(parser, '-l/--lift', config_args.lift, lifts)
 
     return config_args
 

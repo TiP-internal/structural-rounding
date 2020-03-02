@@ -1,6 +1,8 @@
 
 # Structural Rounding
-See example.py if you'd like to write code that makes use of our structural rounding algorithms.
+~~See example.py if you'd like to write code that makes use of our structural rounding algorithms~~
+
+See ```example.yaml``` if you'd like to create a config file for use with structural rounding.
 
 
 ## Compiling
@@ -20,39 +22,44 @@ You can also create different sizes of graphs using ```./create_graphs.sh custom
 
 
 ## Running Experiments
-- **Python** Once compiled, run ```python main.py ...optional arguments...```
-    Furhter information on our optional arguments:
-    
-    ```-h, --help``` show this message and exit
-    
-    ```-p, --problem``` **required** the problem to solve: [vertex_cover]
-    
-    ```-c, --class``` the graph class to edit to: [bipartite]
-    
-    ```-e, --edit``` the editing algorithm [remove_octset]
-    
-    ```-l, --lift``` the lifting algorithm [greedy, nieve]
-    
-    ```-a, --approx``` accessory approximation algorithms for the problem [dfs, heuristic, std]
-    
-    ```-g, --graph``` **required** the path to the graph file/dir
-    
-    ```-s, --spec``` the (optional) config file (.yaml) where these arguments can also be assigned
-    
-    ```-r, --results``` **required** the results file (.csv) where results are printed to
+- **Python** Once compiled, run ```python3 main.py ...optional arguments...```
 
     - Arguments set in the command line have precedent over those set in the config file.
     - Putting -s alone as an argument will look for *config.yaml* by default.
-    - Putting -r alone as an arugment will write to *results.csv* by default.
+    - Putting -r alone as an argument will write to *results.csv* by default.
 
 
-- **C++** Once compiled, run ```./main <graphs-directory/>``` or ```./main <graph-file.s6>```
+- **C++** Once compiled, run ```./main ...optional arguments...```
+
+    - Currently, no optional help command.
+    - Currently, no config file parsing.
+
+    Further information on our optional arguments:
+
+    ```-h, --help``` show this message and exit
+
+    ```-p, --problem``` **required** the problem to solve: [vertex_cover]
+
+    ```-c, --class``` the graph class to edit to: [bipartite]
+
+    ```-e, --edit``` the editing algorithm [remove_octset]
+
+    ```-l, --lift``` the lifting algorithm [greedy, nieve]
+
+    ```-a, --approx``` accessory approximation algorithms for the problem [dfs, heuristic, std]
+
+    ```-g, --graph``` **required** the path to the graph file/dir
+
+    ```-s, --spec``` the (optional) config file (.yaml) where these arguments can also be assigned
+
+    ```-r, --results``` **required** the results file (.csv) where results are printed to
+
 
 ~~Once you have created synthetic graphs, you can reproduce our experimental results by running ```make small_data```.
 Use ```make medium_data``` or ```make large_data``` if appropriate.
 You can run our experiments on different sizes of graphs using ```python main.py <directory>```.
 Note that the ```make``` commands additionally disable Python's random hashing feature so that results are consistent between runs.~~
 
-The variance experiments can also be reproduced using ```make test_data```.
+~~The variance experiments can also be reproduced using ```make test_data```.
 Do the large amount of repetition, it is not recommended to use graphs with more than 100 thousand edges in the variance tests.
-To run the variance experiments on graphs of a different size, use ```python variance.py <directory>```.
+To run the variance experiments on graphs of a different size, use ```python variance.py <directory>```.~~
