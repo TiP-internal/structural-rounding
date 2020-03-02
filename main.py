@@ -1,7 +1,7 @@
 
 import cProfile
 
-import os, random, argparse, yaml
+import os, argparse, yaml
 from time import time
 from csv import DictWriter
 
@@ -17,8 +17,7 @@ from sr_apx.vc.lift import naive_lift, greedy_lift
 def run_apx(apx, graph, n):
     times = []
     sols = []
-    for i in range(n):
-        random.seed(i)
+    for _ in range(n):
         start = time()
         cover = apx(graph)
         end = time()
@@ -34,8 +33,7 @@ def run_apx(apx, graph, n):
 def run_lift(lift, graph, n, octset, partial):
     times = []
     sols = []
-    for i in range(n):
-        random.seed(i)
+    for _ in range(n):
         start = time()
         cover = lift(graph, octset, partial)
         end = time()
@@ -46,6 +44,14 @@ def run_lift(lift, graph, n, octset, partial):
     minsol = min(sols)
     maxsol = max(sols)
     return avgtime, minsol, maxsol
+
+
+def is_yaml(file):
+    return file.lower().endswith('.yaml')
+
+
+def is_s6(file):
+    return file.lower().endswith('.s6')
 
 
 def main():
@@ -184,15 +190,28 @@ def main():
                 print()
 
 
+def usage_error(parser, argument, choice=None, lists=[]):
+    res = 'usage: ' + parser.prog + '\n' + parser.prog + ': error: argument ' + argument
+    if choice is None:
+        return res + ': expected one argument'
+    else:
+        return res + ': invalid choice: \'' + choice + '\' (choose from ' + str(lists)[1:-1] + ')'
+
+
 def parse_config():
+    problems = ['vertex_cover']
+    classes = ['bipartite']
+    edits = ['remove_octset']
+    lifts = ['greedy', 'naive']
+    approx = ['dfs', 'heuristic', 'std']
+
     parser = argparse.ArgumentParser(prog='main.py', usage='%(prog)s',
-        description='Structural Rounding - Experimental Harness',
-        epilog='')
-    parser.add_argument('-p', '--problem', choices=['vertex_cover'], help='the problem')
-    parser.add_argument('-c', '--class', dest='gclass', choices=['bipartite'], help='the graph class to edit to')
-    parser.add_argument('-e', '--edit', choices=['remove_octset'], help='the editing algorithm')
-    parser.add_argument('-l', '--lift', choices=['greedy', 'naive'], help='the lifting algorithm')
-    parser.add_argument('-a', '--approx', choices=['dfs', 'heuristic', 'std'], help='an approximation for the problem')
+        description='Structural Rounding - Experimental Harness')
+    parser.add_argument('-p', '--problem', choices=problems, help='the problem')
+    parser.add_argument('-c', '--class', dest='gclass', choices=classes, help='the graph class to edit to')
+    parser.add_argument('-e', '--edit', choices=edits, help='the editing algorithm')
+    parser.add_argument('-l', '--lift', choices=lifts, help='the lifting algorithm')
+    parser.add_argument('-a', '--approx', choices=approx, help='an approximation for the problem')
     parser.add_argument('-g', '--graph', help='the graph file/dir')
     parser.add_argument('-s', '--spec', nargs='?', const='config.yaml', help='the optional config (.yaml) file')
     parser.add_argument('-r', '--results', nargs='?', const='results.csv', help='the results (.csv) file')
@@ -216,49 +235,33 @@ def parse_config():
 
     # check that required arguments exist
     if config_args.problem is None:
-        print('usage: ' + parser.prog + '\n' + parser.prog + ': error: argument -p/--problem: expected one argument')
+        print(usage_error(parser, '-p/--problem'))
         exit(1)
     if config_args.graph is None:
-        print('usage: ' + parser.prog + '\n' + parser.prog + ': error: argument -g/--graph: expected one argument')
+        print(usage_error(parser, '-g/--graph'))
         exit(1)
     if config_args.results is None:
-        print('usage: ' + parser.prog + '\n' + parser.prog + ': error: argument -r/--results: expected one argument')
+        print(usage_error(parser, '-r/--results'))
         exit(1)
 
     # check that optional arguments are within their choices
-    if config_args.problem is not None and config_args.problem != 'vertex_cover':
-        print('usage: ' + parser.prog + '\n' + parser.prog + ': error: argument -p/--problem: invalid choice: \'' + config_args.problem + '\' (choose from \'vertex_cover\')')
+    if config_args.problem not in problems:
+        print(usage_error(parser, '-p/--problem', config_args.problem, problems))
         exit(1)
-    if config_args.gclass is not None and config_args.gclass != 'bipartite':
-        print('usage: ' + parser.prog + '\n' + parser.prog + ': error: argument -c/--class: invalid choice: \'' + config_args.gclass + '\' (choose from \'bipartite\')')
+    if config_args.gclass not in classes:
+        print(usage_error(parser, '-c/--class', config_args.gclass, classes))
         exit(1)
-    if config_args.edit is not None and config_args.edit != 'remove_octset':
-        print('usage: ' + parser.prog + '\n' + parser.prog + ': error: argument -e/--edit: invalid choice: \'' + config_args.edit + '\' (choose from \'remove_octset\')')
+    if config_args.approx not in approx:
+        print(usage_error(parser, '-a/--approx', config_args.approx, approx))
         exit(1)
-    if config_args.lift is not None and config_args.lift != 'greedy' and config_args.lift != 'naive':
-        print('usage: ' + parser.prog + '\n' + parser.prog + ': error: argument -l/--lift: invalid choice: \'' + config_args.lift + '\' (choose from \'greedy\', \'naive\')')
+    if config_args.edit not in edits:
+        print(usage_error(parser, '-e/--edit', config_args.edit, edits))
         exit(1)
-    if config_args.approx is not None and config_args.approx != 'dfs' and config_args.approx != 'heuristic' and config_args.approx != 'std':
-        print('usage: ' + parser.prog + '\n' + parser.prog + ': error: argument -a/--approx: invalid choice: \'' + config_args.approx + '\' (choose from \'dfs\', \'heuristic\', \'std\')')
+    if config_args.lift not in lifts:
+        print(usage_error(parser, '-l/--lift', config_args.lift, lifts))
         exit(1)
 
     return config_args
-
-
-def is_yaml(file):
-    if len(file) < 6:
-        return False
-    if file[len(file)-5] == '.' and file[len(file)-4] == 'y' and file[len(file)-3] == 'a' and file[len(file)-2] == 'm' and file[len(file)-1] == 'l':
-        return True
-    return False
-
-
-def is_s6(file):
-    if len(file) < 4:
-        return False
-    if file[len(file)-3] == '.' and file[len(file) - 2] == 's' and file[len(file) - 1] == '6':
-        return True
-    return False
 
 
 if __name__ == "__main__":
