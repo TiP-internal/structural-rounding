@@ -113,8 +113,8 @@ def main():
 
             n = 1
             # approx sol to problem
-            if config_args.approx is not None:
-                if config_args.approx == 'heuristic':
+            if config_args.solve is not None:
+                if config_args.solve == 'heuristic':
                     t, minsol, maxsol = run_apx(heuristic_apx, graph, n)
                     print("heuristic apx")
                     print("\tavg time: {}".format(t))
@@ -122,7 +122,7 @@ def main():
                     print("\tmax size: {}".format(maxsol))
                     res["heuristic time"] = t
                     res["heuristic size"] = minsol
-                elif config_args.approx == 'dfs':
+                elif config_args.solve == 'dfs':
                     t, minsol, maxsol = run_apx(dfs_apx, graph, n)
                     print("dfs apx")
                     print("\tavg time: {}".format(t))
@@ -130,7 +130,7 @@ def main():
                     print("\tmax size: {}".format(maxsol))
                     res["dfs time"] = t
                     res["dfs size"] = minsol
-                elif config_args.approx == 'std':
+                elif config_args.solve == 'std':
                     t, minsol, maxsol = run_apx(std_apx, graph, n)
                     print("std apx")
                     print("\tavg time: {}".format(t))
@@ -196,32 +196,32 @@ def usage_error_exit(parser, argument, choice=None, list=[]):
 def parse_config():
     edits = ['remove_octset']
     lifts = ['greedy', 'naive']
-    approx = ['dfs', 'heuristic', 'std']
+    solvers = ['dfs', 'heuristic', 'std']
 
     parser = argparse.ArgumentParser(prog=sys.argv[0], usage='%(prog)s',
         description='Structural Rounding - Experimental Hardness',
         epilog='')
     parser.add_argument('-e', '--edit', choices=edits, help='the editing algorithm')
     parser.add_argument('-l', '--lift', choices=lifts, help='the lifting algorithm')
-    parser.add_argument('-a', '--approx', choices=approx, help='an approximation for the problem')
+    parser.add_argument('-s', '--solve', choices=solvers, help='an approximation for the problem')
     parser.add_argument('-g', '--graph', help='the graph file/dir')
-    parser.add_argument('-s', '--spec', nargs='?', const='config.yaml', help='the optional config (.yaml) file')
+    parser.add_argument('-c', '--config', nargs='?', const='config.yaml', help='the optional config (.yaml) file')
     parser.add_argument('-r', '--results', nargs='?', const='results.csv', help='the results (.csv) file')
     parser.add_argument('-v', '--version', action='version', version='Structural Rounding - Experimental Hardness Alpha v1.0')
     config_args = parser.parse_args()
 
-    if config_args.spec is not None:
-        if is_yaml(config_args.spec):
-            stream = open(config_args.spec, 'r')
+    if config_args.config is not None:
+        if is_yaml(config_args.config):
+            stream = open(config_args.config, 'r')
             config = yaml.safe_load(stream)
 
             if config_args.edit is None: config_args.edit = config.get('edit')
             if config_args.lift is None: config_args.lift = config.get('lift')
-            if config_args.approx is None: config_args.approx = config.get('approx')
+            if config_args.solve is None: config_args.solve = config.get('solve')
             if config_args.graph is None: config_args.graph = config.get('graph')
             if config_args.results is None: config_args.results = config.get('results')
         else:
-            print('error: ' + config_args.spec + ' isn\'t a correctly formed (.yaml) file')
+            print('error: ' + config_args.config + ' isn\'t a correctly formed (.yaml) file')
             exit(1)
 
     # check that required arguments exist
@@ -231,8 +231,8 @@ def parse_config():
         usage_error_exit(parser, '-r/--results')
 
     # check that optional arguments (if from config) are within their choices
-    if config_args.approx not in approx:
-        usage_error_exit(parser, '-a/--approx', config_args.approx, approx)
+    if config_args.solve not in solvers:
+        usage_error_exit(parser, '-s/--solve', config_args.solve, solvers)
     if config_args.edit not in edits:
         usage_error_exit(parser, '-e/--edit', config_args.edit, edits)
     if config_args.lift not in lifts:
