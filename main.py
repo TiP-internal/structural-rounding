@@ -111,84 +111,80 @@ def main():
             print("time: {}".format(round(end - start, 4)))
             res["n"] = len(graph)
 
-            # problem
-            if config_args.problem == 'vertex_cover':
-                n = 1
-                # approx sol to problem
-                if config_args.approx is not None:
-                    if config_args.approx == 'heuristic':
-                        t, minsol, maxsol = run_apx(heuristic_apx, graph, n)
-                        print("heuristic apx")
-                        print("\tavg time: {}".format(t))
-                        print("\tmin size: {}".format(minsol))
-                        print("\tmax size: {}".format(maxsol))
-                        res["heuristic time"] = t
-                        res["heuristic size"] = minsol
-                    elif config_args.approx == 'dfs':
-                        t, minsol, maxsol = run_apx(dfs_apx, graph, n)
-                        print("dfs apx")
-                        print("\tavg time: {}".format(t))
-                        print("\tmin size: {}".format(minsol))
-                        print("\tmax size: {}".format(maxsol))
-                        res["dfs time"] = t
-                        res["dfs size"] = minsol
-                    elif config_args.approx == 'std':
-                        t, minsol, maxsol = run_apx(std_apx, graph, n)
-                        print("std apx")
-                        print("\tavg time: {}".format(t))
-                        print("\tmin size: {}".format(minsol))
-                        res["std time"] = t
-                        res["std size"] = minsol
+            n = 1
+            # approx sol to problem
+            if config_args.approx is not None:
+                if config_args.approx == 'heuristic':
+                    t, minsol, maxsol = run_apx(heuristic_apx, graph, n)
+                    print("heuristic apx")
+                    print("\tavg time: {}".format(t))
+                    print("\tmin size: {}".format(minsol))
+                    print("\tmax size: {}".format(maxsol))
+                    res["heuristic time"] = t
+                    res["heuristic size"] = minsol
+                elif config_args.approx == 'dfs':
+                    t, minsol, maxsol = run_apx(dfs_apx, graph, n)
+                    print("dfs apx")
+                    print("\tavg time: {}".format(t))
+                    print("\tmin size: {}".format(minsol))
+                    print("\tmax size: {}".format(maxsol))
+                    res["dfs time"] = t
+                    res["dfs size"] = minsol
+                elif config_args.approx == 'std':
+                    t, minsol, maxsol = run_apx(std_apx, graph, n)
+                    print("std apx")
+                    print("\tavg time: {}".format(t))
+                    print("\tmin size: {}".format(minsol))
+                    res["std time"] = t
+                    res["std size"] = minsol
 
-                # class
-                if config_args.gclass == 'bipartite':
-                    # edit algorithm
-                    if config_args.edit == 'remove_octset':
-                        start = time()
-                        left, right, octset = find_octset(graph)
+            # Edit algorithms
+            if config_args.edit == 'remove_octset':
+                    start = time()
+                    left, right, octset = find_octset(graph)
 
-                        bippart = Set()
-                        for v in left:
-                            bippart.add(v)
-                        for v in right:
-                            bippart.add(v)
+                    bippart = Set()
+                    for v in left:
+                        bippart.add(v)
+                    for v in right:
+                        bippart.add(v)
 
-                        partial = bip_exact(graph.subgraph(bippart))
-                        end = time()
+                    partial = bip_exact(graph.subgraph(bippart))
+                    end = time()
 
-                        print("bip solve")
-                        print("\tavg time: {}".format(round(end - start, 4)))
-                        print(len(partial))
+                    print("bip solve")
+                    print("\tavg time: {}".format(round(end - start, 4)))
+                    print(len(partial))
 
-                        res["oct size"] = len(octset)
-                        res["bip time"] = round(end - start, 4)
-                        res["partial"] = len(partial)
+                    res["oct size"] = len(octset)
+                    res["bip time"] = round(end - start, 4)
+                    res["partial"] = len(partial)
 
-                        # lift algorithm
-                        if config_args.lift is not None:
-                            if config_args.lift == 'greedy':
-                                t, minsol, maxsol = run_lift(greedy_lift, graph, n, octset, partial)
-                                print("greedy lift")
-                                print("\tavg time: {}".format(t))
-                                print("\tmin size: {}".format(minsol))
-                                print("\tmax size: {}".format(maxsol))
-                                res["greedy time"] = t
-                                res["greedy size"] = minsol
-                            elif config_args.lift == 'naive':
-                                t, minsol, maxsol = run_lift(naive_lift, graph, n, octset, partial)
-                                print("naive lift")
-                                print("\tavg time: {}".format(t))
-                                print("\tmin size: {}".format(minsol))
-                                print("\tmax size: {}".format(maxsol))
-                                res["naive time"] = t
-                                res["naive size"] = minsol
+                    # lift algorithm
+                    if config_args.lift is not None:
+                        if config_args.lift == 'greedy':
+                            t, minsol, maxsol = run_lift(greedy_lift, graph, n, octset, partial)
+                            print("greedy lift")
+                            print("\tavg time: {}".format(t))
+                            print("\tmin size: {}".format(minsol))
+                            print("\tmax size: {}".format(maxsol))
+                            res["greedy time"] = t
+                            res["greedy size"] = minsol
+                        elif config_args.lift == 'naive':
+                            t, minsol, maxsol = run_lift(naive_lift, graph, n, octset, partial)
+                            print("naive lift")
+                            print("\tavg time: {}".format(t))
+                            print("\tmin size: {}".format(minsol))
+                            print("\tmax size: {}".format(maxsol))
+                            res["naive time"] = t
+                            res["naive size"] = minsol
 
-                results.writerow(res)
-                del graph
-                print()
+            results.writerow(res)
+            del graph
+            print()
 
 
-def usage_error(parser, argument, choice=None, list=[]):
+def usage_error_exit(parser, argument, choice=None, list=[]):
     res = 'usage: ' + parser.prog + '\n' + parser.prog + ': error: argument ' + argument
     if choice is None:
         print(res + ': expected one argument')
@@ -198,32 +194,27 @@ def usage_error(parser, argument, choice=None, list=[]):
 
 
 def parse_config():
-    problems = ['vertex_cover']
-    classes = ['bipartite']
     edits = ['remove_octset']
     lifts = ['greedy', 'naive']
     approx = ['dfs', 'heuristic', 'std']
 
     parser = argparse.ArgumentParser(prog=sys.argv[0], usage='%(prog)s',
-        description='Structural Rounding - Experimental Harness',
+        description='Structural Rounding - Experimental Hardness',
         epilog='')
-    parser.add_argument('-p', '--problem', choices=problems, help='the problem')
-    parser.add_argument('-c', '--class', dest='gclass', choices=classes, help='the graph class to edit to')
     parser.add_argument('-e', '--edit', choices=edits, help='the editing algorithm')
     parser.add_argument('-l', '--lift', choices=lifts, help='the lifting algorithm')
     parser.add_argument('-a', '--approx', choices=approx, help='an approximation for the problem')
     parser.add_argument('-g', '--graph', help='the graph file/dir')
     parser.add_argument('-s', '--spec', nargs='?', const='config.yaml', help='the optional config (.yaml) file')
     parser.add_argument('-r', '--results', nargs='?', const='results.csv', help='the results (.csv) file')
-    parser.add_argument('-v', '--version', action='version', version='Structural Rounding - Experimental Harness Alpha v1.0')
+    parser.add_argument('-v', '--version', action='version', version='Structural Rounding - Experimental Hardness Alpha v1.0')
     config_args = parser.parse_args()
 
     if config_args.spec is not None:
         if is_yaml(config_args.spec):
             stream = open(config_args.spec, 'r')
             config = yaml.safe_load(stream)
-            if config_args.problem is None: config_args.problem = config.get('problem')
-            if config_args.gclass is None: config_args.gclass = config.get('class')
+
             if config_args.edit is None: config_args.edit = config.get('edit')
             if config_args.lift is None: config_args.lift = config.get('lift')
             if config_args.approx is None: config_args.approx = config.get('approx')
@@ -234,24 +225,18 @@ def parse_config():
             exit(1)
 
     # check that required arguments exist
-    if config_args.problem is None:
-        usage_error(parser, '-p/--problem')
     if config_args.graph is None:
-        usage_error(parser, '-g/--graph')
+        usage_error_exit(parser, '-g/--graph')
     if config_args.results is None:
-        usage_error(parser, '-r/--results')
+        usage_error_exit(parser, '-r/--results')
 
     # check that optional arguments (if from config) are within their choices
-    if config_args.problem not in problems:
-        usage_error(parser, '-p/--problem', config_args.problem, problems)
-    if config_args.gclass not in classes:
-        usage_error(parser, '-c/--class', config_args.gclass, classes)
     if config_args.approx not in approx:
-        usage_error(parser, '-a/--approx', config_args.approx, approx)
+        usage_error_exit(parser, '-a/--approx', config_args.approx, approx)
     if config_args.edit not in edits:
-        usage_error(parser, '-e/--edit', config_args.edit, edits)
+        usage_error_exit(parser, '-e/--edit', config_args.edit, edits)
     if config_args.lift not in lifts:
-        usage_error(parser, '-l/--lift', config_args.lift, lifts)
+        usage_error_exit(parser, '-l/--lift', config_args.lift, lifts)
 
     return config_args
 
