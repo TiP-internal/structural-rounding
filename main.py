@@ -54,7 +54,7 @@ def is_s6(file):
     return file.lower().endswith('.s6')
 
 
-def print_results(algo, time, min_sol, max_sol):
+def print_result(algo, time, min_sol, max_sol):
     print(algo)
     print("\tavg time: {}\n\tmin size: {}\n\tmax size: {}"
         .format(time, min_sol, max_sol))
@@ -82,9 +82,7 @@ def main():
 
     #write to results file
     with open(config_args.results, "w") as f:
-        header = ["name","n","m","dfs time","dfs size","heuristic time","heuristic size","std time","std size","stdrev time","stdrev size","oct size","partial","bip time","naive time","naive size","apx time","apx size","greedy time","greedy size","octfirst time","octfirst size","octfirst break","bipfirst time","bipfirst size","bipfirst break","rec time","rec size","rec break","recoct time","recoct size","recoct break","recbip time","recbip size","recbip break"]
-        results = DictWriter(f, header)
-        results.writeheader()
+        # header = ["name","n","m","dfs time","dfs size","heuristic time","heuristic size","std time","std size","stdrev time","stdrev size","oct size","partial","bip time","naive time","naive size","apx time","apx size","greedy time","greedy size","octfirst time","octfirst size","octfirst break","bipfirst time","bipfirst size","bipfirst break","rec time","rec size","rec break","recoct time","recoct size","recoct break","recbip time","recbip size","recbip break"]
 
         # append graph_files
         graph_files = []
@@ -100,6 +98,8 @@ def main():
             else:
                 graph_files.append(filepath[filepath.rfind('/')+1:len(filepath)])
                 filepath = filepath[0:filepath.rfind('/')+1]
+
+        header = ["name","n","m"]
 
         # iterate over graph_files
         for filename in graph_files:
@@ -117,24 +117,26 @@ def main():
             print("time: {}".format(round(end - start, 4)))
             res["n"] = len(graph)
 
+            # Solve the problem
             n = 1
-            # approx sol to problem
-            if config_args.solve is not None:
-                if config_args.solve == 'heuristic':
-                    t, minsol, maxsol = run_apx(heuristic_apx, graph, n)
-                    print_results('heur apx', t, minsol, maxsol)
-                    res["heuristic time"] = t
-                    res["heuristic size"] = minsol
-                elif config_args.solve == 'dfs':
-                    t, minsol, maxsol = run_apx(dfs_apx, graph, n)
-                    print_results('dfs apx', t, minsol, maxsol)
-                    res["dfs time"] = t
-                    res["dfs size"] = minsol
-                elif config_args.solve == 'std':
-                    t, minsol, maxsol = run_apx(std_apx, graph, n)
-                    print_results('std apx', t, minsol, maxsol)
-                    res["std time"] = t
-                    res["std size"] = minsol
+            if config_args.solve == 'heuristic':
+                header.extend(['heuristic time', 'heuristic size'])
+                t, minsol, maxsol = run_apx(heuristic_apx, graph, n)
+                print_result('heur apx', t, minsol, maxsol)
+                res["heuristic time"] = t
+                res["heuristic size"] = minsol
+            elif config_args.solve == 'dfs':
+                header.extend(['dfs time', 'dfs size'])
+                t, minsol, maxsol = run_apx(dfs_apx, graph, n)
+                print_result('dfs apx', t, minsol, maxsol)
+                res["dfs time"] = t
+                res["dfs size"] = minsol
+            elif config_args.solve == 'std':
+                header.extend(['std time', 'std size'])
+                t, minsol, maxsol = run_apx(std_apx, graph, n)
+                print_result('std apx', t, minsol, maxsol)
+                res["std time"] = t
+                res["std size"] = minsol
 
             # Edit algorithms
             if config_args.edit == 'remove_octset':
@@ -154,6 +156,7 @@ def main():
                     print("\tavg time: {}".format(round(end - start, 4)))
                     print(len(partial))
 
+                    header.extend(['bip time', 'oct size', 'partial'])
                     res["oct size"] = len(octset)
                     res["bip time"] = round(end - start, 4)
                     res["partial"] = len(partial)
@@ -161,15 +164,20 @@ def main():
                     # lift algorithm
                     if config_args.lift is not None:
                         if config_args.lift == 'greedy':
+                            header.extend(['greedy time', 'greedy size'])
                             t, minsol, maxsol = run_lift(greedy_lift, graph, n, octset, partial)
-                            print_results('greedy lift', t, minsol, maxsol)
+                            print_result('greedy lift', t, minsol, maxsol)
                             res["greedy time"] = t
                             res["greedy size"] = minsol
                         elif config_args.lift == 'naive':
+                            header.extend(['naive time', 'naive size'])
                             t, minsol, maxsol = run_lift(naive_lift, graph, n, octset, partial)
-                            print_results('naive lift', t, minsol, maxsol)
+                            print_result('naive lift', t, minsol, maxsol)
                             res["naive time"] = t
                             res["naive size"] = minsol
+
+            results = DictWriter(f, header)
+            results.writeheader()
 
             results.writerow(res)
             del graph
@@ -198,7 +206,7 @@ def parse_config():
     parser.add_argument('-g', '--graph', help='the graph file/dir')
     parser.add_argument('-c', '--config', nargs='?', const='config.yaml', help='the optional config (.yaml) file')
     parser.add_argument('-r', '--results', nargs='?', const='results.csv', help='the results (.csv) file')
-    parser.add_argument('-v', '--version', action='version', version='Structural Rounding - Experimental Hardness Alpha v1.0')
+    parser.add_argument('-v', '--version', action='version', version='Structural Rounding - Experimental Hardness, Alpha v1.0')
     config_args = parser.parse_args()
 
     if config_args.config is not None:
