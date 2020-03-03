@@ -118,62 +118,58 @@ def main():
 
             # Solve the problem
             n = 1
+            solve_algo = config_args.solve # We may assume up to this point `solve` has been defined
+            solve_time, solve_size = solve_algo + ' time', solve_algo + ' size'
+            header.extend([solve_time, solve_size])
+
             if config_args.solve == 'heuristic':
-                header.extend(['heuristic time', 'heuristic size'])
                 t, minsol, maxsol = run_apx(heuristic_apx, graph, n)
-                print_result('heur apx', t, minsol, maxsol)
-                res["heuristic time"] = t
-                res["heuristic size"] = minsol
             elif config_args.solve == 'dfs':
-                header.extend(['dfs time', 'dfs size'])
                 t, minsol, maxsol = run_apx(dfs_apx, graph, n)
-                print_result('dfs apx', t, minsol, maxsol)
-                res["dfs time"] = t
-                res["dfs size"] = minsol
             elif config_args.solve == 'std':
-                header.extend(['std time', 'std size'])
                 t, minsol, maxsol = run_apx(std_apx, graph, n)
-                print_result('std apx', t, minsol, maxsol)
-                res["std time"] = t
-                res["std size"] = minsol
+            
+            print_result(solve_algo + ' apx', t, minsol, maxsol)
+            res[solve_time] = t
+            res[solve_size] = minsol
 
             # Edit algorithms
             if config_args.edit == 'remove_octset':
-                    start = time()
-                    left, right, octset = find_octset(graph)
+                start = time()
+                left, right, octset = find_octset(graph)
 
-                    bippart = Set()
-                    for v in left:
-                        bippart.add(v)
-                    for v in right:
-                        bippart.add(v)
+                bippart = Set()
+                for v in left:
+                    bippart.add(v)
+                for v in right:
+                    bippart.add(v)
 
-                    partial = bip_exact(graph.subgraph(bippart))
-                    end = time()
+                partial = bip_exact(graph.subgraph(bippart))
+                end = time()
 
-                    print("bip solve")
-                    print("\tavg time: {}".format(round(end - start, 4)))
-                    print(len(partial))
+                print("bip solve")
+                print("\tavg time: {}".format(round(end - start, 4)))
+                print(len(partial))
 
-                    header.extend(['bip time', 'oct size', 'partial'])
-                    res["oct size"] = len(octset)
-                    res["bip time"] = round(end - start, 4)
-                    res["partial"] = len(partial)
+                header.extend(['bip time', 'oct size', 'partial'])
+                res["oct size"] = len(octset)
+                res["bip time"] = round(end - start, 4)
+                res["partial"] = len(partial)
 
-                    # lift algorithm
-                    if config_args.lift is not None:
-                        if config_args.lift == 'greedy':
-                            header.extend(['greedy time', 'greedy size'])
-                            t, minsol, maxsol = run_lift(greedy_lift, graph, n, octset, partial)
-                            print_result('greedy lift', t, minsol, maxsol)
-                            res["greedy time"] = t
-                            res["greedy size"] = minsol
-                        elif config_args.lift == 'naive':
-                            header.extend(['naive time', 'naive size'])
-                            t, minsol, maxsol = run_lift(naive_lift, graph, n, octset, partial)
-                            print_result('naive lift', t, minsol, maxsol)
-                            res["naive time"] = t
-                            res["naive size"] = minsol
+                # lift algorithm
+                if config_args.lift is not None:
+                    lift_algo = config_args.lift # We may assume up to this point `lift` has been defined
+                    lift_time, lift_size = lift_algo + ' time', lift_algo + ' size'
+                    header.extend([lift_time, lift_size])
+
+                    if config_args.lift == 'greedy':
+                        t, minsol, maxsol = run_lift(greedy_lift, graph, n, octset, partial)
+                    elif config_args.lift == 'naive':
+                        t, minsol, maxsol = run_lift(naive_lift, graph, n, octset, partial)
+
+                    print_result(lift_algo + ' lift', t, minsol, maxsol)
+                    res[lift_time] = t
+                    res[lift_size] = minsol
 
             results = DictWriter(f, header)
             results.writeheader()
@@ -229,7 +225,10 @@ def parse_config():
         usage_error_exit(parser, '-r/--results')
 
     # check that optional arguments (if from config) are within their choices
-    # TODO possible temp fix?
+    if (config_args.edit is None) or (config_args.solve is None):
+        print('Either `edit` or `solve` should be provided.')
+        exit(1)
+
     if (config_args.edit is not None) and (config_args.edit not in edits):
         usage_error_exit(parser, '-e/--edit', config_args.edit, edits)
     if (config_args.solve is not None) and (config_args.solve not in solvers):
