@@ -1,3 +1,4 @@
+# header = ["name","n","m","dfs time","dfs size","heuristic time","heuristic size","std time","std size","stdrev time","stdrev size","oct size","partial","bip time","naive time","naive size","apx time","apx size","greedy time","greedy size","octfirst time","octfirst size","octfirst break","bipfirst time","bipfirst size","bipfirst break","rec time","rec size","rec break","recoct time","recoct size","recoct break","recbip time","recbip size","recbip break"]
 
 import cProfile
 
@@ -82,8 +83,6 @@ def main():
 
     #write to results file
     with open(config_args.results, "w") as f:
-        # header = ["name","n","m","dfs time","dfs size","heuristic time","heuristic size","std time","std size","stdrev time","stdrev size","oct size","partial","bip time","naive time","naive size","apx time","apx size","greedy time","greedy size","octfirst time","octfirst size","octfirst break","bipfirst time","bipfirst size","bipfirst break","rec time","rec size","rec break","recoct time","recoct size","recoct break","recbip time","recbip size","recbip break"]
-
         # append graph_files
         graph_files = []
         if directory:
@@ -184,41 +183,41 @@ def main():
 
 
 def usage_error_exit(parser, argument, choice=None, list=[]):
-    res = 'usage: ' + parser.prog + '\n' + parser.prog + ': error: argument ' + argument
+    res = 'usage: {}\n{}: error: argument {}'.format(parser.prog, parser.prog, argument)
     if choice is None:
         print(res + ': expected one argument')
     else:
-        print(res + ': invalid choice: \'' + choice + '\' (choose from ' + str(list)[1:-1] + ')')
+        print(res + ': invalid choice: \'{}\' (choose from {})'.format(choice, str(list)[1:-1]))
     exit(1)
 
 
 def parse_config():
-    edits = ['remove_octset']
-    lifts = ['greedy', 'naive']
+    edits   = ['remove_octset']
     solvers = ['dfs', 'heuristic', 'std']
+    lifts   = ['greedy', 'naive']
 
     parser = argparse.ArgumentParser(prog=sys.argv[0], usage='%(prog)s',
-        description='Structural Rounding - Experimental Hardness',
+        description='Structural Rounding - Experimental Harness',
         epilog='')
-    parser.add_argument('-e', '--edit', choices=edits, help='the editing algorithm')
-    parser.add_argument('-l', '--lift', choices=lifts, help='the lifting algorithm')
-    parser.add_argument('-s', '--solve', choices=solvers, help='an approximation for the problem')
+    parser.add_argument('-v', '--version', action='version', version='Structural Rounding - Experimental Harness, Alpha v1.0')
     parser.add_argument('-g', '--graph', help='the graph file/dir')
-    parser.add_argument('-c', '--config', nargs='?', const='config.yaml', help='the optional config (.yaml) file')
     parser.add_argument('-r', '--results', nargs='?', const='results.csv', help='the results (.csv) file')
-    parser.add_argument('-v', '--version', action='version', version='Structural Rounding - Experimental Hardness, Alpha v1.0')
+    parser.add_argument('-c', '--config', nargs='?', const='config.yaml', help='the optional config (.yaml) file')
+    parser.add_argument('-e', '--edit', choices=edits, help='the editing algorithm')
+    parser.add_argument('-s', '--solve', choices=solvers, help='an approximation for the problem')
+    parser.add_argument('-l', '--lift', choices=lifts, help='the lifting algorithm')
+
     config_args = parser.parse_args()
 
     if config_args.config is not None:
         if is_yaml(config_args.config):
-            stream = open(config_args.config, 'r')
-            config = yaml.safe_load(stream)
+            config = yaml.safe_load(open(config_args.config, 'r'))
 
-            if config_args.edit is None: config_args.edit = config.get('edit')
-            if config_args.lift is None: config_args.lift = config.get('lift')
-            if config_args.solve is None: config_args.solve = config.get('solve')
             if config_args.graph is None: config_args.graph = config.get('graph')
             if config_args.results is None: config_args.results = config.get('results')
+            if config_args.edit is None: config_args.edit = config.get('edit')
+            if config_args.solve is None: config_args.solve = config.get('solve')
+            if config_args.lift is None: config_args.lift = config.get('lift')
         else:
             print('error: ' + config_args.config + ' isn\'t a correctly formed (.yaml) file')
             exit(1)
@@ -230,11 +229,12 @@ def parse_config():
         usage_error_exit(parser, '-r/--results')
 
     # check that optional arguments (if from config) are within their choices
-    if config_args.solve not in solvers:
-        usage_error_exit(parser, '-s/--solve', config_args.solve, solvers)
-    if config_args.edit not in edits:
+    # TODO possible temp fix?
+    if (config_args.edit is not None) and (config_args.edit not in edits):
         usage_error_exit(parser, '-e/--edit', config_args.edit, edits)
-    if config_args.lift not in lifts:
+    if (config_args.solve is not None) and (config_args.solve not in solvers):
+        usage_error_exit(parser, '-s/--solve', config_args.solve, solvers)
+    if (config_args.lift is not None) and (config_args.lift not in lifts):
         usage_error_exit(parser, '-l/--lift', config_args.lift, lifts)
 
     return config_args
