@@ -4,6 +4,6 @@
 graph:   graphs/a.s6
 results: results.csv
 edit:    remove_octset
-solve:   std
-lift:    naive
+solve:   heuristic
+lift:    greedy
 ...
