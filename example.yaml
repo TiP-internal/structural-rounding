@@ -1,7 +1,8 @@
 # Structural Rounding - Experimental Harness
 # Alpha v1.0
+%YAML 1.2
 ---
-graph:   graphs/a.s6
+graph:   graphs/small/
 results: results.csv
 edit:    remove_octset
 solve:   heuristic
