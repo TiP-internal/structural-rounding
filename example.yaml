@@ -5,6 +5,13 @@
 graph:   graphs/small/
 results: results.csv
 edit:    remove_octset
-solve:   heuristic
+solve:   bip_exact
+lift:    naive
+...
+---
+graph:   graphs/small/
+results: results.csv
+edit:    remove_octset
+solve:   bip_exact
 lift:    greedy
 ...

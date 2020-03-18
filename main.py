@@ -61,65 +61,110 @@ def print_result(algo, time, min_sol, max_sol):
         .format(time, min_sol, max_sol))
 
 
+def process_files(pipe):
+    # format filepath
+    filepath = pipe['graph']
+    directory = True
+    if not filepath.endswith('/'):
+        if os.path.isdir(os.path.join(os.getcwd(), filepath)):
+            filepath += '/'
+        elif os.path.isfile(os.path.join(os.getcwd(), filepath)):
+            if is_s6(filepath):
+                directory = False
+            else:
+                print('error: ' + filepath + ' isn\'t a supported graph file type')
+                exit(1)
+        else:
+            print('error: ' + filepath + ' isn\'t a graph file nor a directory')
+            exit(1)
+
+    # append graph files
+    graph_files = []
+    if directory:
+        if os.access(filepath, os.W_OK):
+            for filename in os.listdir(filepath):
+                if filename.endswith('.s6'):
+                    graph_files.append(filename)
+    else:
+        if '/' not in filepath:
+            graph_files.append(filepath)
+            filepath = ''
+        else:
+            graph_files.append(filepath[filepath.rfind('/')+1:len(filepath)])
+            filepath = filepath[0:filepath.rfind('/')+1]
+
+    return filepath, graph_files
+
+
+def graph_dependencies(pipes):
+    approximate_solves = {'heuristic', 'dfs', 'std'}
+    graph_pipes = {}
+
+    for pipe in pipes.values():
+        filepath, graph_files = process_files(pipe)
+        for file in graph_files:
+            fullpath = filepath+file
+
+            # approximate solves
+            if pipe['solve'] in approximate_solves:
+                if fullpath+pipe['solve'] in graph_pipes.keys():
+                    graph_pipes[fullpath+pipe['solve']] = 1
+                else:
+                    graph_pipes[fullpath+pipe['solve']] = None
+
+            # exact solves
+            else:
+                if fullpath+pipe['edit'] in graph_pipes.keys():
+                    graph_pipes[fullpath+pipe['edit']] = 1
+                    if fullpath+pipe['edit']+pipe['solve'] in graph_pipes.keys():
+                        graph_pipes[fullpath+pipe['edit']+pipe['solve']] = 1
+                        if fullpath+pipe['edit']+pipe['solve']+pipe['lift'] in graph_pipes.keys():
+                            graph_pipes[fullpath+pipe['edit']+pipe['solve']+pipe['lift']] = 1
+                        else:
+                            graph_pipes[fullpath+pipe['edit']+pipe['solve']+pipe['lift']] = None
+                    else:
+                        graph_pipes[fullpath+pipe['edit']+pipe['solve']] = None
+                        graph_pipes[fullpath+pipe['edit']+pipe['solve']+pipe['lift']] = None
+                else:
+                    graph_pipes[fullpath+pipe['edit']] = None
+                    graph_pipes[fullpath+pipe['edit']+pipe['solve']] = None
+                    graph_pipes[fullpath+pipe['edit']+pipe['solve']+pipe['lift']] = None
+
+    del_list = set()
+    for pipe in graph_pipes.keys():
+        if graph_pipes[pipe] == None:
+            del_list.add(pipe)
+    for unique in del_list:
+        del graph_pipes[unique]
+
+    return graph_pipes
+
+
 def main():
-    # parse config
+    # parse config and find redundant work
     pipes = parse_config()
-    print(pipes.values())
-    exit()
+    duplicated_steps = graph_dependencies(pipes)
 
     # iterate over pipes
     first = True
     for pipe in pipes.values():
-        if first:
-            first = False
-        else:
-            print('\n')
+        if first: first = False
+        else: print('\n')
 
-        # format filepath
-        filepath = pipe['graph']
-        directory = True
-        if not filepath.endswith('/'):
-            if os.path.isdir(os.path.join(os.getcwd(), filepath)):
-                filepath += '/'
-            elif os.path.isfile(os.path.join(os.getcwd(), filepath)):
-                if is_s6(filepath):
-                    directory = False
-                else:
-                    print('error: ' + filepath + ' isn\'t a supported graph file type')
-                    exit(1)
-            else:
-                print('error: ' + filepath + ' isn\'t a graph file nor a directory')
-                exit(1)
+        # get filepath and graph_files
+        filepath, graph_files = process_files(pipe)
 
         # write to results file
         with open(pipe['results'], "w") as f:
-            # append graph_files
-            graph_files = []
-            if directory:
-                if os.access(filepath, os.W_OK):
-                    for filename in os.listdir(filepath):
-                        if filename.endswith('.s6'):
-                            graph_files.append(filename)
-            else:
-                if '/' not in filepath:
-                    graph_files.append(filepath)
-                    filepath = ''
-                else:
-                    graph_files.append(filepath[filepath.rfind('/')+1:len(filepath)])
-                    filepath = filepath[0:filepath.rfind('/')+1]
-
             header = ["name","n","m"]
 
             # iterate over graph_files
             first = True
             for filename in graph_files:
-                if first:
-                    first = False
-                else:
-                    print()
+                if first: first = False
+                else: print()
 
                 res = {}
-
                 graphname = filename[0:len(filename)-3]
                 print(graphname)
                 res["name"] = graphname
@@ -131,62 +176,118 @@ def main():
                 print("n: {}".format(len(graph)))
                 print("time: {}".format(round(end - start, 4)))
                 res["n"] = len(graph)
-
-                # approximate the problem
                 n = 1
-                solve_algo = pipe['solve']
-                solve_time, solve_size = solve_algo + ' time', solve_algo + ' size'
-                header.extend([solve_time, solve_size])
-
-                if pipe['solve'] == 'heuristic':
-                    t, minsol, maxsol = run_apx(heuristic_apx, graph, n)
-                elif pipe['solve'] == 'dfs':
-                    t, minsol, maxsol = run_apx(dfs_apx, graph, n)
-                elif pipe['solve'] == 'std':
-                    t, minsol, maxsol = run_apx(std_apx, graph, n)
-
-                print_result(solve_algo + ' apx', t, minsol, maxsol)
-                res[solve_time] = t
-                res[solve_size] = minsol
 
                 # edit
-                if pipe['edit'] == 'remove_octset':
-                    start = time()
-                    left, right, octset = find_octset(graph)
+                if pipe['edit'] is not None:
+                    edit_key = filepath+filename+pipe['edit']
+                    if edit_key in duplicated_steps:
+                        if duplicated_steps[edit_key] == 1:
+                            if pipe['edit'] == 'remove_octset':
+                                start = time()
+                                left, right, octset = find_octset(graph)
+                                bippart = Set()
+                                for v in left:
+                                    bippart.add(v)
+                                for v in right:
+                                    bippart.add(v)
+                                duplicated_steps[edit_key] = bippart
+                        else:
+                            bippart = duplicated_steps[edit_key]
+                    else:
+                        if pipe['edit'] == 'remove_octset':
+                            start = time()
+                            left, right, octset = find_octset(graph)
+                            bippart = Set()
+                            for v in left:
+                                bippart.add(v)
+                            for v in right:
+                                bippart.add(v)
 
-                    bippart = Set()
-                    for v in left:
-                        bippart.add(v)
-                    for v in right:
-                        bippart.add(v)
+                # solve
+                if pipe['solve'] is not None:
+                    solve_algo = pipe['solve']
+                    solve_time, solve_size = solve_algo + ' time', solve_algo + ' size'
+                    header.extend([solve_time, solve_size])
 
-                    # SR solve
-                    partial = bip_exact(graph.subgraph(bippart))
-                    end = time()
+                    # approximate solve
+                    approximate_solves = {'heuristic', 'dfs', 'std'}
+                    if solve_algo in approximate_solves:
+                        approx_solve_key = filepath+filename+solve_algo
+                        if approx_solve_key in duplicated_steps:
+                            if duplicated_steps[approx_solve_key] == 1:
+                                if solve_algo == 'heuristic':
+                                    t, minsol, maxsol = run_apx(heuristic_apx, graph, n)
+                                elif solve_algo == 'dfs':
+                                    t, minsol, maxsol = run_apx(dfs_apx, graph, n)
+                                elif solve_algo == 'std':
+                                    t, minsol, maxsol = run_apx(std_apx, graph, n)
+                                duplicated_steps[approx_solve_key] = t, minsol, maxsol
+                            else:
+                                t, minsol, maxsol = duplicated_steps[approx_solve_key]
+                        else:
+                            if pipe['solve'] == 'heuristic':
+                                t, minsol, maxsol = run_apx(heuristic_apx, graph, n)
+                            elif pipe['solve'] == 'dfs':
+                                t, minsol, maxsol = run_apx(dfs_apx, graph, n)
+                            elif pipe['solve'] == 'std':
+                                t, minsol, maxsol = run_apx(std_apx, graph, n)
 
-                    print("bip solve")
-                    print("\tavg time: {}".format(round(end - start, 4)))
-                    print(len(partial))
+                        print_result(solve_algo + ' apx', t, minsol, maxsol)
+                        res[solve_time] = t
+                        res[solve_size] = minsol
 
-                    header.extend(['bip time', 'oct size', 'partial'])
-                    res["oct size"] = len(octset)
-                    res["bip time"] = round(end - start, 4)
-                    res["partial"] = len(partial)
+                    # exact solve
+                    else:
+                        solve_key = edit_key+solve_algo
+                        if solve_algo == 'bip_exact':
+                            if solve_key in duplicated_steps:
+                                if duplicated_steps[solve_key] == 1:
+                                    partial = bip_exact(graph.subgraph(bippart))
+                                    end = time()
+                                    t = end-start
+                                    duplicated_steps[solve_key] = partial, t
+                                else:
+                                    partial, t = duplicated_steps[solve_key]
+                            else:
+                                partial = bip_exact(graph.subgraph(bippart))
+                                end = time()
+                                t = end-start
 
-                    # lift
-                    if pipe['lift'] is not None:
-                        lift_algo = pipe['lift'] # We may assume up to this point `lift` has been defined
-                        lift_time, lift_size = lift_algo + ' time', lift_algo + ' size'
-                        header.extend([lift_time, lift_size])
+                            print("bip solve")
+                            print("\tavg time: {}".format(round(t, 4)))
+                            print(len(partial))
 
+                            header.extend(['bip time', 'oct size', 'partial'])
+                            res["oct size"] = len(octset)
+                            res["bip time"] = round(t, 4)
+                            res["partial"] = len(partial)
+
+                # lift
+                if pipe['lift'] is not None and pipe['solve'] not in approximate_solves:
+                    lift_algo = pipe['lift'] # We may assume up to this point `lift` has been defined
+                    lift_key = solve_key+lift_algo
+                    lift_time, lift_size = lift_algo + ' time', lift_algo + ' size'
+                    header.extend([lift_time, lift_size])
+
+                    if lift_key in duplicated_steps:
+                        if duplicated_steps[lift_key] == 1:
+                            if pipe['lift'] == 'greedy':
+                                t, minsol, maxsol = run_lift(greedy_lift, graph, n, octset, partial)
+                            elif pipe['lift'] == 'naive':
+                                t, minsol, maxsol = run_lift(naive_lift, graph, n, octset, partial)
+                            duplicated_steps[lift_key] = t, minsol, maxsol
+                        else:
+                            t, minsol, maxsol = duplicated_steps[lift_key]
+                    else:
                         if pipe['lift'] == 'greedy':
                             t, minsol, maxsol = run_lift(greedy_lift, graph, n, octset, partial)
                         elif pipe['lift'] == 'naive':
                             t, minsol, maxsol = run_lift(naive_lift, graph, n, octset, partial)
 
-                        print_result(lift_algo + ' lift', t, minsol, maxsol)
-                        res[lift_time] = t
-                        res[lift_size] = minsol
+                    print_result(lift_algo + ' lift', t, minsol, maxsol)
+                    res[lift_time] = t
+                    res[lift_size] = minsol
 
                 results = DictWriter(f, header)
                 results.writeheader()
@@ -206,17 +307,17 @@ def usage_error_exit(parser, argument, choice=None, list=[]):
 
 def parse_config():
     edits   = ['remove_octset']
-    solvers = ['dfs', 'heuristic', 'std']
+    solvers = ['dfs', 'heuristic', 'std', 'bip_exact']
     lifts   = ['greedy', 'naive']
 
     parser = argparse.ArgumentParser(prog=sys.argv[0], usage='%(prog)s',
         description='Structural Rounding - Experimental Harness',
         epilog='')
     parser.add_argument('-g', '--graph', help='the graph file/dir')
-    parser.add_argument('-r', '--results', nargs='?', const='results.csv', help='the results (.csv) file')
     parser.add_argument('-c', '--config', nargs='?', const='config.yaml', help='the optional config (.yaml) file')
+    parser.add_argument('-r', '--results', nargs='?', const='results.csv', help='the results (.csv) file')
     parser.add_argument('-e', '--edit', choices=edits, help='the editing algorithm')
-    parser.add_argument('-s', '--solve', choices=solvers, help='an approximation for the problem')
+    parser.add_argument('-s', '--solve', choices=solvers, help='an approximation/or solution for the problem')
     parser.add_argument('-l', '--lift', choices=lifts, help='the lifting algorithm')
     parser.add_argument('-v', '--version', action='version', version='Structural Rounding - Experimental Harness, Alpha v1.0')
     config_args = parser.parse_args()

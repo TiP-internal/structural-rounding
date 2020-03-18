@@ -22,37 +22,29 @@ You can also create different sizes of graphs using ```./create_graphs.sh custom
 
 
 ## Running Experiments
-- **Python** Once compiled, run ```python3 main.py ...optional arguments...```
+- **Python** Once compiled, run ```python3 main.py ...arguments...```
 
-    - Arguments set in the command line have precedent over those set in the config file.
+    - Arguments set in the command line have precedent over all those set in the config file.
     - Putting -s alone as an argument will look for *config.yaml* by default.
     - Putting -r alone as an argument will write to *results.csv* by default.
 
-
-- **C++** Once compiled, run ```./main ...optional arguments...```
-
-    - Currently, no optional help command.
-    - Currently, no config file parsing.
-
-    Further information on our optional arguments:
+    Further information on our the arguments:
 
     ```-h, --help``` show this message and exit
 
-    ```-p, --problem``` **required** the problem to solve: [vertex_cover]
+    ```-g, --graph``` **required** the path to the graph file/dir
 
-    ```-c, --class``` the graph class to edit to: [bipartite]
+    ```-c, --config``` the (optional) config file (.yaml) where these arguments can also be assigned
+
+    ```-r, --results``` **required** the results file (.csv) where results are printed to
 
     ```-e, --edit``` the editing algorithm [remove_octset]
 
+    ```-s, --solve``` an approximation/exact (to be used with edit and lift) solution for the implied problem [dfs, heuristic, std]/[bip_exact]
+
     ```-l, --lift``` the lifting algorithm [greedy, nieve]
 
-    ```-a, --approx``` accessory approximation algorithms for the problem [dfs, heuristic, std]
-
-    ```-g, --graph``` **required** the path to the graph file/dir
-
-    ```-s, --spec``` the (optional) config file (.yaml) where these arguments can also be assigned
-
-    ```-r, --results``` **required** the results file (.csv) where results are printed to
+    ```-v, --version``` display the current software version
 
 
 ~~Once you have created synthetic graphs, you can reproduce our experimental results by running ```make small_data```.
