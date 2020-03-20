@@ -5,6 +5,7 @@ import cProfile
 import sys, os, argparse, yaml
 from time import time
 from csv import DictWriter
+from multiprocessing import Process
 
 from sr_apx.graph import Graph, read_edge_list, read_sparse6
 from sr_apx.setmap import Set
@@ -178,123 +179,140 @@ def main():
                 res["n"] = len(graph)
                 n = 1
 
-                # edit
-                if pipe['edit'] is not None:
-                    edit_key = filepath+filename+pipe['edit']
-                    if edit_key in duplicated_steps:
-                        if duplicated_steps[edit_key] == 1:
-                            if pipe['edit'] == 'remove_octset':
-                                start = time()
-                                left, right, octset = find_octset(graph)
-                                bippart = Set()
-                                for v in left:
-                                    bippart.add(v)
-                                for v in right:
-                                    bippart.add(v)
-                                duplicated_steps[edit_key] = bippart
-                        else:
-                            bippart = duplicated_steps[edit_key]
-                    else:
-                        if pipe['edit'] == 'remove_octset':
-                            start = time()
-                            left, right, octset = find_octset(graph)
-                            bippart = Set()
-                            for v in left:
-                                bippart.add(v)
-                            for v in right:
-                                bippart.add(v)
+                # run solution pipeline on another process
+                pipeline = Process(target=run_pipeline, args=(pipe, filepath, filename, duplicated_steps, graph, header, n, res))
+                pipeline.start()
 
-                # solve
-                if pipe['solve'] is not None:
-                    solve_algo = pipe['solve']
-                    solve_time, solve_size = solve_algo + ' time', solve_algo + ' size'
-                    header.extend([solve_time, solve_size])
-
-                    # approximate solve
-                    approximate_solves = {'heuristic', 'dfs', 'std'}
-                    if solve_algo in approximate_solves:
-                        approx_solve_key = filepath+filename+solve_algo
-                        if approx_solve_key in duplicated_steps:
-                            if duplicated_steps[approx_solve_key] == 1:
-                                if solve_algo == 'heuristic':
-                                    t, minsol, maxsol = run_apx(heuristic_apx, graph, n)
-                                elif solve_algo == 'dfs':
-                                    t, minsol, maxsol = run_apx(dfs_apx, graph, n)
-                                elif solve_algo == 'std':
-                                    t, minsol, maxsol = run_apx(std_apx, graph, n)
-                                duplicated_steps[approx_solve_key] = t, minsol, maxsol
-                            else:
-                                t, minsol, maxsol = duplicated_steps[approx_solve_key]
-                        else:
-                            if pipe['solve'] == 'heuristic':
-                                t, minsol, maxsol = run_apx(heuristic_apx, graph, n)
-                            elif pipe['solve'] == 'dfs':
-                                t, minsol, maxsol = run_apx(dfs_apx, graph, n)
-                            elif pipe['solve'] == 'std':
-                                t, minsol, maxsol = run_apx(std_apx, graph, n)
-
-                        print_result(solve_algo + ' apx', t, minsol, maxsol)
-                        res[solve_time] = t
-                        res[solve_size] = minsol
-
-                    # exact solve
-                    else:
-                        solve_key = edit_key+solve_algo
-                        if solve_algo == 'bip_exact':
-                            if solve_key in duplicated_steps:
-                                if duplicated_steps[solve_key] == 1:
-                                    partial = bip_exact(graph.subgraph(bippart))
-                                    end = time()
-                                    t = end-start
-                                    duplicated_steps[solve_key] = partial, t
-                                else:
-                                    partial, t = duplicated_steps[solve_key]
-                            else:
-                                partial = bip_exact(graph.subgraph(bippart))
-                                end = time()
-                                t = end-start
-
-                            print("bip solve")
-                            print("\tavg time: {}".format(round(t, 4)))
-                            print(len(partial))
-
-                            header.extend(['bip time', 'oct size', 'partial'])
-                            res["oct size"] = len(octset)
-                            res["bip time"] = round(t, 4)
-                            res["partial"] = len(partial)
-
-                # lift
-                if pipe['lift'] is not None and pipe['solve'] not in approximate_solves:
-                    lift_algo = pipe['lift'] # We may assume up to this point `lift` has been defined
-                    lift_key = solve_key+lift_algo
-                    lift_time, lift_size = lift_algo + ' time', lift_algo + ' size'
-                    header.extend([lift_time, lift_size])
-
-                    if lift_key in duplicated_steps:
-                        if duplicated_steps[lift_key] == 1:
-                            if pipe['lift'] == 'greedy':
-                                t, minsol, maxsol = run_lift(greedy_lift, graph, n, octset, partial)
-                            elif pipe['lift'] == 'naive':
-                                t, minsol, maxsol = run_lift(naive_lift, graph, n, octset, partial)
-                            duplicated_steps[lift_key] = t, minsol, maxsol
-                        else:
-                            t, minsol, maxsol = duplicated_steps[lift_key]
-                    else:
-                        if pipe['lift'] == 'greedy':
-                            t, minsol, maxsol = run_lift(greedy_lift, graph, n, octset, partial)
-                        elif pipe['lift'] == 'naive':
-                            t, minsol, maxsol = run_lift(naive_lift, graph, n, octset, partial)
-
-                    print_result(lift_algo + ' lift', t, minsol, maxsol)
-                    res[lift_time] = t
-                    res[lift_size] = minsol
+                # kill solution pipeline process if timed out
+                pipeline.join(timout=pipe['timeout'])
 
                 results = DictWriter(f, header)
                 results.writeheader()
 
+                # if timed out
+                if pipeline.exitcode is None:
+                    # write timout error withe line no information
+
+
+                    # fill empty places in results with '-'
+                    for key in header:
+                        if key not in res.keys():
+                            res[key] = '-'
+
                 results.writerow(res)
                 del graph
 
+def run_pipeline(pipe, filepath, filename, duplicated_steps, graph, header, n, res):
+    # edit
+    if pipe['edit'] is not None:
+        edit_key = filepath + filename + pipe['edit']
+        if edit_key in duplicated_steps:
+            if duplicated_steps[edit_key] == 1:
+                if pipe['edit'] == 'remove_octset':
+                    start = time()
+                    left, right, octset = find_octset(graph)
+                    bippart = Set()
+                    for v in left:
+                        bippart.add(v)
+                    for v in right:
+                        bippart.add(v)
+                    duplicated_steps[edit_key] = bippart
+            else:
+                bippart = duplicated_steps[edit_key]
+        else:
+            if pipe['edit'] == 'remove_octset':
+                start = time()
+                left, right, octset = find_octset(graph)
+                bippart = Set()
+                for v in left:
+                    bippart.add(v)
+                for v in right:
+                    bippart.add(v)
+
+    # solve
+    if pipe['solve'] is not None:
+        solve_algo = pipe['solve']
+        solve_time, solve_size = solve_algo + ' time', solve_algo + ' size'
+        header.extend([solve_time, solve_size])
+
+        # approximate solve
+        approximate_solves = {'heuristic', 'dfs', 'std'}
+        if solve_algo in approximate_solves:
+            approx_solve_key = filepath + filename + solve_algo
+            if approx_solve_key in duplicated_steps:
+                if duplicated_steps[approx_solve_key] == 1:
+                    if solve_algo == 'heuristic':
+                        t, minsol, maxsol = run_apx(heuristic_apx, graph, n)
+                    elif solve_algo == 'dfs':
+                        t, minsol, maxsol = run_apx(dfs_apx, graph, n)
+                    elif solve_algo == 'std':
+                        t, minsol, maxsol = run_apx(std_apx, graph, n)
+                    duplicated_steps[approx_solve_key] = t, minsol, maxsol
+                else:
+                    t, minsol, maxsol = duplicated_steps[approx_solve_key]
+            else:
+                if pipe['solve'] == 'heuristic':
+                    t, minsol, maxsol = run_apx(heuristic_apx, graph, n)
+                elif pipe['solve'] == 'dfs':
+                    t, minsol, maxsol = run_apx(dfs_apx, graph, n)
+                elif pipe['solve'] == 'std':
+                    t, minsol, maxsol = run_apx(std_apx, graph, n)
+
+            print_result(solve_algo + ' apx', t, minsol, maxsol)
+            res[solve_time] = t
+            res[solve_size] = minsol
+
+        # exact solve
+        else:
+            solve_key = edit_key + solve_algo
+            if solve_algo == 'bip_exact':
+                if solve_key in duplicated_steps:
+                    if duplicated_steps[solve_key] == 1:
+                        partial = bip_exact(graph.subgraph(bippart))
+                        end = time()
+                        t = end - start
+                        duplicated_steps[solve_key] = partial, t
+                    else:
+                        partial, t = duplicated_steps[solve_key]
+                else:
+                    partial = bip_exact(graph.subgraph(bippart))
+                    end = time()
+                    t = end - start
+
+                print("bip solve")
+                print("\tavg time: {}".format(round(t, 4)))
+                print(len(partial))
+
+                header.extend(['bip time', 'oct size', 'partial'])
+                res["oct size"] = len(octset)
+                res["bip time"] = round(t, 4)
+                res["partial"] = len(partial)
+
+    # lift
+    if pipe['lift'] is not None and pipe['solve'] not in approximate_solves:
+        lift_algo = pipe['lift']  # We may assume up to this point `lift` has been defined
+        lift_key = solve_key + lift_algo
+        lift_time, lift_size = lift_algo + ' time', lift_algo + ' size'
+        header.extend([lift_time, lift_size])
+
+        if lift_key in duplicated_steps:
+            if duplicated_steps[lift_key] == 1:
+                if pipe['lift'] == 'greedy':
+                    t, minsol, maxsol = run_lift(greedy_lift, graph, n, octset, partial)
+                elif pipe['lift'] == 'naive':
+                    t, minsol, maxsol = run_lift(naive_lift, graph, n, octset, partial)
+                duplicated_steps[lift_key] = t, minsol, maxsol
+            else:
+                t, minsol, maxsol = duplicated_steps[lift_key]
+        else:
+            if pipe['lift'] == 'greedy':
+                t, minsol, maxsol = run_lift(greedy_lift, graph, n, octset, partial)
+            elif pipe['lift'] == 'naive':
+                t, minsol, maxsol = run_lift(naive_lift, graph, n, octset, partial)
+
+        print_result(lift_algo + ' lift', t, minsol, maxsol)
+        res[lift_time] = t
+        res[lift_size] = minsol
 
 def usage_error_exit(parser, argument, choice=None, list=[]):
     res = 'usage: {}\n{}: error: argument {}'.format(parser.prog, parser.prog, argument)
@@ -320,6 +338,7 @@ def parse_config():
     parser.add_argument('-s', '--solve', choices=solvers, help='an approximation/or solution for the problem')
     parser.add_argument('-l', '--lift', choices=lifts, help='the lifting algorithm')
     parser.add_argument('-v', '--version', action='version', version='Structural Rounding - Experimental Harness, Alpha v1.0')
+    parser.add_argument('-t', '--timeout', default=3600, help='sets the timeout, in seconds, for each pipeline')
     config_args = parser.parse_args()
 
     if config_args.config is not None:
@@ -334,6 +353,7 @@ def parse_config():
                 if config_args.edit is not None: pipe['edit'] = config_args.edit
                 if config_args.solve is not None: pipe['solve'] = config_args.solve
                 if config_args.lift is not None: pipe['lift'] = config_args.lift
+                if config_args.timeout is not None: pipe['timeout'] = config_args.timeout
                 pipes[0] = pipe
 
             # multi-pipe config file
@@ -345,6 +365,7 @@ def parse_config():
                     if config_args.edit is not None: pipe['edit'] = config_args.edit
                     if config_args.solve is not None: pipe['solve'] = config_args.solve
                     if config_args.lift is not None: pipe['lift'] = config_args.lift
+                    if config_args.timeout is not None: pipe['timeout'] = config_args.timeout
                     pipes[i] = pipe
                     i += 1
 
