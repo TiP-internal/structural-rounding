@@ -179,7 +179,7 @@ def main():
                 n = 1
 
                 # edit
-                if pipe['edit'] is not None:
+                if 'edit' in pipe.keys() and pipe['edit'] is not None:
                     edit_key = filepath+filename+pipe['edit']
                     if edit_key in duplicated_steps:
                         if duplicated_steps[edit_key] == 1:
@@ -264,7 +264,7 @@ def main():
                             res["partial"] = len(partial)
 
                 # lift
-                if pipe['lift'] is not None and pipe['solve'] not in approximate_solves:
+                if 'lift' in pipe.keys() and pipe['lift'] is not None and pipe['solve'] not in approximate_solves:
                     lift_algo = pipe['lift'] # We may assume up to this point `lift` has been defined
                     lift_key = solve_key+lift_algo
                     lift_time, lift_size = lift_algo + ' time', lift_algo + ' size'
@@ -322,31 +322,30 @@ def parse_config():
     parser.add_argument('-v', '--version', action='version', version='Structural Rounding - Experimental Harness, Alpha v1.0')
     config_args = parser.parse_args()
 
+    # read config file
     if config_args.config is not None:
         if is_yaml(config_args.config):
             pipes = {}
 
-            # single-pipe config file
-            try:
-                pipe = yaml.safe_load(open(config_args.config, 'r'))
-                if config_args.graph is not None: pipe['graph'] = config_args.graph
-                if config_args.results is not None: pipe['results'] = config_args.results
-                if config_args.edit is not None: pipe['edit'] = config_args.edit
-                if config_args.solve is not None: pipe['solve'] = config_args.solve
-                if config_args.lift is not None: pipe['lift'] = config_args.lift
-                pipes[0] = pipe
-
-            # multi-pipe config file
-            except:
-                i = 0;
-                for pipe in yaml.safe_load_all(open(config_args.config, 'r')):
+            i = 0;
+            for pipe in yaml.safe_load_all(open(config_args.config, 'r')):
+                if (i == 0):
                     if config_args.graph is not None: pipe['graph'] = config_args.graph
+                    elif 'graph' not in pipe.keys(): usage_error_exit(parser, '-g/--graph')
+                    else: config_args.graph = pipe['graph']
                     if config_args.results is not None: pipe['results'] = config_args.results
+                    elif 'results' not in pipe.keys(): usage_error_exit(parser, '-r/--results')
+                    else: config_args.results = pipe['results']
+                else:
+                    pipe['graph'] = config_args.graph
+                    pipe['results'] = config_args.results
+                    # print(pipe)
+                    # exit()
                     if config_args.edit is not None: pipe['edit'] = config_args.edit
                     if config_args.solve is not None: pipe['solve'] = config_args.solve
                     if config_args.lift is not None: pipe['lift'] = config_args.lift
                     pipes[i] = pipe
-                    i += 1
+                i += 1
 
         else:
             print('error: ' + config_args.config + ' isn\'t a correctly formed (.yaml) file')
