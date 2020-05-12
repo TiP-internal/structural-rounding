@@ -45,7 +45,6 @@ Set** verify_bipartite(Graph* graph, Set* os) {
 			}
 
 			current = *git;
-			left->insert(current);
 			visited.insert(current);
 		}
 		else {
@@ -60,24 +59,27 @@ Set** verify_bipartite(Graph* graph, Set* os) {
 				continue;
 			}
 
-			if (left->contains(current)) {
-				right->insert(nbr);
-			}
-			else {
-				left->insert(nbr);
-			}
-
-			if (left->contains(nbr) && right->contains(nbr)) {
-				left->erase(nbr);
-				right->erase(nbr);
-				octset->insert(nbr);
-				continue;
-			}
-
 			if (!visited.contains(nbr)) {
 				visited.insert(nbr);
 				queue.push_back(nbr);
+				continue;
 			}
+
+			if (left->contains(nbr)) {
+				right->insert(current);
+			}
+			else if (right->contains(nbr)) {
+				left->insert(current);
+			}
+		}
+
+		if (left->contains(current) && right->contains(current)) {
+			left->erase(current);
+			right->erase(current);
+			octset->insert(current);
+		}
+		else if (!left->contains(current) && !right->contains(current)) {
+			left->insert(current);
 		}
 	}
 
