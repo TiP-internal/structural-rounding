@@ -69,11 +69,11 @@ def main():
 
         completed = 0
         for filename in graph_list:
-            completed += 1
             progress = int(completed / len(graph_list) * 100)
             progress_str = "#" * int(progress/2)
             progress_str += "-" * (50 - int(progress/2))
             print("[" + progress_str + "] {}%".format(progress), end="\r")
+            completed += 1
 
             res = {}
 
@@ -150,7 +150,7 @@ def main():
             results.writerow(res)
             del graph
 
-    print()
+    print("[" + ("#" * 50) + "]" + " 100%")
 
 if __name__ == "__main__":
     # cProfile.run("main()")
