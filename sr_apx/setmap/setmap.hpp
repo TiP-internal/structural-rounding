@@ -84,15 +84,15 @@ public:
 	void remove(int);
 	bool contains(int);
     
-    // set_minus, set_union, set_intersection return new sets.
-    Map<NullObj>* set_minus(Map<NullObj>*);       
-    Map<NullObj>* set_union(Map<NullObj>*);
-    Map<NullObj>* set_intersection(Map<NullObj>*);
-    
-    // remove_all, add_all, same_elements modify the calling set.
-    void remove_all(Map<NullObj>*);
-    void add_all(Map<NullObj>*);
-    void same_elements(Map<NullObj>*);
+        // set_minus, set_union, set_intersection return new sets.
+        Map<NullObj>* set_minus(Map<NullObj>*);       
+        Map<NullObj>* set_union(Map<NullObj>*);
+        Map<NullObj>* set_intersection(Map<NullObj>*);
+        
+        // remove_all, add_all, same_elements modify the calling set.
+        void remove_all(Map<NullObj>*);
+        void add_all(Map<NullObj>*);
+        void same_elements(Map<NullObj>*);
 
 	T &operator[](int);
 	T& at(int);
