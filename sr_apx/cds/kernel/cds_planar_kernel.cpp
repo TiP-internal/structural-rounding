@@ -95,24 +95,25 @@ Set* neighbors_closed(Graph* graph, int u, int v) {
     return closed;
 }
 
-Set* neighbors_partition1(Graph* graph, Set* nbs, Set* nbs_closed) {
-    //NOTE: Look into optimizing
-    // Set of neighbors of v which have neighbors which are not also neighbors of v.
+Set* crust(Graph* graph, Set* nbs, Set* nbs_closed) {
+    /*
+     * Set of neighbors of v which have neighbors which are not also neighbors of v.
+     */
     Set* part1 = new Set();
     
     for (Set::Iterator ui = nbs->begin(); ui != nbs->end(); ++ui) {
-        bool isempty = true;
         int u = *ui;
         
         Set* set = set_minus(graph->neighbors(u), nbs_closed);
-        
         if (!set->empty()) part1->insert(u);
     }
     return part1;
 }
 
-Set* neighbors_partition2(Graph* graph, Set* nbs, Set* part1) {
-    //NOTE: Look into optimizing
+Set* mantle(Graph* graph, Set* nbs, Set* part1) {
+    /*
+     * 
+     */
     Set* part2 = new Set();
     Set* set_min = set_minus(nbs, part1);
     
@@ -121,13 +122,14 @@ Set* neighbors_partition2(Graph* graph, Set* nbs, Set* part1) {
         
         Set* set_inter = set_intersection(graph->neighbors(u), part1);
         if (!set_inter->empty()) part2->insert(u);
-        
     }
     return part2;
 }
 
-Set* neighbors_partition3(Set* nbs, Set* part1, Set* part2) {
-    //NOTE: Look into optimizing
+Set* core(Set* nbs, Set* part1, Set* part2) {
+    /*
+     * 
+     */
     Set* setun = set_union(part1, part2);
     Set* part3 = set_minus(nbs, setun);
     return part3;
