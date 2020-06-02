@@ -12,11 +12,6 @@ Graph* rule3(Graph*);
 Graph* rule4(Graph*);
 Graph* rule5(Graph*);
 
-//Used for ACDS kernel
-Set* set_minus(Set*, Set*);
-Set* set_union(Set*, Set*);
-Set* set_intersection(Set*, Set*);
-
 Set* neighbors(Graph*, int, int);  //pair neighborhood function  
 Set* neighbors_closed(Graph*, int);
 Set* neighbors_closed(Graph*, int, int);
