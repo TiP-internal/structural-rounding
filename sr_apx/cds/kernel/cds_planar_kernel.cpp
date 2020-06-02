@@ -95,44 +95,58 @@ Set* neighbors_closed(Graph* graph, int u, int v) {
     return closed;
 }
 
+
+/*
+ * Crust, mantle and core are the neighborhood partitioning functions used in [Gu & Imani, 2010].
+ * They take the neighbohood (nbs) of a single vertex v and partition the neighbors 
+ * into three partitions.
+ */
+
 Set* crust(Graph* graph, Set* nbs, Set* nbs_closed) {
     /*
+     * nsb: the open neighborhood of vertex v
+     * nbs_closed: closed neighborhood of v
+     * 
      * Set of neighbors of v which have neighbors which are not also neighbors of v.
      */
-    Set* part1 = new Set();
+    Set* crust_part = new Set();
     
     for (Set::Iterator ui = nbs->begin(); ui != nbs->end(); ++ui) {
         int u = *ui;
         
         Set* set = set_minus(graph->neighbors(u), nbs_closed);
-        if (!set->empty()) part1->insert(u);
+        if (!set->empty()) crust_part->insert(u);
     }
-    return part1;
+    return crust_part;
 }
 
-Set* mantle(Graph* graph, Set* nbs, Set* part1) {
+Set* mantle(Graph* graph, Set* nbs, Set* crust_part) {
     /*
+     * nbs: open neighborhood of vertex v
      * 
+     * Set of neighbors of v which are also neighbors with vertices in the crust partition.
      */
-    Set* part2 = new Set();
-    Set* set_min = set_minus(nbs, part1);
+    Set* mantle_part = new Set();
+    Set* set_min = set_minus(nbs, crust_part);
     
     for (Set::Iterator ui = set_min->begin(); ui != set_min->end(); ++ui) {
         int u = *ui; 
         
-        Set* set_inter = set_intersection(graph->neighbors(u), part1);
-        if (!set_inter->empty()) part2->insert(u);
+        Set* set_inter = set_intersection(graph->neighbors(u), crust_part);
+        if (!set_inter->empty()) mantle_part->insert(u);
     }
-    return part2;
+    return mantle_part;
 }
 
-Set* core(Set* nbs, Set* part1, Set* part2) {
+Set* core(Set* nbs, Set* crust_part, Set* mantle_part) {
     /*
+     * nbs: open neighborhood of vertex v
      * 
+     * Set of neighbors of v which are not neighbors with the crust_part or the mantle_part.
      */
-    Set* setun = set_union(part1, part2);
-    Set* part3 = set_minus(nbs, setun);
-    return part3;
+    Set* setun = set_union(crust_part, mantle_part);
+    Set* core_part = set_minus(nbs, setun);
+    return core_part;
 }
 
 

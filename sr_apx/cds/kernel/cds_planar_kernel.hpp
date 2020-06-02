@@ -21,9 +21,9 @@ Set* neighbors(Graph*, int, int);  //pair neighborhood function
 Set* neighbors_closed(Graph*, int);
 Set* neighbors_closed(Graph*, int, int);
 
-Set* neighbors_partition1(Graph*, Set*, Set*);
-Set* neighbors_partition2(Graph*, Set*, Set*);
-Set* neighbors_partition3(Set*, Set*, Set*);
+Set* crust(Graph*, Set*, Set*);
+Set* mantle(Graph*, Set*, Set*);
+Set* core(Set*, Set*, Set*);
 
 
 #endif
