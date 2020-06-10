@@ -15,6 +15,7 @@ public:
 	int size();
 	int degree(int);
 	bool adjacent(int, int);
+	int shortest_path(int, int, int);
 
 	Map<Set>::Iterator begin();
 	Map<Set>::Iterator end();

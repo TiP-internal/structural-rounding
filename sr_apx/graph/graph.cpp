@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <list>
 
 #define BUFFER_SIZE 1024
 
@@ -48,6 +49,42 @@ int Graph::degree(int u) {
 		return 0;
 	}
 	return adjlist[u].size();
+}
+
+int Graph::shortest_path(int u, int v, int limit) {
+	std::list<int> queue;
+	int dist[this->size()];
+	bool visited[this->size()];
+
+	for (int i = 0; i < this->size(); i++) {
+		visited[i] = false;
+		dist[i] = INT_MAX;
+	}
+
+	visited[u] = true;
+	dist[u] = 0;
+	queue.push_back(u);
+
+	while (!queue.empty()) {
+		u = queue.front();
+		queue.pop_front();
+		Set* u_adj = &(adjlist[u]);
+		for (Set::Iterator iu = u_adj->begin(); iu != u_adj->end(); iu++) {
+			int nu = *iu;
+			if (!visited[nu]) {
+				visited[nu] = true;
+				dist[nu] = dist[u] + 1;
+				queue.push_back(nu);
+
+				if (nu == v)
+					return dist[nu];
+				if (dist[nu] > limit)
+					return -1;
+			}
+		}
+	}
+
+	return -1;
 }
 
 Graph* Graph::subgraph(Set* vertices) {
