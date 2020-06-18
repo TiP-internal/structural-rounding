@@ -151,7 +151,7 @@ void Map<T>::remove(int key) {
 	if (logsize < 0) {
 		return;
 	}
-
+	
 	int index = lookup(key, false);
 	if (array[index].key != key) {
 		return;
@@ -164,6 +164,83 @@ void Map<T>::remove(int key) {
 	if (load < eraseload) {
 		rehash(logsize - 1);
 	}
+}
+
+template<class T> 
+Map<NullObj>* Map<T>::set_minus(Map<NullObj>* set2) {
+        // Set minus. Creates a new set to return. 
+        Map<T>* set_min = new Map<T>;
+        
+        for (int i = 0; i < 1 << logsize; i++) {
+            int x = array[i].key;       
+            if (!set2->contains(x)) set_min->insert(x);
+        }
+
+        return set_min;
+}
+
+template<class T> 
+Map<NullObj>* Map<T>::set_union(Map<NullObj>* set) {
+        // Set union. Creates a new set.
+        Map<T>* set_un = new Map<T>;
+        
+        for (int i = 0; i < 1 << logsize; i++) {
+            int x = array[i].key;       
+            set_un->insert(x);
+        }
+        
+        for (Iterator iu = set->begin(); iu != set->end(); ++iu) {
+            int u = *iu;
+            set_un->insert(u);
+        }
+        
+        return set_un;
+}
+
+template<class T> 
+Map<NullObj>* Map<T>::set_intersection(Map<NullObj>* set) {
+        // Set intersection. Creates a new set to return.
+        Map<T>* set_int = new Map<T>;
+        
+        for (int i = 0; i < 1 << logsize; i++) {
+            int x = array[i].key;       
+            if (set->contains(x)) set_int->insert(x);
+        }
+        
+        return set_int;
+}
+
+template<class T>
+void Map<T>::remove_all(Map<NullObj>* set_toremove) {
+        /* Set minus, but modifies the calling set. Removes all elements which
+        * are in set_toremove that are also in the calling set.
+        */ 
+            for (Iterator iu = set_toremove->begin(); iu != set_toremove->end(); ++iu) {
+            int u = *iu;
+            if (contains(u)==1) erase(u);
+        }
+}
+
+template<class T>
+void Map<T>::add_all(Map<NullObj>* set_toadd) {
+        /* Set union, but modifies the calling set. Adds all elements which
+        * are in set_toadd to the calling set.
+        */ 
+            for (Iterator iu = set_toadd->begin(); iu != set_toadd->end(); ++iu) {
+            int u = *iu;
+            insert(u);
+        }
+}
+
+template<class T>
+void Map<T>::same_elements(Map<NullObj>* set_same) {
+        /* Set intersection, but modifies the calling set. Removes elements from 
+        * the calling set, which are not also in set_same.
+        */ 
+        for (int i = 0; i < 1 << logsize; i++) {
+                    int x = array[i].key;        
+            if (!set_same->contains(x)) remove(x);
+        }
 }
 
 template<class T>
