@@ -21,6 +21,7 @@ public:
 	Set* neighbors(int);
 
 	Graph* subgraph(Set*);
+	void remove_vertex(int);
 };
 
 Graph* read_sparse6(const char*);

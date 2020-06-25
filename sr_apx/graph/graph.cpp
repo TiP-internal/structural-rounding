@@ -66,6 +66,19 @@ Graph* Graph::subgraph(Set* vertices) {
 	return subg;
 }
 
+void Graph::remove_vertex(int vertex) {
+	if (degree(vertex) == 0) {
+		adjlist.erase(vertex);
+		return;
+	}
+
+	for (int nbr : *(neighbors(vertex))) {
+		neighbors(nbr)->erase(vertex);
+	}
+
+	adjlist.erase(vertex);
+}
+
 Graph* read_sparse6(const char* filename) {
 	std::ifstream f;
 	f.open(filename, std::ios::in | std::ios::binary);
