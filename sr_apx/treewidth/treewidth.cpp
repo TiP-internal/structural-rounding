@@ -5,32 +5,75 @@
 #include <limits>
 #include <math.h>       // sqrt, log 
 #include <cmath>        // floor
+#include <vector>
 
 
-Set* treewidth_nodeedit(Graph* graph, int w) {
+int* treewidth_nodeedit(Graph* graph, Set* edit_set, std::vector<Set*>& bags, int w) {
     /*
      * TreeWidthNodeEdit() from SR paper. 
      * 
-     * rough psuedocode
      */
-    
-    int n = graph->size();
-    
+
+    int n = graph->size();    
     int beta = floor(3*n/4);
     int c1 = 1;                 // constant value
     
-    
     Set* Z = new Set();
-    Set* W = new Set(); // not sure what to initialize these to.
+    Set* W = new Set(); 
     int t = tree_decomp(graph, Z, W);
-    delete empty1, empty2;
     
-    if ( t <= 32*c1*w*sqrt(log(w)) ) return 0 
+    if ( t <= 32*c1*w*sqrt(log(w)) ) return post_order();
         
     Set* S = balanced_separators(graph, beta);
+    edit_set->add_all(S) ;    //set union but modifies S
     
-    for componenets in G[V\S] {
-         return S->set_union(treewidth_nodeedit(component, w)) ;
+    std::vector<Set*> components = connected_components(graph, S);
+    
+    for (auto ic=components.begin(); ic!=components.end(); ic++) {
+        Set* component_set = *ic;
+        Graph* component = graph->subgraph(component_set);
+        
+        treewidth_nodeedit(component, edit_set, bags, w);
+    }
+    delete S;
+    
+    return 0;
+}
+
+
+std::vector<Set*> connected_components(Graph* graph, Set* S) {
+    /*
+     * DFS for finding connected components in G[V\S]
+     */
+    
+    int n = graph->size();
+    std::vector<Set*> components;
+    Set* visited = new Set();
+    auto vitr = graph->begin();
+    
+    while(visited->size() < n) {  
+        if(!visited->contains(*vitr)) {  //if not visited yet
+            Set* comp = new Set();
+            dfs(graph, comp, visited, S, *vitr);
+            components.push_back(comp);
+        }
+        ++vitr;
+    }
+    delete visited;
+    
+    return components;
+}
+
+void dfs(Graph* graph, Set* comp, Set* visited, Set* S, int v) {
+    visited->insert(v);
+    
+    if (!S->contains(v)) comp->insert(v);  // components in G[V\S]
+    
+    Set* nbrs = graph->neighbors(v);
+    for (auto it = nbrs->begin(); it != nbrs->end(); it++) {
+        if(!visited->contains(*it)) {    //if not visited yet
+            dfs(graph, comp, visited, S, *it);
+        }
     }
 }
 
@@ -43,28 +86,34 @@ int tree_decomp(Graph* graph, Set* Z, Set* W) {
      */
     int l = 0;
     
-    if (8*Z->size() <= W->size()) {
-        //return a tree decomposition with a single node containing Z ∩ W
-    } else {
-     
-        int betaS = floor(3*W->size()/4);
-        int betaT = floor(3*Z->set_union(W)->size()/4);
-        Set* S = balanced_separators of W in G[Z ∪ W];
-        Set* T = balanced_separators of Z ∪ W in G[Z ∪ W];
-        
-        l = num connected components;
-        let G[V1], · · · , G[Vl] be the connected components of G[(W ∪ Z) \ (S ∪ T)
-    }
-    
-    for (int i = 0; i < l; i++) {
-        Set* Vi = connected component i;
-        Set* Zi = Z->set_intersection(Vi);
-        Set* Wi = W->set_intersection(Vi);
-        
-        Set* Ti = tree_decomp(graph, Zi, Wi->set_union(S)->set_union(T));
-    }
-    
-    return tree decomposition with (W ∪ S ∪ T) as its root and T1, · · · , Tl as its children;
+//     if (8*Z->size() <= W->size()) {
+//         //return a tree decomposition with a single node containing Z ∩ W
+//     } else {
+//      
+//         int betaS = floor(3*W->size()/4);
+//         int betaT = floor(3*Z->set_union(W)->size()/4);
+//         Set* S = balanced_separators of W in G[Z ∪ W];
+//         Set* T = balanced_separators of Z ∪ W in G[Z ∪ W];
+//         
+//         l = num connected components;
+//         let G[V1], · · · , G[Vl] be the connected components of G[(W ∪ Z) \ (S ∪ T)
+//     }
+//     
+//     for (int i = 0; i < l; i++) {
+//         Set* Vi = connected component i;
+//         Set* Zi = Z->set_intersection(Vi);
+//         Set* Wi = W->set_intersection(Vi);
+//         
+//         Set* Ti = tree_decomp(graph, Zi, Wi->set_union(S)->set_union(T));
+//     }
+//     
+//     return tree decomposition with (W ∪ S ∪ T) as its root and T1, · · · , Tl as its children;
+    return 0;
+}
+
+
+int* post_order() {
+    return 0;
 }
 
 
@@ -157,11 +206,15 @@ Set* balanced_separators(Graph* graph, int beta) {
 
 Set* balanced_separators(Graph graph, Set* W, int beta) {
     /*
-     * Definition 5.1. For a subset of vertices W, a set of vertices S ⊆ V(G) is a vertex c-separator of W in G if each component of G[V \ S] contains at most c|W| vertices of W. The minimum size vertex c-separator of a graph, denoted sepc(G), is the minimum integer k such that for any subset W ⊆ V there exists a vertex c-separator of W in G of size k.
+     * Definition 5.1. For a subset of vertices W, a set of vertices S ⊆ V(G) 
+     * is a vertex c-separator of W in G if each component of G[V \ S] contains 
+     * at most c|W| vertices of W. The minimum size vertex c-separator of a graph, 
+     * denoted sepc(G), is the minimum integer k such that for any subset W ⊆ V 
+     * there exists a vertex c-separator of W in G of size k.
      * 
      */
     
-    
+    return 0;
 }
 
 

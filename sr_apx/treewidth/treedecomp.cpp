@@ -24,7 +24,6 @@ TreeDecomp::~TreeDecomp() {
 
 Set* TreeDecomp::treewidth_edit() {
     post_order = treewidth_nodeedit(graph, edit_set, bags, target_tw);  //in treewidth.hpp
-    
     return edit_set;
 }
 
