@@ -10,18 +10,22 @@
 
 class TreeDecomp {
 public:
-    int target_tw;
+    int tw; 
     
     Graph* graph;
-    Set* edit_set;
+    
+    Set* Z;
+    Set* W;
     
     std::vector<Set*> bags;  
     int* post_order;
     
-    TreeDecomp(Graph*, int);
+    TreeDecomp(Graph*, Set*);
     ~TreeDecomp();
     
-    Set* treewidth_edit();
+    void tree_decomposition();
+    int treewidth();
+    int* get_post_order();
 };
 
 #endif

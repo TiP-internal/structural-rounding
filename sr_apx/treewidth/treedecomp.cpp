@@ -1,29 +1,39 @@
 
 #include "treedecomp.hpp"
 #include "graph.hpp"
-#include "util.hpp"
 
 #include <iostream>
 #include <fstream>
 
 
-TreeDecomp::TreeDecomp(Graph* g, int tw) {
-    target_tw = tw;
-    
-    edit_set = NULL;
+TreeDecomp::TreeDecomp(Graph* g, Set* V) {
+    tw = -1;
     graph = g;
     post_order = NULL;
+    
+    Z = V;  //??
+    W = new Set();
 }
 
 TreeDecomp::~TreeDecomp() {
     for(auto ib=bags.begin(); ib!=bags.end(); ib++) {
         delete *ib;
     }
+    delete Z, W;
     delete (int*) post_order;
 }
 
-Set* TreeDecomp::treewidth_edit() {
-    post_order = treewidth_nodeedit(graph, edit_set, bags, target_tw);  //in treewidth.hpp
-    return edit_set;
+void TreeDecomp::tree_decomposition() {
+    tree_decomp(graph, Z, W, bags);  //in treewidth.hpp
+}
+
+int TreeDecomp::treewidth() {    
+    tw = find_treewidth(bags);
+    return tw;
+}
+
+int* TreeDecomp::get_post_order() {
+    printf("returning post_order()\n");
+    return 0;
 }
 

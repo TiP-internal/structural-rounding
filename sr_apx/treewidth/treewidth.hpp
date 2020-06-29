@@ -8,14 +8,17 @@
 #include "setmap.hpp"
 
 
-int* treewidth_nodeedit(Graph*, Set*, std::vector<Set*>&, int);
-int tree_decomp(Graph*, Set*, Set*);
+void treewidth_nodeedit(Graph*, Set*, int);  
+Set* tree_decomp(Graph*, Set*, Set*, std::vector<Set*>&);
+int find_treewidth(std::vector<Set*> &);
 
 Set* balanced_separators(Graph*, int);  //greedy alg. from (Althoby et al. 2020)
 Set* balanced_separators(Graph*, Set*, int);  //bal. seps for set W.
 
-std::vector<Set*> connected_components(Graph*, Set*);
-void dfs(Graph*, Set*, Set*, Set*, int);
+std::vector<Set*> connected_components(Graph*);
+void dfs(Graph*, Set*, Set*, int);
+
+int min_deg_vert(Graph*);
 
 int* post_order();
 
