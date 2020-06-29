@@ -43,6 +43,21 @@ Set* Graph::neighbors(int u) {
 	return &(adjlist[u]);
 }
 
+Set* Graph::get_vertices() {
+    /*
+     * Returns a set containing the vertices in the graph
+     *
+     * NOTE there could be a better way to do this?
+     * This is used in the tree_decomp function. 
+     */
+    
+    Set* verts = new Set();
+    for (auto iu = this->begin(); iu != this->end(); ++iu) {
+        verts->insert(*iu);
+    }
+    return verts;
+}
+
 int Graph::degree(int u) {
 	if (!adjlist.contains(u)) {
 		return 0;
@@ -55,12 +70,17 @@ Graph* Graph::subgraph(Set* vertices) {
 
 	for (Set::Iterator iu = vertices->begin(); iu != vertices->end(); ++iu) {
 		int u = *iu;
+                int nb_count = 0;
+                
 		for (Set::Iterator iv = adjlist[u].begin(); iv != adjlist[u].end(); ++iv) {
 			int v = *iv;
 			if (vertices->contains(v)) {
 				subg->add_edge(u, v);
+                                nb_count++;
 			}
 		}
+		
+		if (nb_count < 1) subg->add_edge(u, u);  //NOTE for testing only?
 	}
 
 	return subg;

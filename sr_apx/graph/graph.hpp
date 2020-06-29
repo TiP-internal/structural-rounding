@@ -19,6 +19,7 @@ public:
 	Map<Set>::Iterator begin();
 	Map<Set>::Iterator end();
 	Set* neighbors(int);
+        Set* get_vertices(); 
 
 	Graph* subgraph(Set*);
 };
