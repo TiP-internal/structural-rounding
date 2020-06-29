@@ -9,21 +9,16 @@
 #include "treewidth.hpp"
 
 class TreeDecomp {
-public:
+private:
     int tw; 
-    
-    Graph* graph;
-    
-    Set* Z;
-    Set* W;
-    
-    std::vector<Set*> bags;  
     int* post_order;
     
-    TreeDecomp(Graph*, Set*);
+public:
+    std::vector<Set*> bags;
+    
+    TreeDecomp();
     ~TreeDecomp();
     
-    void tree_decomposition();
     int treewidth();
     int* get_post_order();
 };

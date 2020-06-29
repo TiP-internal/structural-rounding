@@ -6,34 +6,32 @@
 #include <fstream>
 
 
-TreeDecomp::TreeDecomp(Graph* g, Set* V) {
+TreeDecomp::TreeDecomp() {
     tw = -1;
-    graph = g;
     post_order = NULL;
-    
-    Z = V;  //??
-    W = new Set();
 }
 
 TreeDecomp::~TreeDecomp() {
     for(auto ib=bags.begin(); ib!=bags.end(); ib++) {
         delete *ib;
     }
-    delete Z, W;
     delete (int*) post_order;
 }
 
-void TreeDecomp::tree_decomposition() {
-    tree_decomp(graph, Z, W, bags);  //in treewidth.hpp
-}
-
 int TreeDecomp::treewidth() {    
-    tw = find_treewidth(bags);
+    //NOTE: split into get and set methods?
+    tw = find_treewidth(bags);          //in treewidth.hpp
     return tw;
 }
 
 int* TreeDecomp::get_post_order() {
-    printf("returning post_order()\n");
-    return 0;
+    post_order = new int[bags.size()];
+    
+    int index = 0;
+    for(int i=bags.size(); i>=0; i--) {
+        post_order[index] = i;
+        index++;
+    }
+    return post_order;
 }
 

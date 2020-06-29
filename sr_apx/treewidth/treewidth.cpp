@@ -9,70 +9,51 @@
 #include <vector>
 
 
-void treewidth_nodeedit(Graph* graph, Set* edit_set, int w) {
+Set* treewidth_nodeedit(Graph* graph, int w) {
     /*
      * TreeWidthNodeEdit() from SR paper. 
      * 
      */
-
     int n = graph->size();    
     int beta = floor(3*n/4);
-    
-    printf("n: %d, beta:%d\n", n, beta);
-    for(auto iv=graph->begin(); iv!=graph->end(); iv++) {
-            printf("%d, ", *iv);
-    }
-    printf("\n");
-    
     int c1 = 1;                 // NOTE constant value
     
-    //--------------------------------------------
+    Set* W = new Set();
     Set* V = graph->get_vertices();
-    TreeDecomp* decomp = new TreeDecomp(graph, V);
-    decomp->tree_decomposition();
+
+    TreeDecomp* decomp = new TreeDecomp();
+    tree_decomp(graph, V, W, decomp->bags);
     int t = decomp->treewidth();
     delete decomp;              // NOTE delete or store?
-    //--------------------------------------------
     
-    
-    //if ( t <= 32*c1*w*sqrt(log(w)) ) return;
-    if (t <= w) return;         // NOTE for testing
+//     if (t <= w) {   // NOTE for testing
+//         Set* empty = new Set();
+//         return empty;
+//     } 
+    if ( t <= 32*c1*w*sqrt(log(w)) ) {
+        Set* empty = new Set();
+        return empty;
+    }
+    else { 
+        Set* S = balanced_separators(graph, beta);    
         
-    Set* S = balanced_separators(graph, beta);
-    printf("Size of S: %d\n", S->size());
-    for (auto ie=S->begin(); ie!=S->end(); ie++) {
-        printf("     S v: %d\n", *ie);
-    }
-    
-    edit_set->add_all(S) ;    //set union but modifies S
-    
-    for (auto ie=edit_set->begin(); ie!=edit_set->end(); ie++) {
-        printf("     edit_set v: %d\n", *ie);
-    }
-    
-    // for connected components of G[V\S]
-    Set* V_min_S = V->set_minus(S);
-    Graph* sub_g = graph->subgraph(V_min_S);
-    delete V_min_S;
-    std::vector<Set*> components = connected_components(sub_g);
-    
-    printf("number of components: %ld\n", components.size());
-    for (auto ic=components.begin(); ic!=components.end(); ic++) {
-        Set* c = *ic;
-        for (auto iv=c->begin(); iv!=c->end(); iv++) {
-            printf("  v: %d, ", *iv);
+        // for connected components of G[V\S]
+        Set* V_min_S = V->set_minus(S);
+        Graph* sub_g = graph->subgraph(V_min_S);
+        
+        std::vector<Set*> components = connected_components(sub_g);
+        delete V_min_S, sub_g;
+        
+        for (auto ic=components.begin(); ic!=components.end(); ic++) {
+            Set* component_set = *ic;
+            Graph* component = graph->subgraph(component_set);
+            
+            S->add_all(treewidth_nodeedit(component, w)); //set union but modifies S
+
+            delete component_set, component;
         }
-        printf("\n_____\n");
+        return S;
     }
-    
-    for (auto ic=components.begin(); ic!=components.end(); ic++) {
-        Set* component_set = *ic;
-        Graph* component = graph->subgraph(component_set);
-        
-        treewidth_nodeedit(component, edit_set, w);
-        delete component;
-    }
-    delete S;
 }
 
 
@@ -159,7 +140,7 @@ Set* tree_decomp(Graph* graph, Set* Z, Set* W, std::vector<Set*> &bags) {
         Graph* sub_g = graph->subgraph(Z_un_W_minus_S_un_T);
         components = connected_components(sub_g);
         
-        delete Z_un_W, Z_un_W_minus_S_un_T, sub_g;
+        delete S, T, Z_un_W, Z_un_W_minus_S_un_T, sub_g, graph_Z_un_W;
     }
     
     for (auto ic=components.begin(); ic!=components.end(); ic++) {
@@ -169,9 +150,12 @@ Set* tree_decomp(Graph* graph, Set* Z, Set* W, std::vector<Set*> &bags) {
         Set* Wi = W->set_intersection(Vi);
         
         Set* Wi_un_S_un_T = Wi->set_union(S_un_T);        
+        delete Vi, Zi;
         
         Set* Ti = tree_decomp(graph, Zi, Wi_un_S_un_T, bags);
         if(Ti->size()>0) bags.push_back(Ti);
+        
+        delete Wi, Wi_un_S_un_T;
     }
     Set* W_un_S_un_T = W->set_union(S_un_T); 
     
@@ -208,8 +192,10 @@ int min_deg_vert(Graph* graph) {
 
 
 Set* balanced_separators(Graph* graph, int beta) {
-    
     /*
+     * NOTE: could probably get rid of this function, and replace call 
+     * on line 31 w/ other balanced_separators(graph, V, beta);
+     * 
      * Balanced separator greedy algorithm from from (Althoby et al. 2020)
      * 
      * Beta = floor(2n/3), or floor(3n/4)
@@ -273,14 +259,6 @@ Set* balanced_separators(Graph* graph, int beta) {
             }
         }
     }
-    
-//     printf("Sizeof A: %d\n", A->size());
-//     printf("Sizeof B: %d\n", B->size());
-//     printf("Sizeof C: %d\n", C->size());
-//     
-//     //1=true, 0=false
-//     printf("Separates? %d\n", test_separators(graph, A, B));
-    
     delete A;
     delete B;
     
@@ -302,9 +280,6 @@ Set* balanced_separators(Graph* graph, Set* W, int beta) {
      * there exists a vertex c-separator of W in G of size k.
      * 
      */
-    
-    printf("**bal seps: %d, beta: %d\n", W->size(), beta);
-    
     int A_count=0, B_count=0, C_count=0;  // counts of vertices in A,B,C which are in W.
     Set* A = new Set();
     Set* B = new Set();

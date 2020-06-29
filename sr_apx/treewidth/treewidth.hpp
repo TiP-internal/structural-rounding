@@ -8,7 +8,7 @@
 #include "setmap.hpp"
 
 
-void treewidth_nodeedit(Graph*, Set*, int);  
+Set* treewidth_nodeedit(Graph*, int);  
 Set* tree_decomp(Graph*, Set*, Set*, std::vector<Set*>&);
 int find_treewidth(std::vector<Set*> &);
 
@@ -19,8 +19,6 @@ std::vector<Set*> connected_components(Graph*);
 void dfs(Graph*, Set*, Set*, int);
 
 int min_deg_vert(Graph*);
-
-int* post_order();
 
 // temporary function to test that vertices from balanced_separators() 
 // actually separates graph.
