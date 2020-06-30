@@ -20,20 +20,21 @@ Set* treewidth_nodeedit(Graph* graph, int w) {
     
     Set* W = new Set();
     Set* V = graph->get_vertices();
-
+    
     TreeDecomp* decomp = new TreeDecomp();
-    tree_decomp(graph, V, W, decomp->bags);
+    
+    tree_decomp(graph, V, W, decomp->preorder_stack, decomp->bags, 0);
     int t = decomp->treewidth();
     delete decomp;              // NOTE delete or store?
     
-//     if (t <= w) {   // NOTE for testing
-//         Set* empty = new Set();
-//         return empty;
-//     } 
-    if ( t <= 32*c1*w*sqrt(log(w)) ) {
+    if (t <= w) {   // NOTE for testing
         Set* empty = new Set();
         return empty;
-    }
+    } 
+//     if ( t <= 32*c1*w*sqrt(log(w)) ) {
+//         Set* empty = new Set();
+//         return empty;
+//     }
     else { 
         Set* S = balanced_separators(graph, beta);    
         
@@ -93,17 +94,18 @@ void dfs(Graph* graph, Set* comp, Set* visited, int v) {
     }
 }
 
-Set* tree_decomp(Graph* graph, Set* Z, Set* W, std::vector<Set*> &bags) {
+Set* tree_decomp(Graph* graph, Set* Z, Set* W, std::deque<std::deque<int>> &preorder_stack, std::vector<Set*> &bags, int po_index) {
     /*
      * Algorithm 4 from SR.
      * 
      * Z is initialized to V.
      * W is initialized to empty set.
      * 
-     * Bags stored in pre-order traversal order.
+     * Bags stored in POST-order traversal order.
      */
     
     std::vector<Set*> components;
+    
     Set* S = new Set();
     Set* T = new Set();
     Set* S_un_T = new Set();
@@ -113,7 +115,7 @@ Set* tree_decomp(Graph* graph, Set* Z, Set* W, std::vector<Set*> &bags) {
         Set* Z_int_W = Z->set_intersection(W);
         
         if (Z_int_W->size() == 0) {
-            //return W;                 // if Z ∩ W = ∅, output contains W in root bag--but actually WunZ.
+            //return W;        // if Z ∩ W = ∅, output contains W in root bag--but actually WunZ.
             return W->set_union(Z);
         }
         else {
@@ -143,6 +145,10 @@ Set* tree_decomp(Graph* graph, Set* Z, Set* W, std::vector<Set*> &bags) {
         delete S, T, Z_un_W, Z_un_W_minus_S_un_T, sub_g, graph_Z_un_W;
     }
     
+    int index = 0;
+    int n_components = components.size();
+    
+    std::deque<int> leaves;  
     for (auto ic=components.begin(); ic!=components.end(); ic++) {
         Set* Vi = *ic;
 
@@ -152,14 +158,19 @@ Set* tree_decomp(Graph* graph, Set* Z, Set* W, std::vector<Set*> &bags) {
         Set* Wi_un_S_un_T = Wi->set_union(S_un_T);        
         delete Vi, Zi;
         
-        Set* Ti = tree_decomp(graph, Zi, Wi_un_S_un_T, bags);
-        if(Ti->size()>0) bags.push_back(Ti);
-        
+        Set* Ti = tree_decomp(graph, Zi, Wi_un_S_un_T, preorder_stack, bags, po_index++);
+        if(Ti->size()>0) {
+            bags.push_back(Ti);
+            leaves.push_back(po_index-1);
+        }
         delete Wi, Wi_un_S_un_T;
+        index++;
     }
+    preorder_stack.push_back(leaves);
     Set* W_un_S_un_T = W->set_union(S_un_T); 
     
     // return tree decomposition with (W ∪ S ∪ T) as its root and T1, · · · , Tl as its children;
+    preorder_stack[0].push_back(po_index-n_components);
     bags.push_back(W_un_S_un_T);
     delete S_un_T;
 

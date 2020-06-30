@@ -3,6 +3,7 @@
 #define TREEDECOMP_H
 
 #include <vector> 
+#include <deque> 
 
 #include "graph.hpp"
 #include "setmap.hpp"
@@ -11,16 +12,19 @@
 class TreeDecomp {
 private:
     int tw; 
-    int* post_order;
+    int* pre_order;
     
 public:
     std::vector<Set*> bags;
+    
+    std::deque<int> root_indices;  //NOTE: for testing
+    std::deque<std::deque<int>> preorder_stack; 
     
     TreeDecomp();
     ~TreeDecomp();
     
     int treewidth();
-    int* get_post_order();
+    int* get_pre_order();
 };
 
 #endif

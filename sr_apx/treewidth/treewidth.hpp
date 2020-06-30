@@ -3,13 +3,14 @@
 #define TREEWIDTH_H
 
 #include <vector>
+#include <deque> 
 
 #include "graph.hpp"
 #include "setmap.hpp"
 
 
 Set* treewidth_nodeedit(Graph*, int);  
-Set* tree_decomp(Graph*, Set*, Set*, std::vector<Set*>&);
+Set* tree_decomp(Graph*, Set*, Set*, std::deque<std::deque<int>>&, std::vector<Set*>&, int);
 int find_treewidth(std::vector<Set*> &);
 
 Set* balanced_separators(Graph*, int);  //greedy alg. from (Althoby et al. 2020)
