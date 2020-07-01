@@ -2,6 +2,8 @@
 #include "treewidth.hpp"
 #include "treedecomp.hpp"
 
+#include "time.h"
+
 #include <fstream>
 #include <limits>
 #include <math.h>       // sqrt, log 
@@ -102,6 +104,8 @@ Set* tree_decomp(Graph* graph, Set* Z, Set* W, std::deque<std::deque<int>> &preo
      * W is initialized to empty set.
      * 
      * Bags stored in POST-order traversal order.
+     * 
+     * NOTE this doesnt work when graph has more than one connected components
      */
     
     std::vector<Set*> components;
@@ -109,9 +113,9 @@ Set* tree_decomp(Graph* graph, Set* Z, Set* W, std::deque<std::deque<int>> &preo
     Set* S = new Set();
     Set* T = new Set();
     Set* S_un_T = new Set();
-    
-    //if(8*Z->size() <= W->size()) {
-    if(Z->size() <= W->size()) {        //NOTE for testing only
+        
+    if(8*Z->size() <= W->size()) {
+//     if(Z->size() <= W->size()) {        //NOTE for testing only
         Set* Z_int_W = Z->set_intersection(W);
         
         if (Z_int_W->size() == 0) {
@@ -147,18 +151,19 @@ Set* tree_decomp(Graph* graph, Set* Z, Set* W, std::deque<std::deque<int>> &preo
     
     int index = 0;
     int n_components = components.size();
-    
     std::deque<int> leaves;  
     for (auto ic=components.begin(); ic!=components.end(); ic++) {
         Set* Vi = *ic;
-
+    
         Set* Zi = Z->set_intersection(Vi); 
+        
         Set* Wi = W->set_intersection(Vi);
         
         Set* Wi_un_S_un_T = Wi->set_union(S_un_T);        
         delete Vi, Zi;
         
         Set* Ti = tree_decomp(graph, Zi, Wi_un_S_un_T, preorder_stack, bags, po_index++);
+        
         if(Ti->size()>0) {
             bags.push_back(Ti);
             leaves.push_back(po_index-1);
@@ -168,7 +173,7 @@ Set* tree_decomp(Graph* graph, Set* Z, Set* W, std::deque<std::deque<int>> &preo
     }
     preorder_stack.push_back(leaves);
     Set* W_un_S_un_T = W->set_union(S_un_T); 
-    
+
     // return tree decomposition with (W ∪ S ∪ T) as its root and T1, · · · , Tl as its children;
     preorder_stack[0].push_back(po_index-n_components);
     bags.push_back(W_un_S_un_T);
@@ -217,7 +222,7 @@ Set* balanced_separators(Graph* graph, int beta) {
     Set* B = new Set();
     Set* C = new Set();
     
-    float min_deg_v = min_deg_vert(graph);
+    float min_deg_v = min_deg_vert(graph); 
     
     A->insert(min_deg_v);
     
@@ -304,8 +309,10 @@ Set* balanced_separators(Graph* graph, Set* W, int beta) {
     // C=N(A), where A={min_deg_v}
     for (Set::Iterator ia_nbs = graph->neighbors(min_deg_v)->begin();
          ia_nbs != graph->neighbors(min_deg_v)->end(); ia_nbs++) {
-        C->insert(*ia_nbs); 
-        if(W->contains(*ia_nbs)) C_count++;
+        if(!C->contains(*ia_nbs)) {
+            C->insert(*ia_nbs); 
+            if(W->contains(*ia_nbs)) C_count++;
+        }
     }
          
          
@@ -314,14 +321,16 @@ Set* balanced_separators(Graph* graph, Set* W, int beta) {
     for (auto ib = graph->begin(); ib != graph->end(); ib++) {
         int b = *ib;
         if (!AunC->contains(b)) {
-            B->insert(b);
-            if (W->contains(b)) B_count++;
+            if(!B->contains(b)) {
+                B->insert(b);
+                if (W->contains(b)) B_count++;
+            }
         }
     }
     delete AunC;
     
-    
     while(A_count + C_count < W->size() - beta) { //N
+        
         float min_inbsB = std::numeric_limits<float>::infinity();
         int vert; // the i s.t. |N(i) intersect B| is minimum.
         
@@ -340,22 +349,35 @@ Set* balanced_separators(Graph* graph, Set* W, int beta) {
         }
         
         //A = A union vert
-        A->insert(vert);
-        if (W->contains(vert)) A_count++;
+        if(!A->contains(vert)) {
+            A->insert(vert);
+            if (W->contains(vert)) A_count++;
+        }
         
-        B->remove(vert);
-        if (W->contains(vert)) B_count--;
+        if (B->contains(vert)) {
+            B->remove(vert);
+            if (W->contains(vert)) B_count--;
+        }
         
         // C=N(A), where A = A union vert
-        C->remove(vert);
-        if(W->contains(vert)) C_count--;
+        if(C->contains(vert)) {
+            C->remove(vert);
+            if(W->contains(vert)) C_count--;
+        }
+        
         for (Set::Iterator iv_nbs = graph->neighbors(vert)->begin();
             iv_nbs != graph->neighbors(vert)->end(); iv_nbs++) {
             
             if(!A->contains(*iv_nbs)) { 
-                C->insert(*iv_nbs); 
-                B->remove(*iv_nbs);
-                if (W->contains(*iv_nbs)) B_count--;
+                if (!C->contains(*iv_nbs)) {
+                    C->insert(*iv_nbs);
+                    if(W->contains(*iv_nbs)) C_count++;
+                }
+                
+                if (B->contains(*iv_nbs)) {
+                    B->remove(*iv_nbs);
+                    if (W->contains(*iv_nbs)) B_count--;
+                }
             }
         }
     }
