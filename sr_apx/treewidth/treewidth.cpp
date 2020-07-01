@@ -29,14 +29,14 @@ Set* treewidth_nodeedit(Graph* graph, int w) {
     int t = decomp->treewidth();
     delete decomp;              // NOTE delete or store?
     
-    if (t <= w) {   // NOTE for testing
-        Set* empty = new Set();
-        return empty;
-    } 
-//     if ( t <= 32*c1*w*sqrt(log(w)) ) {
+//     if (t <= w) {   // NOTE for testing
 //         Set* empty = new Set();
 //         return empty;
-//     }
+//     } 
+    if ( t <= 32*c1*w*sqrt(log(w)) ) {
+        Set* empty = new Set();
+        return empty;
+    }
     else { 
         Set* S = balanced_separators(graph, beta);    
         
@@ -113,21 +113,16 @@ Set* tree_decomp(Graph* graph, Set* Z, Set* W, std::deque<std::deque<int>> &preo
     Set* S = new Set();
     Set* T = new Set();
     Set* S_un_T = new Set();
-        
+    Set* Z_un_W = Z->set_union(W);
+    
+    //WARNING this is the problem im talking about. 8*Z->size is greater than W->size, but Z doesnt get
+    // reduced in size by the code before the recursive call, resulting in infinte recursive calls. 
+    printf("8*Z->size()=%d, W->size()=%d\n", 8*Z->size(), W->size());
+    
     if(8*Z->size() <= W->size()) {
 //     if(Z->size() <= W->size()) {        //NOTE for testing only
-        Set* Z_int_W = Z->set_intersection(W);
-        
-        if (Z_int_W->size() == 0) {
-            //return W;        // if Z ∩ W = ∅, output contains W in root bag--but actually WunZ.
-            return W->set_union(Z);
-        }
-        else {
-            return Z_int_W;
-        }
+        return Z_un_W;
     } else {
-        Set* Z_un_W = Z->set_union(W);
-        
         int betaS = floor(3*W->size()/4);
         int betaT = floor(3*Z_un_W->size()/4);
             
@@ -141,7 +136,7 @@ Set* tree_decomp(Graph* graph, Set* Z, Set* W, std::deque<std::deque<int>> &preo
         
         // let G[V1], · · · , G[Vl] be the connected components of G[(W ∪ Z) \ (S ∪ T)]
         S_un_T = S->set_union(T);
-        Set* Z_un_W_minus_S_un_T = Z_un_W->set_minus(S_un_T);
+        Set* Z_un_W_minus_S_un_T = Z_un_W->set_minus(S_un_T);  //NOTE could replace w/ remove_all fun.
         
         Graph* sub_g = graph->subgraph(Z_un_W_minus_S_un_T);
         components = connected_components(sub_g);
@@ -155,14 +150,15 @@ Set* tree_decomp(Graph* graph, Set* Z, Set* W, std::deque<std::deque<int>> &preo
     for (auto ic=components.begin(); ic!=components.end(); ic++) {
         Set* Vi = *ic;
     
-        Set* Zi = Z->set_intersection(Vi); 
+        Set* Zi = Z->set_intersection(Vi);   //WARNING Here, Zi is not reduced in size. //NOTE could also replace w/ same_elements fun.
         
         Set* Wi = W->set_intersection(Vi);
+        delete Vi;
         
-        Set* Wi_un_S_un_T = Wi->set_union(S_un_T);        
-        delete Vi, Zi;
+        Set* Wi_un_S_un_T = Wi->set_union(S_un_T);  //NOTE replace w. add_all fun.      
         
-        Set* Ti = tree_decomp(graph, Zi, Wi_un_S_un_T, preorder_stack, bags, po_index++);
+        Set* Ti = tree_decomp(graph, Zi, Wi_un_S_un_T, preorder_stack, bags, po_index++);  //NOTE recursive call
+        delete Zi;
         
         if(Ti->size()>0) {
             bags.push_back(Ti);
@@ -171,17 +167,20 @@ Set* tree_decomp(Graph* graph, Set* Z, Set* W, std::deque<std::deque<int>> &preo
         delete Wi, Wi_un_S_un_T;
         index++;
     }
+    
     preorder_stack.push_back(leaves);
-    Set* W_un_S_un_T = W->set_union(S_un_T); 
+    Set* W_un_S_un_T = W->set_union(S_un_T);   //NOTE replace w. add_all fun.
+    delete S_un_T;
 
     // return tree decomposition with (W ∪ S ∪ T) as its root and T1, · · · , Tl as its children;
     preorder_stack[0].push_back(po_index-n_components);
     bags.push_back(W_un_S_un_T);
-    delete S_un_T;
 
+    
     //NOTE: need to return something here, but is this it?
     Set* temp = new Set();
     return temp;
+    //return W_un_S_un_T;  // Doesnt work
 }
 
 int find_treewidth(std::vector<Set*> &bags) {
