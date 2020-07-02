@@ -18,11 +18,6 @@ Set* balanced_separators(Graph*, Set*, int);  //bal. seps for set W.
 
 std::vector<Set*> connected_components(Graph*);
 void dfs(Graph*, Set*, Set*, int);
-
 int min_deg_vert(Graph*);
-
-// temporary function to test that vertices from balanced_separators() 
-// actually separates graph.
-bool test_separators(Graph*, Set*, Set*); 
 
 #endif
