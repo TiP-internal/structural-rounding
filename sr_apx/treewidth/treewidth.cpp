@@ -118,6 +118,7 @@ Set* tree_decomp(Graph* graph, Set* Z, Set* W, std::deque<std::deque<int>> &preo
     // reduced in size by the code before the recursive call, resulting in infinte recursive calls. 
     //printf("8*Z->size()=%d, W->size()=%d\n", 8*Z->size(), W->size());
     
+    
     if(8*Z->size() <= W->size()) {
 //     if(Z->size() <= W->size()) {        //NOTE for testing only
         return Z_un_W;
@@ -141,7 +142,7 @@ Set* tree_decomp(Graph* graph, Set* Z, Set* W, std::deque<std::deque<int>> &preo
         Graph* sub_g = graph->subgraph(Z_un_W_minus_S_un_T);
         components = connected_components(sub_g);
         
-        delete S, T, Z_un_W, sub_g, graph_Z_un_W, Z_un_W_minus_S_un_T;
+        delete S, T, sub_g, graph_Z_un_W, Z_un_W_minus_S_un_T;
     }
     
     int Z_size = Z->size();
@@ -153,11 +154,12 @@ Set* tree_decomp(Graph* graph, Set* Z, Set* W, std::deque<std::deque<int>> &preo
     
         Set* Zi = Z->set_intersection(Vi);   //WARNING Here, Zi is not reduced in size.
         
-        //NOTE this fixes the issue described in warnings. Need to make sure this still gives valid decomp
+        //NOTE this fixes the issue described in warnings. 
+        //This gives valid decomposition, but does it maintain tw bound?
         if (Zi->size() == Z_size) {  //if the size of Zi is the same as Z (as in set_intersection doesnt decrease size)
-            Set* temp = new Set();
-            return temp;
+            return Z_un_W;
         }
+        delete Z_un_W;
         
         Set* Wi = W->set_intersection(Vi);
         delete Vi;

@@ -80,7 +80,10 @@ Graph* Graph::subgraph(Set* vertices) {
 			}
 		}
 		
-		if (nb_count < 1) subg->add_edge(u, u);  //NOTE for testing only?
+		//NOTE necessary for tree_decomp. Without this, not all verts/edges get added to bags
+		if (nb_count < 1) {
+                    subg->add_edge(u, u);  
+                }
 	}
 
 	return subg;
