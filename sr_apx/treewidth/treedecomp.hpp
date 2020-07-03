@@ -16,8 +16,6 @@ private:
     
 public:
     std::vector<Set*> bags;
-    
-    std::deque<int> root_indices;  //NOTE: for testing
     std::deque<std::deque<int>> preorder_stack; 
     
     TreeDecomp();

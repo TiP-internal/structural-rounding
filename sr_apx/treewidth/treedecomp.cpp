@@ -30,26 +30,24 @@ int TreeDecomp::treewidth() {
 int* TreeDecomp::get_pre_order() {
     pre_order = new int[bags.size()];
     
-    root_indices = preorder_stack[0];  // NOTE storing for testing
+    std::deque<int> root_indices = preorder_stack[0]; 
     preorder_stack.pop_front();
     
     int i = 0;
-    int n_leaves = preorder_stack.size()-1;  // num leaf bags
-    int rootval = bags.size()-1;  // 
+    int rootval = bags.size()-1;  //root bag indices
     
     for(auto iv=root_indices.rbegin(); iv!=root_indices.rend(); iv++) {
-        pre_order[i] = rootval;
+        pre_order[i] = rootval;  //visits root first
         
         i++;
         rootval--;
         
-        //NOTE not popping for testing 
-        std::deque<int> leaves = preorder_stack[n_leaves];  
+        std::deque<int> leaves = preorder_stack.back();
+        preorder_stack.pop_back();
         for(auto il=leaves.begin(); il!=leaves.end(); il++) {       
-            pre_order[i] = *il;
+            pre_order[i] = *il;  //then leaves
             i++;
         }
-        n_leaves--;
     }
     
     return pre_order;
