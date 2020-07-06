@@ -24,7 +24,7 @@ Set* treewidth_nodeedit(Graph* graph, int w) {
     
     TreeDecomp* decomp = new TreeDecomp();
     
-    tree_decomp(graph, V, W, decomp->preorder_stack, decomp->bags, 0);
+    tree_decomp(graph, V, W, decomp->preorder_stack, decomp->bags);
     int t = decomp->treewidth();
     delete decomp;              // NOTE delete or store?
     
@@ -88,6 +88,7 @@ void dfs(Graph* graph, Set* comp, Set* visited, int v) {
     comp->insert(v);  // components in G[V]
     
     Set* nbrs = graph->neighbors(v);
+    nbrs->remove(v);
     for (auto it = nbrs->begin(); it != nbrs->end(); it++) {
         if(!visited->contains(*it)) {    //if not visited yet
             dfs(graph, comp, visited, *it);
@@ -95,7 +96,7 @@ void dfs(Graph* graph, Set* comp, Set* visited, int v) {
     }
 }
 
-Set* tree_decomp(Graph* graph, Set* Z, Set* W, std::deque<std::deque<int>> &preorder_stack, std::vector<Set*> &bags, int po_index) {
+Set* tree_decomp(Graph* graph, Set* Z, Set* W, std::deque<std::deque<int>> &preorder_stack, std::vector<Set*> &bags) {
     /*
      * Algorithm 4 from SR.
      * 
@@ -114,29 +115,30 @@ Set* tree_decomp(Graph* graph, Set* Z, Set* W, std::deque<std::deque<int>> &preo
     Set* S_un_T = new Set();
     Set* Z_un_W = Z->set_union(W);
     
-    //WARNING this is the problem im talking about. 8*Z->size is greater than W->size, but Z doesnt get
-    // reduced in size by the code before the recursive call, resulting in infinte recursive calls. 
-    //printf("8*Z->size()=%d, W->size()=%d\n", 8*Z->size(), W->size());
     
-    
-    if(8*Z->size() <= W->size()) {
-//     if(Z->size() <= W->size()) {        //NOTE for testing only
+    if(5*Z->size() <= W->size()) {  //NOTE: changing the constant here fixes the infinite loop problem
         return Z_un_W;
     } else {
         int betaS = floor(3*W->size()/4);
         int betaT = floor(3*Z_un_W->size()/4);
-            
+        
         Graph* graph_Z_un_W = graph->subgraph(Z_un_W);
         
         //NOTE: balanced_separator calls take up something like 98% of the total time the alg. takes to run.
         //balanced_separators of W in G[Z ∪ W];
-        S = balanced_separators(graph_Z_un_W, W, betaS);        
-        
+        //if stmt necessary because balanced_separators(graph, Set, beta) doesnt quite work when W={}.
+        if (W->size()==0) {//NOTE: Question- is this the correct thing to do when W is empty? What to set beta to?
+            S = balanced_separators(graph_Z_un_W, betaS);  
+        } else {
+            S = balanced_separators(graph_Z_un_W, W, betaS);  
+        }
+
         //balanced_separators of Z ∪ W in G[Z ∪ W];
         T = balanced_separators(graph_Z_un_W, Z_un_W, betaT);   //NOTE this is what takes the most time
         
         // let G[V1], · · · , G[Vl] be the connected components of G[(W ∪ Z) \ (S ∪ T)]
         S_un_T = S->set_union(T);
+        
         Set* Z_un_W_minus_S_un_T = Z_un_W->set_minus(S_un_T); 
         
         Graph* sub_g = graph->subgraph(Z_un_W_minus_S_un_T);
@@ -152,42 +154,39 @@ Set* tree_decomp(Graph* graph, Set* Z, Set* W, std::deque<std::deque<int>> &preo
     for (auto ic=components.begin(); ic!=components.end(); ic++) {
         Set* Vi = *ic;
     
-        Set* Zi = Z->set_intersection(Vi);   //WARNING Here, Zi is not reduced in size.
+        Set* Zi = Z->set_intersection(Vi);   
         
-        //NOTE this fixes the issue described in warnings. 
-        //This gives valid decomposition, but does it maintain tw bound?
-        if (Zi->size() == Z_size) {  //if the size of Zi is the same as Z (as in set_intersection doesnt decrease size)
-            return Z_un_W;
-        }
         delete Z_un_W;
         
         Set* Wi = W->set_intersection(Vi);
+        
         delete Vi;
         
         Set* Wi_un_S_un_T = Wi->set_union(S_un_T); 
         
-        Set* Ti = tree_decomp(graph, Zi, Wi_un_S_un_T, preorder_stack, bags, po_index++);  
+        Set* Ti = tree_decomp(graph, Zi, Wi_un_S_un_T, preorder_stack, bags);      
+        
         delete Zi, Wi, Wi_un_S_un_T;
         
         if(Ti->size()>0) {
             bags.push_back(Ti);
-            leaves.push_back(po_index-1);
+            leaves.push_back(bags.size()-1);
         }
         index++;
     }
     
     preorder_stack.push_back(leaves);
     Set* W_un_S_un_T = W->set_union(S_un_T);  
+    
     delete S_un_T, W, Z;
 
     // return tree decomposition with (W ∪ S ∪ T) as its root and T1, · · · , Tl as its children;
-    preorder_stack[0].push_back(po_index-n_components);
     bags.push_back(W_un_S_un_T);
+    preorder_stack[0].push_back(bags.size()-1);
 
     //NOTE: need to return something here, but is this it?
     Set* temp = new Set();
     return temp;
-    //return W_un_S_un_T;  // Doesnt work
 }
 
 int find_treewidth(std::vector<Set*> &bags) {
@@ -200,16 +199,21 @@ int find_treewidth(std::vector<Set*> &bags) {
 }
 
 int min_deg_vert(Graph* graph) {
-    float min_deg_v = std::numeric_limits<float>::infinity();
+    float md_v = std::numeric_limits<float>::infinity();
+    int min_deg_value = (int)md_v;
+    int min_deg_vert=0;
     
     //Find a minimum degree vertex to add to A
     for (auto iu = graph->begin(); iu!=graph->end(); iu++) {
         int u = *iu;
-        if ( u < min_deg_v) {
-            min_deg_v = u;
+        int u_deg = graph->neighbors(u)->size();
+        
+        if ( u_deg < min_deg_value) {
+            min_deg_value = u_deg;
+            min_deg_vert = u;
         }
     }
-    return min_deg_v;
+    return min_deg_vert;
 }
 
 
@@ -228,16 +232,16 @@ Set* balanced_separators(Graph* graph, int beta) {
     Set* B = new Set();
     Set* C = new Set();
     
-    float min_deg_v = min_deg_vert(graph); 
-    
+    float md_v = min_deg_vert(graph);
+    int   min_deg_v = (int)md_v;
+
     A->insert(min_deg_v);
     
     // C=N(A), where A={min_deg_v}
     for (Set::Iterator ia_nbs = graph->neighbors(min_deg_v)->begin();
          ia_nbs != graph->neighbors(min_deg_v)->end(); ia_nbs++) {
-        C->insert(*ia_nbs); 
+        if(*ia_nbs != min_deg_v) C->insert(*ia_nbs); 
     }
-         
          
     // B = V\(A union C)
     Set* AunC = A->set_union(C);
@@ -257,7 +261,8 @@ Set* balanced_separators(Graph* graph, int beta) {
             int u = *iu;
             if(!A->contains(u)) {
                 Set* nbi_B = graph->neighbors(u)->set_intersection(B);
-                
+                nbi_B->remove(u);
+
                 if (nbi_B->size() < min_inbsB)  {
                     min_inbsB = nbi_B->size();
                     vert = u;
@@ -274,13 +279,17 @@ Set* balanced_separators(Graph* graph, int beta) {
         C->remove(vert);
         for (Set::Iterator iv_nbs = graph->neighbors(vert)->begin();
             iv_nbs != graph->neighbors(vert)->end(); iv_nbs++) {
-            
-            if(!A->contains(*iv_nbs)) { 
-                C->insert(*iv_nbs); 
-                B->remove(*iv_nbs);
+            if(*iv_nbs != vert) {
+                if(!A->contains(*iv_nbs)) { 
+                    C->insert(*iv_nbs); 
+                    B->remove(*iv_nbs);
+                }
             }
         }
     }
+//     bool test = test_separators(graph, A, B, beta);
+//     printf("is valid sep? %d\n", test);
+    
     delete A;
     delete B;
     
@@ -302,26 +311,28 @@ Set* balanced_separators(Graph* graph, Set* W, int beta) {
      * there exists a vertex c-separator of W in G of size k.
      * 
      */
+
     int A_count=0, B_count=0, C_count=0;  // counts of vertices in A,B,C which are in W.
     Set* A = new Set();
     Set* B = new Set();
     Set* C = new Set();
     
-    float min_deg_v = min_deg_vert(graph);
+    float md_v = min_deg_vert(graph);
+    int   min_deg_v = (int)md_v;
     
     A->insert(min_deg_v);
     if(W->contains(min_deg_v)) A_count++;
-    
+       
     // C=N(A), where A={min_deg_v}
-    for (Set::Iterator ia_nbs = graph->neighbors(min_deg_v)->begin();
-         ia_nbs != graph->neighbors(min_deg_v)->end(); ia_nbs++) {
-        if(!C->contains(*ia_nbs)) {
-            C->insert(*ia_nbs); 
-            if(W->contains(*ia_nbs)) C_count++;
+    for (Set::Iterator ia_nbs = graph->neighbors(min_deg_v)->begin(); ia_nbs != graph->neighbors(min_deg_v)->end(); ia_nbs++) {
+        if(*ia_nbs != min_deg_v) {
+            if(!C->contains(*ia_nbs)) {
+                C->insert(*ia_nbs); 
+                if(W->contains(*ia_nbs)) C_count++;
+            }
         }
     }
-         
-         
+              
     // B = V\(A union C)
     Set* AunC = A->set_union(C);
     for (auto ib = graph->begin(); ib != graph->end(); ib++) {
@@ -335,8 +346,8 @@ Set* balanced_separators(Graph* graph, Set* W, int beta) {
     }
     delete AunC;
     
+    
     while(A_count + C_count < W->size() - beta) { //N
-        
         float min_inbsB = std::numeric_limits<float>::infinity();
         int vert; // the i s.t. |N(i) intersect B| is minimum.
         
@@ -345,6 +356,7 @@ Set* balanced_separators(Graph* graph, Set* W, int beta) {
             int u = *iu;
             if(!A->contains(u)) {
                 Set* nbi_B = graph->neighbors(u)->set_intersection(B);
+                nbi_B->remove(u);
                 
                 if (nbi_B->size() < min_inbsB)  {
                     min_inbsB = nbi_B->size();
@@ -374,19 +386,24 @@ Set* balanced_separators(Graph* graph, Set* W, int beta) {
         for (Set::Iterator iv_nbs = graph->neighbors(vert)->begin();
             iv_nbs != graph->neighbors(vert)->end(); iv_nbs++) {
             
-            if(!A->contains(*iv_nbs)) { 
-                if (!C->contains(*iv_nbs)) {
-                    C->insert(*iv_nbs);
-                    if(W->contains(*iv_nbs)) C_count++;
-                }
-                
-                if (B->contains(*iv_nbs)) {
-                    B->remove(*iv_nbs);
-                    if (W->contains(*iv_nbs)) B_count--;
+            if(*iv_nbs != vert) {
+                if(!A->contains(*iv_nbs)) { 
+                    if (!C->contains(*iv_nbs)) {
+                        C->insert(*iv_nbs);
+                        if(W->contains(*iv_nbs)) C_count++;
+                    }
+                    
+                    if (B->contains(*iv_nbs)) {
+                        B->remove(*iv_nbs);
+                        if (W->contains(*iv_nbs)) B_count--;
+                    }
                 }
             }
         }
     }
+    
+//     bool test = test_separators(graph, A, B, beta);
+//     printf("is valid sep? %d\n", test);
     
     delete A;
     delete B;
@@ -396,9 +413,23 @@ Set* balanced_separators(Graph* graph, Set* W, int beta) {
 
 
 
+bool test_separators(Graph* graph, Set* A, Set* B, int beta) {
+    /*
+     * Tests that there are not edges between the two sets.
+     */
+    printf("is |A|=%d <=? beta=%d\n", A->size(), beta);
+    printf("is |B|=%d <=? beta=%d\n", B->size(), beta);
+    
+    for (Set::Iterator iu = A->begin(); iu != A->end(); ++iu) {
+        int u = *iu;
 
-
-
+        for (Set::Iterator iv = B->begin(); iv != B->end(); ++iv) {
+            int v = *iv;
+            if (graph->adjacent(u,v)) return false; //there is an edge between the sets
+        }
+    }
+    return true;
+}
 
 
 

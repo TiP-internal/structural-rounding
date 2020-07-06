@@ -34,14 +34,10 @@ int* TreeDecomp::get_pre_order() {
     preorder_stack.pop_front();
     
     int i = 0;
-    int rootval = bags.size()-1;  //root bag indices
-    
     for(auto iv=root_indices.rbegin(); iv!=root_indices.rend(); iv++) {
-        pre_order[i] = rootval;  //visits root first
+        pre_order[i] = *iv;  //visits root first
         
         i++;
-        rootval--;
-        
         std::deque<int> leaves = preorder_stack.back();
         preorder_stack.pop_back();
         for(auto il=leaves.begin(); il!=leaves.end(); il++) {       
