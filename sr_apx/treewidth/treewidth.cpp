@@ -115,8 +115,9 @@ Set* tree_decomp(Graph* graph, Set* Z, Set* W, std::deque<std::deque<int>> &preo
     Set* S_un_T = new Set();
     Set* Z_un_W = Z->set_union(W);
     
-    
-    if(5*Z->size() <= W->size()) {  //NOTE: changing the constant here fixes the infinite loop problem
+    int C = 8;  //NOTE: changing the constant here fixes the infinite loop problem
+//     printf("Zsize=%d, C*Zsize=%d <=? Wsize=%d\n", Z->size(), C*Z->size(), W->size());
+    if(C*Z->size() <= W->size()) {  
         return Z_un_W;
     } else {
         int betaS = floor(3*W->size()/4);
@@ -128,7 +129,9 @@ Set* tree_decomp(Graph* graph, Set* Z, Set* W, std::deque<std::deque<int>> &preo
         //balanced_separators of W in G[Z ∪ W];
         //if stmt necessary because balanced_separators(graph, Set, beta) doesnt quite work when W={}.
         if (W->size()==0) {//NOTE: Question- is this the correct thing to do when W is empty? What to set beta to?
-            S = balanced_separators(graph_Z_un_W, betaS);  
+//             int beta = floor(3*graph->size()/4); //WARNING ?? this?
+//             S = balanced_separators(graph_Z_un_W, beta); 
+            S = balanced_separators(graph_Z_un_W, betaS); //this version seems to give smaller tw
         } else {
             S = balanced_separators(graph_Z_un_W, W, betaS);  
         }
@@ -150,21 +153,21 @@ Set* tree_decomp(Graph* graph, Set* Z, Set* W, std::deque<std::deque<int>> &preo
     int Z_size = Z->size();
     int index = 0;
     int n_components = components.size();
-    std::deque<int> leaves;  
+    std::deque<int> leaves;
     for (auto ic=components.begin(); ic!=components.end(); ic++) {
         Set* Vi = *ic;
     
         Set* Zi = Z->set_intersection(Vi);   
         
-        delete Z_un_W;
+        //delete Z_un_W;
         
         Set* Wi = W->set_intersection(Vi);
         
-        delete Vi;
+        //delete Vi;  // deleting this causes probelsm
         
         Set* Wi_un_S_un_T = Wi->set_union(S_un_T); 
         
-        Set* Ti = tree_decomp(graph, Zi, Wi_un_S_un_T, preorder_stack, bags);      
+        Set* Ti = tree_decomp(graph, Zi, Wi_un_S_un_T, preorder_stack, bags);  
         
         delete Zi, Wi, Wi_un_S_un_T;
         
@@ -178,12 +181,13 @@ Set* tree_decomp(Graph* graph, Set* Z, Set* W, std::deque<std::deque<int>> &preo
     preorder_stack.push_back(leaves);
     Set* W_un_S_un_T = W->set_union(S_un_T);  
     
-    delete S_un_T, W, Z;
+    
 
     // return tree decomposition with (W ∪ S ∪ T) as its root and T1, · · · , Tl as its children;
     bags.push_back(W_un_S_un_T);
     preorder_stack[0].push_back(bags.size()-1);
 
+    //delete S_un_T, W, Z;
     //NOTE: need to return something here, but is this it?
     Set* temp = new Set();
     return temp;
