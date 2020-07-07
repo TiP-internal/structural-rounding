@@ -172,7 +172,7 @@ Set* tree_decomp(Graph* graph, Set* Z, Set* W, std::deque<std::deque<int>> &preo
     
         Set* Zi = Z->set_intersection(Vi);         
         Set* Wi = W->set_intersection(Vi);
-        delete Vi;  // deleting this causes probelsm
+        delete Vi;  
         
         Set* Wi_un_S_un_T = Wi->set_union(S_un_T); 
         
