@@ -22,6 +22,7 @@ public:
         Set* get_vertices(); 
 
 	Graph* subgraph(Set*);
+        Graph* subgraph_wsingles(Set*);
 };
 
 Graph* read_sparse6(const char*);

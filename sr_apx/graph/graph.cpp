@@ -70,6 +70,30 @@ Graph* Graph::subgraph(Set* vertices) {
 
 	for (Set::Iterator iu = vertices->begin(); iu != vertices->end(); ++iu) {
 		int u = *iu;
+		for (Set::Iterator iv = adjlist[u].begin(); iv != adjlist[u].end(); ++iv) {
+			int v = *iv;
+			if (vertices->contains(v)) {
+				subg->add_edge(u, v);
+			}
+		}
+	}
+
+	return subg;
+}
+
+
+Graph* Graph::subgraph_wsingles(Set* vertices) {
+    /*
+     * Subgraph function which includes single vertices w/ no edges. 
+     * This is necessary for tree decomp algorithm. Otherwise, not all vertices/edges
+     * get added to the bags. 
+     * 
+     * NOTE may need to be careful when looking at neighbors of verts in the subgraph.
+     */
+	Graph* subg = new Graph(vertices->size());
+
+	for (Set::Iterator iu = vertices->begin(); iu != vertices->end(); ++iu) {
+		int u = *iu;
                 int nb_count = 0;
                 
 		for (Set::Iterator iv = adjlist[u].begin(); iv != adjlist[u].end(); ++iv) {
@@ -80,7 +104,6 @@ Graph* Graph::subgraph(Set* vertices) {
 			}
 		}
 		
-		//NOTE necessary for tree_decomp. Without this, not all verts/edges get added to bags
 		if (nb_count < 1) {
                     subg->add_edge(u, u);  
                 }
@@ -88,6 +111,7 @@ Graph* Graph::subgraph(Set* vertices) {
 
 	return subg;
 }
+
 
 Graph* read_sparse6(const char* filename) {
 	std::ifstream f;
