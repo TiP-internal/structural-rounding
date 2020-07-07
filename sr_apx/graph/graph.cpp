@@ -179,10 +179,46 @@ Graph* read_edge_list(const char* filename) {
 	Graph* g = new Graph();
 
 	char s[100];
+	f.getline(s, 100);
 	while (f.getline(s, 100)) {
 		int u, v;
 		sscanf(s, "%d %d", &u, &v);
 		g->add_edge(u, v);
+	}
+
+	f.close();
+	return g;
+}
+
+Graph* read_dimacs(const char* filename) {
+	std::ifstream f;
+	f.open(filename, std::ios::in);
+
+	Graph* g = new Graph();
+
+	char s[100];
+	f.getline(s, 100);
+	f.getline(s, 100);
+
+	int n;
+	sscanf(s, "%d", &n);
+
+	int nextu;
+	int nextv;
+	f.getline(s, 100);
+	sscanf(s, "%d %d", &nextu, &nextv);
+
+	for (int u = 1; u <= n; u++) {
+		for (int v = 1; v < u; v++) {
+			if (u == nextu && v == nextv) {
+				if (f.getline(s, 100)) {
+					sscanf(s, "%d %d", &nextu, &nextv);
+				}
+				continue;
+			}
+
+			g->add_edge(u, v);
+		}
 	}
 
 	f.close();

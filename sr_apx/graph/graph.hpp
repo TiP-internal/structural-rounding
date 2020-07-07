@@ -26,5 +26,6 @@ public:
 
 Graph* read_sparse6(const char*);
 Graph* read_edge_list(const char*);
+Graph* read_dimacs(const char*);
 
 #endif
