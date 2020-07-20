@@ -20,5 +20,5 @@ void dfs(Graph*, Set*, Set*, int);
 int min_deg_vert(Graph*);
 bool sets_equal(Set*, Set*);
 
-bool test_separators(Graph*, Set*, Set*, int);
+bool test_separators(Graph*, Set*, Set*, int, int, int);
 #endif
