@@ -51,14 +51,14 @@ build/treewidth.o: sr_apx/treewidth/treewidth.cpp sr_apx/treewidth/treewidth.hpp
 
 build/table.o: sr_apx/domset/exact/table.cpp sr_apx/domset/exact/table.hpp
 	mkdir -p build
-	$(CC) $(CCFLAGS) -c $(INCLUDES) -o build/table.o sr_apx/domset/exact/table.hpp
+	$(CC) $(CCFLAGS) -c $(INCLUDES) -o build/table.o sr_apx/domset/exact/table.cpp
 
 build/domset_exact.o: sr_apx/domset/exact/domset_exact.cpp sr_apx/domset/exact/domset_exact.hpp 
 	mkdir -p build
 	$(CC) $(CCFLAGS) -c $(INCLUDES) -o build/domset_exact.o sr_apx/domset/exact/domset_exact.cpp
 
-lib_sr_apx.so: build/util.o build/matching.o build/graph.o build/vc_apx.o build/vc_exact.o build/vc_lift.o build/vc_kernel.o build/bipartite.o build/treewidth.o build/treedecomp.o build/domset_exact.o sr_apx/setmap/setmap.hpp sr_apx/setmap/setmap.tpp
-	$(CC) -shared -o lib_sr_apx.so build/util.o build/matching.o build/graph.o build/vc_apx.o build/vc_exact.o build/vc_lift.o build/vc_kernel.o build/bipartite.o build/treewidth.o build/treedecomp.o
+lib_sr_apx.so: build/util.o build/matching.o build/graph.o build/vc_apx.o build/vc_exact.o build/vc_lift.o build/vc_kernel.o build/bipartite.o build/treewidth.o build/treedecomp.o build/table.o build/domset_exact.o sr_apx/setmap/setmap.hpp sr_apx/setmap/setmap.tpp
+	$(CC) -shared -o lib_sr_apx.so build/util.o build/matching.o build/graph.o build/vc_apx.o build/vc_exact.o build/vc_lift.o build/vc_kernel.o build/bipartite.o build/treewidth.o build/treedecomp.o  build/domset_exact.o build/table.o
 
 build/main.o: main.cpp
 	mkdir -p build
