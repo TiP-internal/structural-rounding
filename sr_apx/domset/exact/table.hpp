@@ -41,6 +41,10 @@ public:
         this->A_c = r->A_c;
         this->key = r->key;
         this->key_str = r->key_str;
+
+        for(auto it=r->domset_verts->begin(); it!=r->domset_verts->end(); it++) {
+            this->domset_verts->insert(*it);
+        }
     }
     
     ~Row() {

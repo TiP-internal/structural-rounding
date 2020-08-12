@@ -21,9 +21,9 @@ bool is_domset(Graph* graph, std::vector<int> domset) {
 
 void print_table(Table* tab, int i) {
     printf("\n===========================================\n");
-    printf("IN_DOMSET=1=1, DOMINATED=2=0, NOT_DOMINATED=3=0hat\n");
+    printf("IN_DOMSET=1=1,   DOMINATED=2=0,   NOT_DOMINATED=3=0hat\n");
     printf("          Table: %d, Label: %d, Type: %s  \n", i, tab->label, tab->table_type.c_str());
-    printf("  vertices \t\t |  A_ci  \n");
+    printf("  vertices \t\t |  A_ci \t | Soln. Set \n");
     printf("|");
     for(int j=0; j<tab->vertices.size(); j++) {
         printf("  %d  |", tab->vertices[j]);
@@ -37,7 +37,10 @@ void print_table(Table* tab, int i) {
         for(int k=0; k<r->coloring.size(); k++) {
             printf("  %d  |", r->coloring[k]);
         }
-        printf("%15d", r->A_c);
+        printf("%15d \t | ", r->A_c);
+        for(auto it=r->domset_verts->begin(); it!=r->domset_verts->end(); it++) {
+            printf(" %d,", *it);
+        }
         printf("\n");
     }
     

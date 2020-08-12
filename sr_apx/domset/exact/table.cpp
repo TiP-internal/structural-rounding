@@ -44,7 +44,6 @@ void Table::initialize_leaf_table() {
     for(auto it=bag->begin(); it!=bag->end(); it++) {  //3^ni time
         int v = *it;
         vertices.push_back(v);
-        printf("Vertex=%d\n", v);
 
         if(i==0) {
             //intitial rows for first vert.
@@ -142,13 +141,31 @@ void Table::update_forget_table(Table* child, int v) {
     this->intro_or_forget_vertex=v;
     this->child_table = child;
     
-    int v_index = get_vertex_col_index(v);  
-    vertices.erase(vertices.begin()+v_index);  //delete v from verts vec. O(ni)
+    //NOTE this extra loop could potentially be removed if we could
+    // guarantee that the "forgotten" vertex is at the first index.
+    int v_index = get_vertex_col_index(v);      //O(ni) 
+
+    vertices.erase(vertices.begin()+v_index);   //delete v from verts vec. O(ni)
     
+    //printf("forget v=%d, v_index=%d\n", v, v_index);
+
     for(int j=0; j<child->table.size(); j++) {  //3^ni
         //TODO only make copy if rowj/v not in table already.
+
+        // printf("\n\n\nchild->table[j] coloring=\n");
+        // for(int i=0; i<child->table[j]->coloring.size(); i++) {
+        //     printf(" %d,", child->table[j]->coloring[i]);
+        // }
+        // printf("\n");
+
         Row* rowj = new Row(child->table[j]);  //copy O(ni)
-        
+        // printf("\nrowj coloring=\n");
+        // for(int i=0; i<rowj->coloring.size(); i++) {
+        //     printf(" %d,", rowj->coloring[i]);
+        // }
+        // printf("\n");
+
+
         int color_v = rowj->coloring[v_index];
         int Aj_prevcolor_ind = child->lookup(rowj->key);
         int Aj_prevcolor = child->table[Aj_prevcolor_ind]->A_c;
@@ -167,7 +184,20 @@ void Table::update_forget_table(Table* child, int v) {
         int Ai_currcolor_ind = lookup(rowj_par->key);
         int Ai = table[Ai_currcolor_ind]->A_c;
         
-        if(color_v!=NOT_DOMINATED && Aj_prevcolor < Ai) {
+        //printf("color_v=%d, Aj_prevcolor=%d, Ai=%d\n", color_v, Aj_prevcolor, Ai);
+
+        //NOTE may need to add extra constraint here
+        if(color_v!=NOT_DOMINATED && Aj_prevcolor <= Ai) {
+            if(color_v==IN_DOMSET)  {
+                //Adds the forgotten vertex to the soln set if necessary
+                //printf("INSERTING\n");
+                rowj_par->domset_verts->insert(v);
+            }
+            else if(color_v==DOMINATED) {
+                //printf("REMOVING\n");
+                rowj_par->domset_verts->remove(v);
+            }
+            
             rowj_par->A_c = Aj_prevcolor;
         }
     }
@@ -383,12 +413,10 @@ int Table::locally_valid_coloring(Row* row) {
         
         k^2
      */
-    printf("locally valid coloring: ");
     int A_c = 0;
     bool valid = false;
     for(int i=0; i<vertices.size(); i++) {  //at most k
         int coloring_i = row->coloring[i];
-        printf(" %d, ", coloring_i);
 
         if(coloring_i == IN_DOMSET) {
             A_c++;
@@ -408,7 +436,6 @@ int Table::locally_valid_coloring(Row* row) {
             if(!actually_dominated) return INF;
         }
     }
-    printf("\n\n");
     return A_c;
 }
 
