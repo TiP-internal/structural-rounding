@@ -44,20 +44,30 @@ void Table::initialize_leaf_table() {
     for(auto it=bag->begin(); it!=bag->end(); it++) {  //3^ni time
         int v = *it;
         vertices.push_back(v);
-        
+        printf("Vertex=%d\n", v);
+
         if(i==0) {
             //intitial rows for first vert.
             r1 = new Row();
             r1->append_coloring(IN_DOMSET);
             insert_row(r1);
+            if(r1->coloring.size()==bag->size()) {  //if bag size==1
+                r1->A_c = locally_valid_coloring(r1);                   //k^2
+            }
                     
             r2 = new Row();
             r2->append_coloring(DOMINATED);
             insert_row(r2);
+            if(r2->coloring.size()==bag->size()) {
+                r2->A_c = locally_valid_coloring(r2);                   //k^2
+            }
             
             r3 = new Row();
             r3->append_coloring(NOT_DOMINATED);
             insert_row(r3);
+            if(r3->coloring.size()==bag->size()) {
+                r3->A_c = locally_valid_coloring(r3);                   //k^2
+            }
             
         } else {
             int tab_size = table.size();
@@ -67,22 +77,24 @@ void Table::initialize_leaf_table() {
                 Row* r2 = new Row(r_update);
                 r2->append_coloring(DOMINATED);
                 insert_row(r2);
+                if(r2->coloring.size()==bag->size()) {
+                    r2->A_c = locally_valid_coloring(r2);               //k^2
+                }
                 
                 Row* r3 = new Row(r_update);
                 r3->append_coloring(NOT_DOMINATED);
                 insert_row(r3);
-
+                if(r3->coloring.size()==bag->size()) {
+                    r3->A_c = locally_valid_coloring(r3);               //k^2
+                }
+                
                 update_row_add(r_update, IN_DOMSET);
+                if(r_update->coloring.size()==bag->size()) {
+                    r_update->A_c = locally_valid_coloring(r_update);   //k^2
+                }
             }
         }
-        
         i++;
-        if(i == bag->size()) {
-            r1->A_c = locally_valid_coloring(r1);               //k^2
-            r2->A_c = locally_valid_coloring(r2);               //k^2
-            r3->A_c = locally_valid_coloring(r3);               //k^2
-        }
-        
     }
     
     if(table.size()!=pow(3, vertices.size())) {
@@ -371,11 +383,13 @@ int Table::locally_valid_coloring(Row* row) {
         
         k^2
      */
+    printf("locally valid coloring: ");
     int A_c = 0;
     bool valid = false;
     for(int i=0; i<vertices.size(); i++) {  //at most k
         int coloring_i = row->coloring[i];
-        
+        printf(" %d, ", coloring_i);
+
         if(coloring_i == IN_DOMSET) {
             A_c++;
         }
@@ -394,7 +408,7 @@ int Table::locally_valid_coloring(Row* row) {
             if(!actually_dominated) return INF;
         }
     }
-    
+    printf("\n\n");
     return A_c;
 }
 
