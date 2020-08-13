@@ -122,7 +122,7 @@ public:
     
     //Functions
     int locally_valid_coloring(Row*);
-    int minAi_c(Table*, Table*, Row*, Row*, Row*);
+    void minAi_c(Table*, Table*, Row*, Row*, Row*);
     int get_vertex_col_index(int);
     
     void insert_row(Row*);

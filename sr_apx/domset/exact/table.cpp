@@ -112,7 +112,7 @@ void Table::update_join_table(Table* leftchildj, Table* rightchildk) {
      */
     
     int tab_size = leftchildj->table.size();
-    this->vertices = leftchildj->vertices;  //O(ni)
+    this->vertices = leftchildj->vertices;  //k
     
     this->left_child_table = leftchildj;
     this->right_child_table = rightchildk;
@@ -123,8 +123,7 @@ void Table::update_join_table(Table* leftchildj, Table* rightchildk) {
         
         Row* row_i = new Row();  //no copying here.
             
-        int Aic = minAi_c(leftchildj, rightchildk, row_i, row_k, row_j);        
-        row_i->A_c = Aic;
+        minAi_c(leftchildj, rightchildk, row_i, row_k, row_j);        
         insert_row(row_i);
     }
     
@@ -151,20 +150,12 @@ void Table::update_forget_table(Table* child, int v) {
 
     for(int j=0; j<child->table.size(); j++) {  //3^ni
         //TODO only make copy if rowj/v not in table already.
-
-        // printf("\n\n\nchild->table[j] coloring=\n");
-        // for(int i=0; i<child->table[j]->coloring.size(); i++) {
-        //     printf(" %d,", child->table[j]->coloring[i]);
-        // }
-        // printf("\n");
-
         Row* rowj = new Row(child->table[j]);  //copy O(ni)
         // printf("\nrowj coloring=\n");
         // for(int i=0; i<rowj->coloring.size(); i++) {
         //     printf(" %d,", rowj->coloring[i]);
         // }
         // printf("\n");
-
 
         int color_v = rowj->coloring[v_index];
         int Aj_prevcolor_ind = child->lookup(rowj->key);
@@ -190,12 +181,11 @@ void Table::update_forget_table(Table* child, int v) {
         if(color_v!=NOT_DOMINATED && Aj_prevcolor <= Ai) {
             if(color_v==IN_DOMSET)  {
                 //Adds the forgotten vertex to the soln set if necessary
-                //printf("INSERTING\n");
                 rowj_par->domset_verts->insert(v);
             }
             else if(color_v==DOMINATED) {
-                //printf("REMOVING\n");
-                rowj_par->domset_verts->remove(v);
+                rowj_par->domset_verts->remove(v); 
+                rowj_par->domset_verts = rowj_par->domset_verts->set_union(rowj->domset_verts);
             }
             
             rowj_par->A_c = Aj_prevcolor;
@@ -214,20 +204,20 @@ void Table::update_introduce_table(Table* child, int v) {
     Set* neighbors_v = bag->set_intersection(graph->neighbors(v));
     int tab_size = child->table_lookups.size();
     
-    this->vertices = child->vertices;               //O(ni)
+    this->vertices = child->vertices;               //k
     this->vertices.push_back(v);
     this->child_table = child;
     this->intro_or_forget_vertex = v;
     
     for(int i=0; i<tab_size; i++) {  //3^ni 
-        Row* r_update = new Row(child->table[i]);   //O(ni)
+        Row* r_update = new Row(child->table[i]);   //k
         insert_row(r_update);
         
-        Row* r2 = new Row(r_update);                //O(ni)
+        Row* r2 = new Row(r_update);                //k
         r2->append_coloring(DOMINATED);
         insert_row(r2);
         
-        Row* r3 = new Row(r_update);                //O(ni)
+        Row* r3 = new Row(r_update);                //k
         r3->append_coloring(NOT_DOMINATED);
         insert_row(r3);
         
@@ -264,20 +254,21 @@ void Table::update_introduce_table(Table* child, int v) {
 //-----------------
 
 
-int Table::minAi_c(Table* childj, Table* childk, Row* row_i, Row* row_k, Row* row_j) {
+void Table::minAi_c(Table* childj, Table* childk, Row* row_i, Row* row_k, Row* row_j) {
     /*
      * 
      */
-    
+
     //First, find all possible c' and c'' which divide c.
     std::vector<std::string> c_prime;
     std::vector<std::string> c_primeprime;
     
     int num_ones = 0;   //number of 1's (IN_DOMSET's) in the coloring. 
-    int k = 0; //number of 0's in the coloring.
-    for(int i=0; i<row_j->coloring.size(); i++) { //ni
+    for(int i=0; i<row_j->coloring.size(); i++) { //k
         
         int c_t = row_j->coloring[i]; 
+        //printf("c_t=%d\n", c_t);
+
         update_coloring_add(row_i, c_t);
         
         if(c_t == IN_DOMSET) num_ones++;
@@ -306,7 +297,6 @@ int Table::minAi_c(Table* childj, Table* childk, Row* row_i, Row* row_k, Row* ro
                 }
             }
         } else if (c_t == DOMINATED ) {
-            k++;
         
             if(cprime_size==0 && cprimeprime_size==0) {
                 //---- c'_t = 0
@@ -347,7 +337,7 @@ int Table::minAi_c(Table* childj, Table* childk, Row* row_i, Row* row_k, Row* ro
                     
                     //---------
                     //1. make copy
-                    std::string cprimeprime_t_str = c_primeprime[t]; //O(ni)
+                    std::string cprimeprime_t_str = c_primeprime[t]; //k
                     
                     //2. update current
                     c_primeprime[t]=c_primeprime[t]+std::to_string(NOT_DOMINATED);
@@ -364,6 +354,9 @@ int Table::minAi_c(Table* childj, Table* childk, Row* row_i, Row* row_k, Row* ro
     
     //Now, find Ai(c) ← min{Aj(c')+ Ak(c'') − #1(c) | c' and c'' divide c }
     int min_Ai = INF;
+    int A_jcprime_ind_final = -1;
+    int A_kprimeprime_ind_final = -1;
+
     for(int i=0; i<c_prime.size(); i++) {  
         int A_jcprime_ind = childj->lookup(stoi(c_prime[i]));
         int A_jcprime = childj->table[A_jcprime_ind]->A_c;
@@ -371,14 +364,25 @@ int Table::minAi_c(Table* childj, Table* childk, Row* row_i, Row* row_k, Row* ro
         int A_kprimeprime_ind = childk->lookup(stoi(c_primeprime[i]));
         int A_kprimeprime = childk->table[A_kprimeprime_ind]->A_c;
                 
+        //printf("c'=%d, c''=%d\n", stoi(c_prime[i]), stoi(c_primeprime[i]));
         int val;
         if(A_jcprime==INF || A_kprimeprime==INF) val = INF;
         else val = A_jcprime + A_kprimeprime - num_ones;
         
-        if(val < min_Ai) min_Ai = val;
+        if(val < min_Ai) {   
+            min_Ai = val;
+            A_jcprime_ind_final = A_jcprime_ind;
+            A_kprimeprime_ind_final = A_kprimeprime_ind;
+        }
     }
     
-    return min_Ai;
+    //NOTE constructing solution here.
+    //TODO double check this?--set union or other?
+    Row* rj = childj->table[A_jcprime_ind_final];
+    Row* rk = childk->table[A_kprimeprime_ind_final];
+    row_i->domset_verts = rj->domset_verts->set_union(rk->domset_verts);
+    row_i->A_c = min_Ai;
+    //printf("\n\n");
 }
 
 
