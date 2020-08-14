@@ -25,7 +25,7 @@ class Row {
 public:
     //NOTE could possiby delete the vector after table is finished creating?
     std::vector<int> coloring;      //all possible colorings for the xi verts
-    Set* domset_verts = new Set();  //NOTE not sure if this is necessary.
+    Set* domset_verts = new Set();  //Holds domset soln verts
     int A_c;                        //domset size
     int key;
     std::string key_str = "";
@@ -101,36 +101,19 @@ public:
 
 
 class Table {
-//private:
-public:
-    Graph* graph;
-    Set* bag;
-    Map<int> table_lookups;  //key=the unique coloring, value=index of row in the table. 
-    
-    //-----NOTE could use inheritance for these.
-    //      Forget/Introduce
-    int intro_or_forget_vertex;
-    Table* child_table;
-    
-    //      Join
-    Table* left_child_table;
-    Table* right_child_table;
-    //-----
-    
-    int label;  //NOTE for testing
-    std::string table_type; //leaf, intro, forget, join
-    
-    //Functions
-    int locally_valid_coloring(Row*);
-    void minAi_c(Table*, Table*, Row*, Row*, Row*);
+private:
+    Set* bag;  //NOTE necessrary to store?
+        
+    //Private Functions
+    int locally_valid_coloring(Graph*, Row*);
+    void minAi_c(Table*, Row*, Row*);
     int get_vertex_col_index(int);
     
     void insert_row(Row*);
-    void update_coloring_add(Row*, int);
     void update_row_add(Row*, int);
-    void update_row_delete(Row*, int);
     
 public:
+    int label;  //NOTE stores the current bag index
     //vector of the vertices in the current bag.
     //table[i].coloring[j] corresponds to the coloring of vertices[j] vertex. 
     //could probably delete after table creation since we have pointer to bag.
@@ -138,15 +121,18 @@ public:
     
     //Keeping this because we need to iterate over rows in order. 
     std::vector<Row*> table;   //vector containing pointers to row structs
+    Map<int> table_lookups;  //key=the unique coloring, value=index of row in the table. 
     
+    
+    //Public Functions
     Table(); 
-    Table(Graph*, Set*, std::string, int); //table constructor
+    Table(Set*, int); //table constructor
     ~Table();
     
-    void initialize_leaf_table();
-    void update_join_table(Table*, Table*);
-    void update_forget_table(Table*, int);
-    void update_introduce_table(Table*, int);
+    void initialize_leaf_table(Graph*);
+    void update_join_table(Table*, int);
+    void update_forget_table(int, int);
+    void update_introduce_table(Graph*, int, int);
     
     int lookup(int);
 };

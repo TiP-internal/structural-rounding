@@ -17,7 +17,9 @@ Set* calc_domset(Graph*, TreeDecomp*);
 
 //For testing
 bool is_domset(Graph*, std::vector<int>);
-void print_table(Table*, int);
+
+void print_row(Row*);
+void print_table(Table*, std::string);
 void print_tables(std::vector<Table*>);
 void print_lookups(Table*);
 

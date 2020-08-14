@@ -9,15 +9,12 @@
 #include <limits>  //infinity
 
 
-Table::Table(Graph* graph, Set* bag, std::string type, int lab) {
+Table::Table(Set* bag, int lab) {
     /*
      * Table constructor.
      */
-    
-    this->graph = graph;
     this->bag = bag;
     this->label = lab;
-    this->table_type = type;
 }
 
 
@@ -26,7 +23,7 @@ Table::~Table() {
 }
 
 
-void Table::initialize_leaf_table() {
+void Table::initialize_leaf_table(Graph* graph) {
     /*
      * ni*3^ni
      * 
@@ -51,21 +48,21 @@ void Table::initialize_leaf_table() {
             r1->append_coloring(IN_DOMSET);
             insert_row(r1);
             if(r1->coloring.size()==bag->size()) {  //if bag size==1
-                r1->A_c = locally_valid_coloring(r1);                   //k^2
+                r1->A_c = locally_valid_coloring(graph, r1);                   //k^2
             }
                     
             r2 = new Row();
             r2->append_coloring(DOMINATED);
             insert_row(r2);
             if(r2->coloring.size()==bag->size()) {
-                r2->A_c = locally_valid_coloring(r2);                   //k^2
+                r2->A_c = locally_valid_coloring(graph, r2);                   //k^2
             }
             
             r3 = new Row();
             r3->append_coloring(NOT_DOMINATED);
             insert_row(r3);
             if(r3->coloring.size()==bag->size()) {
-                r3->A_c = locally_valid_coloring(r3);                   //k^2
+                r3->A_c = locally_valid_coloring(graph, r3);                   //k^2
             }
             
         } else {
@@ -77,19 +74,19 @@ void Table::initialize_leaf_table() {
                 r2->append_coloring(DOMINATED);
                 insert_row(r2);
                 if(r2->coloring.size()==bag->size()) {
-                    r2->A_c = locally_valid_coloring(r2);               //k^2
+                    r2->A_c = locally_valid_coloring(graph, r2);               //k^2
                 }
                 
                 Row* r3 = new Row(r_update);
                 r3->append_coloring(NOT_DOMINATED);
                 insert_row(r3);
                 if(r3->coloring.size()==bag->size()) {
-                    r3->A_c = locally_valid_coloring(r3);               //k^2
+                    r3->A_c = locally_valid_coloring(graph, r3);               //k^2
                 }
                 
                 update_row_add(r_update, IN_DOMSET);
                 if(r_update->coloring.size()==bag->size()) {
-                    r_update->A_c = locally_valid_coloring(r_update);   //k^2
+                    r_update->A_c = locally_valid_coloring(graph, r_update);   //k^2
                 }
             }
         }
@@ -103,116 +100,107 @@ void Table::initialize_leaf_table() {
 }
 
 
-void Table::update_join_table(Table* leftchildj, Table* rightchildk) {
+void Table::update_join_table(Table* leftchildj, int new_label) {
     /*
-     * j is left
-     * k is right
+     * j is left  
+     * k is right  -- calling table
      * 
      * i is parent table
      */
-    
-    int tab_size = leftchildj->table.size();
-    this->vertices = leftchildj->vertices;  //k
-    
-    this->left_child_table = leftchildj;
-    this->right_child_table = rightchildk;
+    this->label = new_label;
+    int tab_size = table.size();
     
     for(int i=0; i<tab_size; i++) {  //4^ni
         Row* row_j = leftchildj->table[i];
-        Row* row_k = rightchildk->table[i];
-        
-        Row* row_i = new Row();  //no copying here.
+        Row* row_k = table[i];
             
-        minAi_c(leftchildj, rightchildk, row_i, row_k, row_j);        
-        insert_row(row_i);
+        minAi_c(leftchildj, row_k, row_j);        
     }
     
-    print_table(this, 1);
+    std::string type = "Join";
+    print_table(this, type);
     print_lookups(this);
 }
 
 
-void Table::update_forget_table(Table* child, int v) {
+void Table::update_forget_table(int v, int new_label) {
     /*
      * 
-     */    
-    this->vertices = child->vertices;           //O(ni)
-    this->intro_or_forget_vertex=v;
-    this->child_table = child;
-    
+     */   
+    this->label = new_label;
+
     //NOTE this extra loop could potentially be removed if we could
     // guarantee that the "forgotten" vertex is at the first index.
-    int v_index = get_vertex_col_index(v);      //O(ni) 
-
-    vertices.erase(vertices.begin()+v_index);   //delete v from verts vec. O(ni)
+    int v_index = get_vertex_col_index(v);      //k
+    vertices.erase(vertices.begin()+v_index);   //delete v from verts vec. k
+    int table_size = table.size();
     
-    //printf("forget v=%d, v_index=%d\n", v, v_index);
-
-    for(int j=0; j<child->table.size(); j++) {  //3^ni
-        //TODO only make copy if rowj/v not in table already.
-        Row* rowj = new Row(child->table[j]);  //copy O(ni)
-        // printf("\nrowj coloring=\n");
-        // for(int i=0; i<rowj->coloring.size(); i++) {
-        //     printf(" %d,", rowj->coloring[i]);
-        // }
-        // printf("\n");
-
-        int color_v = rowj->coloring[v_index];
-        int Aj_prevcolor_ind = child->lookup(rowj->key);
-        int Aj_prevcolor = child->table[Aj_prevcolor_ind]->A_c;
+    int curr_index = 0;
+    for(int j=0; j<table_size; j++) {                   //3^ni
+        Row* row_child = table[curr_index];
         
-        update_row_delete(rowj, v_index);  //O(ni)
+        int color_v = row_child->coloring[v_index];
+        int Aj = row_child->A_c;
         
-        //copying child table to parent table so must insert row. 
-        if(!table_lookups.contains(rowj->key)) {
-            insert_row(rowj);
+        table_lookups.erase(row_child->key);
+        row_child->remove_from_coloring(v_index);       //k
+
+        int par_row_ind;
+        Row* row_par;
+        if(table_lookups.contains(row_child->key)) {  // row has already been added
+            //delete_row(curr_index);
+            table.erase(table.begin()+curr_index); 
+            curr_index--;
+            
+            par_row_ind = lookup(row_child->key);   // get the parent row which has been added.
+            row_par = table[par_row_ind];
+        } else {  //row needs readding to table lookups
+            par_row_ind = curr_index;
+            row_par = table[par_row_ind];  
+            
+            //add to table lookups.
+            table_lookups.insert(row_par->key, par_row_ind);  //same index, updated key
         }
         
-        //get the actual row in the parent table.
-        int par_rowj_ind = lookup(rowj->key);
-        Row* rowj_par = table[par_rowj_ind];  //not copying
+        int Ai_ind = lookup(row_par->key);
+        int Ai = table[Ai_ind]->A_c;
         
-        int Ai_currcolor_ind = lookup(rowj_par->key);
-        int Ai = table[Ai_currcolor_ind]->A_c;
-        
-        //printf("color_v=%d, Aj_prevcolor=%d, Ai=%d\n", color_v, Aj_prevcolor, Ai);
-
         //NOTE may need to add extra constraint here
-        if(color_v!=NOT_DOMINATED && Aj_prevcolor <= Ai) {
+        if(color_v!=NOT_DOMINATED && Aj <= Ai) {
             if(color_v==IN_DOMSET)  {
                 //Adds the forgotten vertex to the soln set if necessary
-                rowj_par->domset_verts->insert(v);
+                row_par->domset_verts->insert(v);
             }
             else if(color_v==DOMINATED) {
-                rowj_par->domset_verts->remove(v); 
-                rowj_par->domset_verts = rowj_par->domset_verts->set_union(rowj->domset_verts);
+                row_par->domset_verts->remove(v); 
+                row_par->domset_verts = row_par->domset_verts->set_union(row_child->domset_verts);
             }
             
-            rowj_par->A_c = Aj_prevcolor;
+            row_par->A_c = Aj;
         }
+        curr_index++;
     }
 
-    print_table(this, 2);
+    std::string type = "Forget";
+    print_table(this, type);
     print_lookups(this);
 }
 
         
-void Table::update_introduce_table(Table* child, int v) {
+void Table::update_introduce_table(Graph* graph, int v, int new_label) {
     /*
      * 
      */
-    Set* neighbors_v = bag->set_intersection(graph->neighbors(v));
-    int tab_size = child->table_lookups.size();
+    this->label = new_label;
     
-    this->vertices = child->vertices;               //k
+    Set* neighbors_v = bag->set_intersection(graph->neighbors(v));
+    int tab_size = table_lookups.size();
+    
     this->vertices.push_back(v);
-    this->child_table = child;
-    this->intro_or_forget_vertex = v;
     
     for(int i=0; i<tab_size; i++) {  //3^ni 
-        Row* r_update = new Row(child->table[i]);   //k
-        insert_row(r_update);
-        
+        Row* r_update = table[i];                   //k
+                
         Row* r2 = new Row(r_update);                //k
         r2->append_coloring(DOMINATED);
         insert_row(r2);
@@ -224,8 +212,8 @@ void Table::update_introduce_table(Table* child, int v) {
         //TODO Double check these.
         //x is IN_DOMSET
         int new_col_key = r_update->phi(neighbors_v->size()); //k
-        int A_phi_ind = child->lookup(new_col_key);
-        int A_phi = child->table[A_phi_ind]->A_c;
+        int A_phi_ind = lookup(new_col_key);
+        int A_phi = table[A_phi_ind]->A_c;
         
         r_update->A_c = A_phi+1;
         update_row_add(r_update, IN_DOMSET);
@@ -246,7 +234,9 @@ void Table::update_introduce_table(Table* child, int v) {
     
     }
     delete neighbors_v;
-    print_table(this, 1);
+    
+    std::string type = "Introduce";
+    print_table(this, type);
     print_lookups(this);
 }
 
@@ -254,9 +244,9 @@ void Table::update_introduce_table(Table* child, int v) {
 //-----------------
 
 
-void Table::minAi_c(Table* childj, Table* childk, Row* row_i, Row* row_k, Row* row_j) {
+void Table::minAi_c(Table* childj, Row* row_k, Row* row_j) {
     /*
-     * 
+     * j is this child
      */
 
     //First, find all possible c' and c'' which divide c.
@@ -264,12 +254,9 @@ void Table::minAi_c(Table* childj, Table* childk, Row* row_i, Row* row_k, Row* r
     std::vector<std::string> c_primeprime;
     
     int num_ones = 0;   //number of 1's (IN_DOMSET's) in the coloring. 
-    for(int i=0; i<row_j->coloring.size(); i++) { //k
-        
-        int c_t = row_j->coloring[i]; 
+    for(int i=0; i<row_k->coloring.size(); i++) { //k
+        int c_t = row_k->coloring[i]; 
         //printf("c_t=%d\n", c_t);
-
-        update_coloring_add(row_i, c_t);
         
         if(c_t == IN_DOMSET) num_ones++;
         
@@ -297,7 +284,6 @@ void Table::minAi_c(Table* childj, Table* childk, Row* row_i, Row* row_k, Row* r
                 }
             }
         } else if (c_t == DOMINATED ) {
-        
             if(cprime_size==0 && cprimeprime_size==0) {
                 //---- c'_t = 0
                 std::string cprime0_str = "";
@@ -318,7 +304,6 @@ void Table::minAi_c(Table* childj, Table* childk, Row* row_i, Row* row_k, Row* r
                 std::string cprimeprime1_str = "";
                 cprimeprime1_str = cprimeprime1_str+std::to_string(DOMINATED);
                 c_primeprime.push_back(cprimeprime1_str);
-                
             } else {
                 //NOTE combine these for loops
                 for(int t=0; t<cprime_size; t++) {
@@ -333,7 +318,6 @@ void Table::minAi_c(Table* childj, Table* childk, Row* row_i, Row* row_k, Row* r
                     
                     //4. add second pair to end of vector
                     c_prime.push_back(cprime_t_str);
-                    
                     
                     //---------
                     //1. make copy
@@ -361,8 +345,8 @@ void Table::minAi_c(Table* childj, Table* childk, Row* row_i, Row* row_k, Row* r
         int A_jcprime_ind = childj->lookup(stoi(c_prime[i]));
         int A_jcprime = childj->table[A_jcprime_ind]->A_c;
         
-        int A_kprimeprime_ind = childk->lookup(stoi(c_primeprime[i]));
-        int A_kprimeprime = childk->table[A_kprimeprime_ind]->A_c;
+        int A_kprimeprime_ind = lookup(stoi(c_primeprime[i]));
+        int A_kprimeprime = table[A_kprimeprime_ind]->A_c;
                 
         //printf("c'=%d, c''=%d\n", stoi(c_prime[i]), stoi(c_primeprime[i]));
         int val;
@@ -377,12 +361,11 @@ void Table::minAi_c(Table* childj, Table* childk, Row* row_i, Row* row_k, Row* r
     }
     
     //NOTE constructing solution here.
-    //TODO double check this?--set union or other?
     Row* rj = childj->table[A_jcprime_ind_final];
-    Row* rk = childk->table[A_kprimeprime_ind_final];
-    row_i->domset_verts = rj->domset_verts->set_union(rk->domset_verts);
-    row_i->A_c = min_Ai;
-    //printf("\n\n");
+    Row* rk = table[A_kprimeprime_ind_final];
+    
+    row_k->domset_verts = rj->domset_verts->set_union(rk->domset_verts);
+    row_k->A_c = min_Ai;
 }
 
 
@@ -398,7 +381,7 @@ int Table::get_vertex_col_index(int v) {
 }
 
 
-int Table::locally_valid_coloring(Row* row) {
+int Table::locally_valid_coloring(Graph* graph, Row* row) {
     /*
      * A_c is the size of the dominating set of the specific coloring in the row.
      * If its an invalid coloring, return -99;
@@ -428,7 +411,7 @@ int Table::locally_valid_coloring(Row* row) {
         
         if(coloring_i == DOMINATED) {  //if a vertex is set to DOMINATED
             bool actually_dominated = false;
-            
+                
             for(int j=0; j<vertices.size(); j++) {  //at most k
                 int coloring_j = row->coloring[j];
                 
@@ -446,6 +429,7 @@ int Table::locally_valid_coloring(Row* row) {
 
 int Table::lookup(int key) {
     //Returns the INDEX of the row in the table.
+    if(!table_lookups.contains(key)) return -1;
     return table_lookups[key];
 }
 
@@ -458,12 +442,6 @@ void Table::insert_row(Row* r) {
     table_lookups.insert(r->key, index);
 }
 
-
-void Table::update_coloring_add(Row* r, int value) {
-    //updates the key in the row, along with the coloring vect. 
-    //does not add to the table/table_lookups 
-    r->append_coloring(value);
-}
 
 void Table::update_row_add(Row* r, int value) {
     /* must update key in table_lookups whenever we add values
@@ -479,13 +457,5 @@ void Table::update_row_add(Row* r, int value) {
     //2. re-insert into table_lookups
     r->append_coloring(value);
     table_lookups.insert(r->key, index);  //same index, updated key
-}
-
-
-void Table::update_row_delete(Row* r, int v_index) {
-    //1. erase
-    int index = lookup(r->key);
-    table_lookups.erase(r->key);
-    r->remove_from_coloring(v_index);  //O(ni)
 }
 
