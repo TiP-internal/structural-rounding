@@ -133,7 +133,8 @@ Set* get_solution(Table* table) {
 }
 
 
-std::vector<Set*> calc_domset(Graph* graph, TreeDecomp* decomp, bool annotated_version) {
+std::vector<Set*> calc_domset(Graph* graph, TreeDecomp* decomp, 
+                              Set* optional_verts, bool annotated_version) {
     /*
      * Calculates the minimum dominating set given a tree decomp.
      * Must calculate for each component in the decomp. 
@@ -146,7 +147,9 @@ std::vector<Set*> calc_domset(Graph* graph, TreeDecomp* decomp, bool annotated_v
     Set* dom_set;
     std::vector<Set*> component_tables;
     for(int j=0; j<decomp->components_bags.size(); j++) {
-        Table* final_table = calculate_tables(graph, decomp->components_bags[j], postorder[j]);
+        Table* final_table = calculate_tables(graph, decomp->components_bags[j], 
+                                              postorder[j], optional_verts,
+                                              annotated_version);
         dom_set = get_solution(final_table); 
         
         printf("\n");
@@ -158,7 +161,9 @@ std::vector<Set*> calc_domset(Graph* graph, TreeDecomp* decomp, bool annotated_v
 }
 
 
-Table* calculate_tables(Graph* graph, std::vector<Set*>& bags, std::vector<po_bag>& postorder) {
+Table* calculate_tables(Graph* graph, std::vector<Set*>& bags, 
+                        std::vector<po_bag>& postorder, 
+                        Set* optional_verts, bool annotated_version) {
     /*     
      * Dynamic programming algorithm, for dominating set on graphs 
      * w/ bounded treewidth.
@@ -179,7 +184,7 @@ Table* calculate_tables(Graph* graph, std::vector<Set*>& bags, std::vector<po_ba
         if(num_children==2) {          //-----------------------JOIN bag
             printf("JOIN BAG %d\n", bag_index);
             
-            //get child table indices. NOTE this could probably be improved 
+            //get child table indices, this could probably be improved 
             int table_index_child_left=-99;
             int table_index_child_right=-99;
 //             for(int j=0; j<postorder.size(); j++) {             //O(n)

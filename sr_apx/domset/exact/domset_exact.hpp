@@ -11,8 +11,8 @@
 #include "treedecomp.hpp"
 
 
-Table* calculate_tables(Graph*, std::vector<Set*>&, std::vector<po_bag>&);
-std::vector<Set*> calc_domset(Graph*, TreeDecomp*, bool);
+Table* calculate_tables(Graph*, std::vector<Set*>&, std::vector<po_bag>&, Set*, bool);
+std::vector<Set*> calc_domset(Graph*, TreeDecomp*, Set*, bool);
 
 Table* initialize_leaf_table(Graph*, Set*, int);
 void update_introduce_table(Graph*, Table*, Set*, int, int);
