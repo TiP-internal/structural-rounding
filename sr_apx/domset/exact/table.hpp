@@ -70,50 +70,12 @@ public:
         key = stoi(key_str);
     }
 
-    int phi(int num_neigbs) {
-        /*
-         *  φ : {0, ˆ0, 1}^nj → {0, ˆ0, 1}^nj 
-         * on the set of colorings of Xj. 
-         * For c =(c1,... ,c_nj ) ∈ {0, ˆ0, 1}^nj , let φ(c):= (c'_1,... ,c'_nj ) 
-         * such that
-         * 
-         * c'_t = 0ˆ if t ∈ {p1,... ,ps} and ct =0  OR
-         * c'_t = c_t otherwise.
-         * 
-         * TODO use actual indexes of neighbors in the coloring vertex?
-         * 
-         * returns key of the new coloring
-         */
-        
-        std::string k_str = "";
-        for(int i=0; i<coloring.size(); i++) {
-            if( coloring[i] == DOMINATED  && i< num_neigbs) {
-                std::string k = std::to_string(NOT_DOMINATED); 
-                k_str = k_str+k;
-            } else {
-                std::string k = std::to_string(coloring[i]); 
-                k_str = k_str+k;
-            }
-        }
-        return stoi(k_str);
-    }
 };
 
 
 class Table {
-private:
-    //Set* bag;  //NOTE necessrary to store?
-        
-    //Private Functions
-    int locally_valid_coloring(Graph*, Row*);
-    void minAi_c(Table*, Row*, Row*);
-    int get_vertex_col_index(int);
-    
-    void insert_row(Row*);
-    void update_row_add(Row*, int);
-    
 public:
-    int label;  //NOTE stores the current bag index
+    int label;  //stores the current bag index
     //vector of the vertices in the current bag.
     //table[i].coloring[j] corresponds to the coloring of vertices[j] vertex. 
     //could probably delete after table creation since we have pointer to bag.
@@ -121,18 +83,16 @@ public:
     
     //Keeping this because we need to iterate over rows in order. 
     std::vector<Row*> table;   //vector containing pointers to row structs
-    Map<int> table_lookups;  //key=the unique coloring, value=index of row in the table. 
+    Map<int> table_lookups;    //key=the unique coloring, value=index of row in the table. 
     
     //Public Functions
     Table(); 
-    Table(int); //table constructor
+    Table(int);
     ~Table();
     
-    void initialize_leaf_table(Graph*, Set*);
-    void update_join_table(Table*, int);
-    void update_forget_table(int, int);
-    void update_introduce_table(Graph*, Set*, int, int);
-    
+    void insert_row(Row*);
+    void update_row_add(Row*, int);
+    int get_vertex_col_index(int);
     int lookup(int);
 };
 
