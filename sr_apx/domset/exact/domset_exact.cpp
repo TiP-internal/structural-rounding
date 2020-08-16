@@ -4,13 +4,38 @@
 #include <cstdio>
 
 //---for testing
-bool is_domset(Graph* graph, std::vector<int> domset) {
+bool is_domset(Graph* graph, Set* domset) {
     for(auto it=graph->begin(); it!=graph->end(); it++) {
         int v=*it;
         bool adjacent = false;
-        for(int i=0; i<domset.size(); i++) {
-            int u=domset[i];
+        //for(int i=0; i<domset->size(); i++) {
+        for(auto ids=domset->begin(); ids!=domset->end(); ids++) {
+            int u=*ids;
             if(graph->adjacent(v, u)) {
+                adjacent=true;
+            }
+        }
+        if(!adjacent) return false;
+    }
+    return true;
+}
+
+bool is_ann_domset(Graph* graph, Set* domset, Set* NX) {
+    /*
+     * For the annotated version of DS.  
+     * 
+     * B=V\N[X] MUST be dominated.
+     * 
+     * N[X] CAN be dominated, but its optional. 
+     */
+    for(auto it=graph->begin(); it!=graph->end(); it++) {
+        int v=*it;
+        bool adjacent = false;
+        for(auto ids=domset->begin(); ids!=domset->end(); ids++) {
+            int u=*ids;
+            if(graph->adjacent(v, u)) {
+                adjacent=true;
+            } else if (NX->contains(v)) {  //Doenst need to be dominated.
                 adjacent=true;
             }
         }
@@ -108,17 +133,15 @@ Set* get_solution(Table* table) {
 }
 
 
-Set* calc_domset(Graph* graph, TreeDecomp* decomp) {
+std::vector<Set*> calc_domset(Graph* graph, TreeDecomp* decomp) {
     /*
      * Calculates the minimum dominating set given a tree decomp.
      * Must calculate for each component in the decomp. 
-     * 
-     * TODO must update to handle each component.
-     */
+    */
     std::vector<std::vector<po_bag>> postorder = decomp->get_post_order();
 
     Set* dom_set;
-    // std::vector<Table*> component_tables;
+    std::vector<Set*> component_tables;
     for(int j=0; j<decomp->components_bags.size(); j++) {
         Table* final_table = calculate_tables(graph, decomp->components_bags[j], postorder[j]);
         dom_set = get_solution(final_table); 
@@ -126,9 +149,9 @@ Set* calc_domset(Graph* graph, TreeDecomp* decomp) {
         printf("\n");
         for(auto it=dom_set->begin(); it!=dom_set->end(); it++) printf("soln set verts=%d\n", *it);
         
-        // component_tables.push_back(comp); 
+        component_tables.push_back(dom_set); 
     }
-    return dom_set;
+    return component_tables;
 }
 
 

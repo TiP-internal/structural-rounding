@@ -12,11 +12,11 @@
 
 
 Table* calculate_tables(Graph*, std::vector<Set*>&, std::vector<po_bag>&);
-
-Set* calc_domset(Graph*, TreeDecomp*);
+std::vector<Set*> calc_domset(Graph*, TreeDecomp*);
 
 //For testing
 bool is_domset(Graph*, std::vector<int>);
+bool is_ann_domset(Graph*, Set*, Set*);
 
 void print_row(Row*);
 void print_table(Table*, std::string);
