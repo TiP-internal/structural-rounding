@@ -14,13 +14,13 @@
 Table* calculate_tables(Graph*, std::vector<Set*>&, std::vector<po_bag>&, Set*, bool);
 std::vector<Set*> calc_domset(Graph*, TreeDecomp*, Set*, bool);
 
-Table* initialize_leaf_table(Graph*, Set*, int);
-void update_introduce_table(Graph*, Table*, Set*, int, int);
-void update_forget_table(Table*, int, int);
-void update_join_table(Table*, Table*, int);
+Table* initialize_leaf_table(Graph*, Set*, Set*, int, bool);
+void update_introduce_table(Graph*, Table*, Set*, Set*, int, int, bool);
+void update_forget_table(Table*, Set*, int, int, bool);
+void update_join_table(Table*, Table*, Set*, int, bool);
     
 
-int locally_valid_coloring(Graph*, Row*, std::vector<int> &);
+int locally_valid_coloring(Graph*, Set*, Row*, std::vector<int> &, bool);
 void minAi_c(Table*, Table*, Row*, Row*);
 int phi(Row*, int);
     

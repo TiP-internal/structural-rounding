@@ -125,7 +125,7 @@ Set* get_solution(Table* table) {
     Row* soln_row = table->table[soln_index];
     for(int i=0; i<soln_row->coloring.size(); i++) {
         if(soln_row->coloring[i]==IN_DOMSET) {
-            soln_row->domset_verts->insert(soln_row->coloring[i]);
+            soln_row->domset_verts->insert(table->vertices[i]);
         }
     }
     
@@ -204,7 +204,10 @@ Table* calculate_tables(Graph* graph, std::vector<Set*>& bags,
             Table* left_child_table = tables[tables.size()-2];  //TODO find correct left table
             Table* right_child_table = tables[tables.size()-1];
             
-            update_join_table(right_child_table, left_child_table, bag_index);
+            update_join_table(right_child_table, left_child_table, 
+                              optional_verts, bag_index, 
+                              annotated_version);
+            
             tables.erase(tables.begin()+tables.size()-2);  // delete the left child table. 
 
         } else if(num_children==1) {     //-------------------either INTRODUCE or FORGET bag
@@ -226,7 +229,8 @@ Table* calculate_tables(Graph* graph, std::vector<Set*>& bags,
                 }
                 
                 Table* child_table = tables[child_bag_table_index];
-                update_introduce_table(graph, child_table, child_bag, v, bag_index);
+                update_introduce_table(graph, child_table, child_bag, optional_verts,
+                                       v, bag_index, annotated_version);
                 
             } else if(parent_bag->size() < child_bag->size()) { // forget node
                 printf("FORGET BAG %d\n", bag_index);
@@ -240,7 +244,8 @@ Table* calculate_tables(Graph* graph, std::vector<Set*>& bags,
                 
                 //update table here
                 Table* child_table = tables[child_bag_table_index];
-                update_forget_table(child_table, v, bag_index);
+                update_forget_table(child_table, optional_verts, 
+                                    v, bag_index, annotated_version);
                 
             } else {
                 printf("ERROR: in find_bagtype(), parent and child should not have same size.\n");
@@ -250,7 +255,8 @@ Table* calculate_tables(Graph* graph, std::vector<Set*>& bags,
             //leaf bag, need to initialize table.
             printf("LEAF BAG %d\n", bag_index);
             
-            Table* table = initialize_leaf_table(graph, bags[bag_index], bag_index);
+            Table* table = initialize_leaf_table(graph, bags[bag_index], optional_verts,
+                                                 bag_index, annotated_version);
             tables.push_back(table);
             
             std::string type = "Leaf";
@@ -272,7 +278,8 @@ Table* calculate_tables(Graph* graph, std::vector<Set*>& bags,
 //---
 
 
-Table* initialize_leaf_table(Graph* graph, Set* bag, int bag_index) {
+Table* initialize_leaf_table(Graph* graph, Set* bag, Set* optional_verts,
+                             int bag_index, bool annotated_version) {
     /*
      * ni*3^ni
      * 
@@ -298,21 +305,27 @@ Table* initialize_leaf_table(Graph* graph, Set* bag, int bag_index) {
             r1->append_coloring(IN_DOMSET);
             table->insert_row(r1);
             if(r1->coloring.size()==bag->size()) {  //if bag size==1
-                r1->A_c = locally_valid_coloring(graph, r1, table->vertices);                   //k^2
+                r1->A_c = locally_valid_coloring(graph, optional_verts, 
+                                                 r1, table->vertices, 
+                                                 annotated_version);                   //k^2
             }
                     
             r2 = new Row();
             r2->append_coloring(DOMINATED);
             table->insert_row(r2);
             if(r2->coloring.size()==bag->size()) {
-                r2->A_c = locally_valid_coloring(graph, r2, table->vertices);                   //k^2
+                r2->A_c = locally_valid_coloring(graph, optional_verts, 
+                                                 r2, table->vertices, 
+                                                 annotated_version);                   //k^2
             }
             
             r3 = new Row();
             r3->append_coloring(NOT_DOMINATED);
             table->insert_row(r3);
             if(r3->coloring.size()==bag->size()) {
-                r3->A_c = locally_valid_coloring(graph, r3, table->vertices);                   //k^2
+                r3->A_c = locally_valid_coloring(graph, optional_verts, 
+                                                 r3, table->vertices, 
+                                                 annotated_version);                   //k^2
             }
             
         } else {
@@ -324,19 +337,25 @@ Table* initialize_leaf_table(Graph* graph, Set* bag, int bag_index) {
                 r2->append_coloring(DOMINATED);
                 table->insert_row(r2);
                 if(r2->coloring.size()==bag->size()) {
-                    r2->A_c = locally_valid_coloring(graph, r2, table->vertices);               //k^2
+                    r2->A_c = locally_valid_coloring(graph, optional_verts, 
+                                                     r2, table->vertices, 
+                                                     annotated_version);               //k^2
                 }
                 
                 Row* r3 = new Row(r_update);
                 r3->append_coloring(NOT_DOMINATED);
                 table->insert_row(r3);
                 if(r3->coloring.size()==bag->size()) {
-                    r3->A_c = locally_valid_coloring(graph, r3, table->vertices);               //k^2
+                    r3->A_c = locally_valid_coloring(graph, optional_verts, 
+                                                     r3, table->vertices, 
+                                                     annotated_version);               //k^2
                 }
                 
                 table->update_row_add(r_update, IN_DOMSET);
                 if(r_update->coloring.size()==bag->size()) {
-                    r_update->A_c = locally_valid_coloring(graph, r_update, table->vertices);   //k^2
+                    r_update->A_c = locally_valid_coloring(graph, optional_verts, 
+                                                           r_update, table->vertices, 
+                                                           annotated_version);   //k^2
                 }
             }
         }
@@ -352,7 +371,8 @@ Table* initialize_leaf_table(Graph* graph, Set* bag, int bag_index) {
 }
 
 
-void update_introduce_table(Graph* graph, Table* child_table, Set* child_bag, int v, int new_label) {
+void update_introduce_table(Graph* graph, Table* child_table, Set* child_bag, Set* optional_verts,
+                            int v, int new_label, bool annotated_version) {
     /*
      * Updates the child table to be the parent. 
      */
@@ -406,7 +426,8 @@ void update_introduce_table(Graph* graph, Table* child_table, Set* child_bag, in
 }
 
 
-void update_forget_table(Table* child_table, int v, int new_label) {
+void update_forget_table(Table* child_table, Set* optional_verts, 
+                         int v, int new_label, bool annotated_version) {
     /*
      * Updates the child_table to be the parent. 
      */   
@@ -470,7 +491,8 @@ void update_forget_table(Table* child_table, int v, int new_label) {
 }
 
 
-void update_join_table(Table* rightchildk, Table* leftchildj, int new_label) {
+void update_join_table(Table* rightchildk, Table* leftchildj, Set* optional_verts,
+                       int new_label, bool annotated_version) {
     /*
      * j is left  
      * k is right  -- calling table
@@ -499,7 +521,8 @@ void update_join_table(Table* rightchildk, Table* leftchildj, int new_label) {
 //-- Dom set Helper functions
 
 
-int locally_valid_coloring(Graph* graph, Row* row, std::vector<int> &vertices) {
+int locally_valid_coloring(Graph* graph, Set* optional_verts, Row* row, 
+                           std::vector<int> &vertices, bool annotated_version) {
     /*
      * A_c is the size of the dominating set of the specific coloring in the row.
      * If its an invalid coloring, return -99;
@@ -533,11 +556,24 @@ int locally_valid_coloring(Graph* graph, Row* row, std::vector<int> &vertices) {
             for(int j=0; j<vertices.size(); j++) {  //at most k
                 int coloring_j = row->coloring[j];
                 
-                //another vert in bag is in domset and is neighbor.
-                if(i != j && coloring_j== IN_DOMSET) {  
-                    if(graph->adjacent(vertices[j], vertices[i])) actually_dominated = true;
+                if(i!=j) {
+                    //another vert in bag is in domset and is neighbor.
+                    if(!annotated_version) {
+                        if(coloring_j== IN_DOMSET) {  
+                            if(graph->adjacent(vertices[j], vertices[i])) actually_dominated = true;
+                        }
+                    } else {  //NOTE Changed for annotated version  TODO double check this
+                        if(optional_verts->contains(vertices[i])) { //CAN be dominated
+                            if(graph->adjacent(vertices[j], vertices[i])) actually_dominated = true;
+                        } else {  //not in opt verts set. MUST be dominated
+                            if(coloring_j== IN_DOMSET) {
+                                if(graph->adjacent(vertices[j], vertices[i])) actually_dominated = true;
+                            }
+                        }
+                    }
                 }
             }
+            
             if(!actually_dominated) return INF;
         }
     }
