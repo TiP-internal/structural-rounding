@@ -102,7 +102,7 @@ public:
 
 class Table {
 private:
-    Set* bag;  //NOTE necessrary to store?
+    //Set* bag;  //NOTE necessrary to store?
         
     //Private Functions
     int locally_valid_coloring(Graph*, Row*);
@@ -123,16 +123,15 @@ public:
     std::vector<Row*> table;   //vector containing pointers to row structs
     Map<int> table_lookups;  //key=the unique coloring, value=index of row in the table. 
     
-    
     //Public Functions
     Table(); 
-    Table(Set*, int); //table constructor
+    Table(int); //table constructor
     ~Table();
     
-    void initialize_leaf_table(Graph*);
+    void initialize_leaf_table(Graph*, Set*);
     void update_join_table(Table*, int);
     void update_forget_table(int, int);
-    void update_introduce_table(Graph*, int, int);
+    void update_introduce_table(Graph*, Set*, int, int);
     
     int lookup(int);
 };

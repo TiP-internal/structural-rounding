@@ -9,11 +9,13 @@
 #include <limits>  //infinity
 
 
-Table::Table(Set* bag, int lab) {
+Table::Table(int lab) {
     /*
-     * Table constructor.
+     * Table constructor. 
+     * 
+     * For NICE decomps
      */
-    this->bag = bag;
+    //this->bag = bag;
     this->label = lab;
 }
 
@@ -23,7 +25,7 @@ Table::~Table() {
 }
 
 
-void Table::initialize_leaf_table(Graph* graph) {
+void Table::initialize_leaf_table(Graph* graph, Set* bag) {
     /*
      * ni*3^ni
      * 
@@ -187,13 +189,14 @@ void Table::update_forget_table(int v, int new_label) {
 }
 
         
-void Table::update_introduce_table(Graph* graph, int v, int new_label) {
+void Table::update_introduce_table(Graph* graph, Set* child_bag, int v, int new_label) {
     /*
      * 
      */
     this->label = new_label;
-    
-    Set* neighbors_v = bag->set_intersection(graph->neighbors(v));
+
+    //NOTE could just add bag as param and make sure to insert the child's bag into fun call.    
+    Set* neighbors_v = child_bag->set_intersection(graph->neighbors(v));  
     int tab_size = table_lookups.size();
     
     this->vertices.push_back(v);
@@ -209,7 +212,6 @@ void Table::update_introduce_table(Graph* graph, int v, int new_label) {
         r3->append_coloring(NOT_DOMINATED);
         insert_row(r3);
         
-        //TODO Double check these.
         //x is IN_DOMSET
         int new_col_key = r_update->phi(neighbors_v->size()); //k
         int A_phi_ind = lookup(new_col_key);

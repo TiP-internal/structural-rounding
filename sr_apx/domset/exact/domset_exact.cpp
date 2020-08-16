@@ -133,10 +133,13 @@ Set* get_solution(Table* table) {
 }
 
 
-std::vector<Set*> calc_domset(Graph* graph, TreeDecomp* decomp) {
+std::vector<Set*> calc_domset(Graph* graph, TreeDecomp* decomp, bool annotated_version) {
     /*
      * Calculates the minimum dominating set given a tree decomp.
      * Must calculate for each component in the decomp. 
+     * 
+     * Calculates annotated and regular version (separately) of the Dominating
+     * Set problem. 
     */
     std::vector<std::vector<po_bag>> postorder = decomp->get_post_order();
 
@@ -160,7 +163,7 @@ Table* calculate_tables(Graph* graph, std::vector<Set*>& bags, std::vector<po_ba
      * Dynamic programming algorithm, for dominating set on graphs 
      * w/ bounded treewidth.
      * 
-     * NOTE For NICE tree decompositions. 
+     * NOTE For NICE tree decompositions. For both annotated and regular dominating set. 
      */
     std::vector<Table*> tables;
     
@@ -176,10 +179,7 @@ Table* calculate_tables(Graph* graph, std::vector<Set*>& bags, std::vector<po_ba
         if(num_children==2) {          //-----------------------JOIN bag
             printf("JOIN BAG %d\n", bag_index);
             
-            //Table* table = new Table(graph, bags[bag_index], "join_bag", bag_index);
-            //tables.push_back(table);
-            
-            //get child table indices. TODO this could probably be improved 
+            //get child table indices. NOTE this could probably be improved 
             int table_index_child_left=-99;
             int table_index_child_right=-99;
 //             for(int j=0; j<postorder.size(); j++) {             //O(n)
@@ -219,11 +219,8 @@ Table* calculate_tables(Graph* graph, std::vector<Set*>& bags, std::vector<po_ba
                     if(!child_bag->contains(u)) v = u;
                 }
                 
-                //Table* table = new Table(graph, parent_bag, "introduce_bag", bag_index);
-                //tables.push_back(table);
-                
                 Table* child_table = tables[child_bag_table_index];
-                child_table->update_introduce_table(graph, v, bag_index);
+                child_table->update_introduce_table(graph, child_bag, v, bag_index);
             
             } else if(parent_bag->size() < child_bag->size()) { // forget node
                 printf("FORGET BAG %d\n", bag_index);
@@ -234,9 +231,6 @@ Table* calculate_tables(Graph* graph, std::vector<Set*>& bags, std::vector<po_ba
                     int u = *it;
                     if(!parent_bag->contains(u)) v = u;
                 }
-                
-                //Table* table = new Table(graph, parent_bag, "forget_bag", bag_index);
-                //tables.push_back(table);
                 
                 //update table here
                 Table* child_table = tables[child_bag_table_index];
@@ -250,8 +244,8 @@ Table* calculate_tables(Graph* graph, std::vector<Set*>& bags, std::vector<po_ba
             //leaf bag, need to initialize table.
             printf("LEAF BAG %d\n", bag_index);
             
-            Table* table = new Table(bags[bag_index], bag_index);
-            table->initialize_leaf_table(graph);
+            Table* table = new Table(bag_index);
+            table->initialize_leaf_table(graph, bags[bag_index]);
             tables.push_back(table);
             
             std::string type = "Leaf";

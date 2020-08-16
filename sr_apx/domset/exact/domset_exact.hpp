@@ -12,7 +12,7 @@
 
 
 Table* calculate_tables(Graph*, std::vector<Set*>&, std::vector<po_bag>&);
-std::vector<Set*> calc_domset(Graph*, TreeDecomp*);
+std::vector<Set*> calc_domset(Graph*, TreeDecomp*, bool);
 
 //For testing
 bool is_domset(Graph*, std::vector<int>);
