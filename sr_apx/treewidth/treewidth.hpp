@@ -9,7 +9,7 @@
 #include "setmap.hpp"
 #include "treedecomp.hpp"
 
-Set* treewidth_nodeedit(Graph*, int);
+Set* treewidth_nodeedit(Graph*, Set*, int, bool);
 void calculated_treedecomposition(Graph*, TreeDecomp*);
 Set* tree_decomp(Graph*, Set*, Set*, std::deque<std::deque<int>>&, std::vector<Set*>&);
 

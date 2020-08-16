@@ -52,7 +52,7 @@ void dfs(Graph* graph, Set* comp, Set* visited, int v) {
 }
 
 
-Set* treewidth_nodeedit(Graph* graph, int w) {
+Set* treewidth_nodeedit(Graph* graph, Set* optional_verts, int w, bool annotated_version) {
     /*
      * TreeWidthNodeEdit() from SR paper. 
      * 
@@ -68,7 +68,7 @@ Set* treewidth_nodeedit(Graph* graph, int w) {
     calculated_treedecomposition(graph, decomp);
     int t = decomp->treewidth();
     
-    delete decomp;                      // NOTE delete or store?
+    delete decomp;                    
     
     
     if ( t <= 32*c1*w*sqrt(log2(w)) ) {  //NOTE double check which log base
@@ -89,7 +89,19 @@ Set* treewidth_nodeedit(Graph* graph, int w) {
             Set* component_set = *ic;
             Graph* component = graph->subgraph_wsingles(component_set);
             
-            S->add_all(treewidth_nodeedit(component, w)); //set union but modifies S
+            Set* edited_vertices = treewidth_nodeedit(component, w);
+            S->add_all(edited_vertices); //set union but modifies S
+            
+            if(annotated_version) {
+                //Add the neighbors of the edit set to the optinally dominated set. 
+                for(auto iev=edited_vertices->begin(); iev!=edited_vertices->end(); iev++) {
+                    int e=*iev;
+                    for(auto ien=component->neighbors(e)->begin(); 
+                        ien!=component->neighbors(e)->end(); ien++) {
+                        optional_verts->insert(*iev);
+                    }
+                }
+            }
             
             delete component_set, component;
         }
