@@ -89,7 +89,7 @@ Set* treewidth_nodeedit(Graph* graph, Set* optional_verts, int w, bool annotated
             Set* component_set = *ic;
             Graph* component = graph->subgraph_wsingles(component_set);
             
-            Set* edited_vertices = treewidth_nodeedit(component, w);
+            Set* edited_vertices = treewidth_nodeedit(component, optional_verts, w, annotated_version);
             S->add_all(edited_vertices); //set union but modifies S
             
             if(annotated_version) {
