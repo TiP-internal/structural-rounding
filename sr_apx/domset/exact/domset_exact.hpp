@@ -21,7 +21,7 @@ void update_join_table(Table*, Table*, Set*, int, bool);
     
 
 int locally_valid_coloring(Graph*, Set*, Row*, std::vector<int> &, bool);
-void minAi_c(Table*, Table*, Row*, Row*);
+void minAi_c(Table*, Table*, Set*, Row*, Row*);
 int phi(Row*, int);
     
 

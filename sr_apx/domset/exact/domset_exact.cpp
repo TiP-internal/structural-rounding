@@ -172,7 +172,7 @@ Table* calculate_tables(Graph* graph, std::vector<Set*>& bags,
      */
     std::vector<Table*> tables;
     
-    for(int i=0; i<postorder.size(); i++) { // O(n)
+    for(int i=0; i<postorder.size(); i++) {     // O(n -- # of bags)
         int bag_index = postorder[i].bag_index;
         int num_children = postorder[i].num_children;
         int parent_bag_index = postorder[i].parent_bag_index;
@@ -184,31 +184,15 @@ Table* calculate_tables(Graph* graph, std::vector<Set*>& bags,
         if(num_children==2) {          //-----------------------JOIN bag
             printf("JOIN BAG %d\n", bag_index);
             
-            //get child table indices, this could probably be improved 
-            int table_index_child_left=-99;
-            int table_index_child_right=-99;
-//             for(int j=0; j<postorder.size(); j++) {             //O(n)
-//                 if(postorder[j].parent_bag_index==bag_index) {
-//                     if(table_index_child_left==-99) {
-//                         table_index_child_left=j;
-//                     } else if(table_index_child_right==-99) {
-//                         table_index_child_right=j;
-//                     }
-//                 }
-//             }
-            
-//             printf("left child ind=%d, right child ind=%d\n", 
-//                    table_index_child_left, table_index_child_right);
-            
             //update table here
-            Table* left_child_table = tables[tables.size()-2];  //TODO find correct left table
+            Table* left_child_table = tables[tables.size()-2];  
             Table* right_child_table = tables[tables.size()-1];
             
             update_join_table(right_child_table, left_child_table, 
                               optional_verts, bag_index, 
-                              annotated_version);
+                              annotated_version);           // reuses the right child table
             
-            tables.erase(tables.begin()+tables.size()-2);  // delete the left child table. 
+            tables.erase(tables.begin()+tables.size()-2);   // deletes the left child table. 
 
         } else if(num_children==1) {     //-------------------either INTRODUCE or FORGET bag
             int child_bag_index = postorder[i-1].bag_index;
@@ -227,6 +211,7 @@ Table* calculate_tables(Graph* graph, std::vector<Set*>& bags,
                     int u = *it;
                     if(!child_bag->contains(u)) v = u;
                 }
+                printf("intro vert=%d\n", v);
                 
                 Table* child_table = tables[child_bag_table_index];
                 update_introduce_table(graph, child_table, child_bag, optional_verts,
@@ -241,6 +226,7 @@ Table* calculate_tables(Graph* graph, std::vector<Set*>& bags,
                     int u = *it;
                     if(!parent_bag->contains(u)) v = u;
                 }
+                printf("forget vert=%d\n", v);
                 
                 //update table here
                 Table* child_table = tables[child_bag_table_index];
@@ -379,7 +365,6 @@ void update_introduce_table(Graph* graph, Table* child_table, Set* child_bag, Se
     child_table->label = new_label;
     child_table->vertices.push_back(v);
 
-    //NOTE could just add bag as param and make sure to insert the child's bag into fun call.    
     Set* neighbors_v = child_bag->set_intersection(graph->neighbors(v));  
     int tab_size = child_table->table_lookups.size();
     
@@ -395,7 +380,6 @@ void update_introduce_table(Graph* graph, Table* child_table, Set* child_bag, Se
         child_table->insert_row(r3);
         
         //x is IN_DOMSET
-        //int new_col_key = r_update->phi(neighbors_v->size()); //k
         int new_col_key = phi(r_update, neighbors_v->size()); //k
         int A_phi_ind = child_table->lookup(new_col_key);
         int A_phi = child_table->table[A_phi_ind]->A_c;
@@ -404,16 +388,21 @@ void update_introduce_table(Graph* graph, Table* child_table, Set* child_bag, Se
         child_table->update_row_add(r_update, IN_DOMSET);
 
         //x is DOMINATED=0
-        bool in_ds=false;
-        for(auto it=neighbors_v->begin(); it!=neighbors_v->end(); it++) { //*k^2!!
-            int index = child_table->get_vertex_col_index(*it); 
-            
-            //x has a neighbor IN_DOMSET
-            if(r2->coloring[index]==IN_DOMSET) {
-                in_ds = true;
+        bool is_xoptional = optional_verts->contains(v);  // in optional set or not?  
+        if(!annotated_version || !is_xoptional) {  //it's either not the annotated version or x is not optional
+            bool in_ds=false;
+            for(auto it=neighbors_v->begin(); it!=neighbors_v->end(); it++) { //*k^2!!
+                int index = child_table->get_vertex_col_index(*it); 
+                
+                //x has a neighbor IN_DOMSET
+                if(r2->coloring[index]==IN_DOMSET) {
+                    in_ds = true;
+                }
             }
+            if(!in_ds) r2->A_c=INF;
+        } else { //annotated version and x IS an optional vertex. TODO double check
+            //Ai(c x {DOMINATED}) <- Aj(c)  i.e. do nothing?
         }
-        if(!in_ds) r2->A_c=INF;
                 
         //r3: x is NOT_DOMINATED  -- do nothing
     
@@ -439,6 +428,8 @@ void update_forget_table(Table* child_table, Set* optional_verts,
     child_table->vertices.erase(child_table->vertices.begin()+v_index);   //delete v from verts vec. k
     int table_size = child_table->table.size();
     
+    bool is_xoptional = optional_verts->contains(v);  // in optional set or not? 
+    
     int curr_index = 0;
     for(int j=0; j<table_size; j++) {                   //3^ni
         Row* row_child = child_table->table[curr_index];
@@ -452,11 +443,11 @@ void update_forget_table(Table* child_table, Set* optional_verts,
         int par_row_ind;
         Row* row_par;
         if(child_table->table_lookups.contains(row_child->key)) {  // row has already been added
-            //delete_row(curr_index);
+            //delete_row(curr_index) of the child table.
             child_table->table.erase(child_table->table.begin()+curr_index); 
             curr_index--;
             
-            par_row_ind = child_table->lookup(row_child->key);   // get the parent row which has been added.
+            par_row_ind = child_table->lookup(row_child->key);   // gets the actual parent row which has been added previously
             row_par = child_table->table[par_row_ind];
         } else {  //row needs readding to table lookups
             par_row_ind = curr_index;
@@ -469,19 +460,34 @@ void update_forget_table(Table* child_table, Set* optional_verts,
         int Ai_ind = child_table->lookup(row_par->key);
         int Ai = child_table->table[Ai_ind]->A_c;
         
-        //NOTE may need to add extra constraint here
-        if(color_v!=NOT_DOMINATED && Aj <= Ai) {
-            if(color_v==IN_DOMSET)  {
-                //Adds the forgotten vertex to the soln set if necessary
-                row_par->domset_verts->insert(v);
+        //NOTE may need to add extra constraint here (for monotonicity?)
+        if(!annotated_version || !is_xoptional) {  //it's either not the annotated version or x is not optional
+            if(color_v!=NOT_DOMINATED && Aj <= Ai) {
+                if(color_v==IN_DOMSET)  {
+                    //Adds the forgotten vertex to the soln set if necessary
+                    row_par->domset_verts->insert(v);
+                }
+                else if(color_v==DOMINATED) {
+                    row_par->domset_verts->remove(v); 
+                    row_par->domset_verts = row_par->domset_verts->set_union(row_child->domset_verts);
+                }
+                
+                row_par->A_c = Aj;
+            }    
+        } else { //annotated version and x IS an optional vertex. TODO double check
+            if(Aj <= Ai) {
+                if(color_v==IN_DOMSET)  {
+                    //Adds the forgotten vertex to the soln set if necessary
+                    row_par->domset_verts->insert(v);
+                }
+                else {  // when color_v is DOMINATED or NOT_DOMINATED
+                    row_par->domset_verts->remove(v); 
+                    row_par->domset_verts = row_par->domset_verts->set_union(row_child->domset_verts);
+                }
+                row_par->A_c = Aj;
             }
-            else if(color_v==DOMINATED) {
-                row_par->domset_verts->remove(v); 
-                row_par->domset_verts = row_par->domset_verts->set_union(row_child->domset_verts);
-            }
-            
-            row_par->A_c = Aj;
         }
+        
         curr_index++;
     }
 
@@ -508,7 +514,7 @@ void update_join_table(Table* rightchildk, Table* leftchildj, Set* optional_vert
         Row* row_j = leftchildj->table[i];
         Row* row_k = rightchildk->table[i];
             
-        minAi_c(rightchildk, leftchildj, row_k, row_j);        
+        minAi_c(rightchildk, leftchildj, optional_verts, row_k, row_j);        
     }
     
     std::string type = "Join";
@@ -581,7 +587,7 @@ int locally_valid_coloring(Graph* graph, Set* optional_verts, Row* row,
 }
 
 
-void minAi_c(Table* childk, Table* childj, Row* row_k, Row* row_j) {
+void minAi_c(Table* childk, Table* childj, Set* optional_verts, Row* row_k, Row* row_j) {
     /*
      * j is this child
      */
@@ -595,6 +601,9 @@ void minAi_c(Table* childk, Table* childj, Row* row_k, Row* row_j) {
         int c_t = row_k->coloring[i]; 
         //printf("c_t=%d\n", c_t);
         
+        int xt = childk->vertices[i];
+        bool is_xtoptional = optional_verts->contains(xt);  // xt in optional set or not? 
+        
         if(c_t == IN_DOMSET) num_ones++;
         
         int cprime_size = c_prime.size();
@@ -602,7 +611,8 @@ void minAi_c(Table* childk, Table* childj, Row* row_k, Row* row_j) {
         
         if(cprime_size != cprimeprime_size) printf("ERROR: in divide().\n");
         
-        if(c_t == IN_DOMSET || c_t==NOT_DOMINATED) {
+        //is_xoptional will only be true is we want the annotated version.  
+        if(c_t == IN_DOMSET || c_t==NOT_DOMINATED || is_xtoptional) {  
             if(cprime_size==0 && cprimeprime_size==0) {
                 std::string cprime0_str = "";
                 cprime0_str = cprime0_str+std::to_string(c_t);
