@@ -50,9 +50,9 @@ void print_row(Row* row) {
         printf("  %d  |", row->coloring[k]);
     }
     printf("%15d \t | ", row->get_Ac());
-    //for(auto it=row->domset_verts->begin(); it!=row->domset_verts->end(); it++) {
-    //    printf(" %d,", *it);
-    //}
+    for(auto it=row->domset_verts->begin(); it!=row->domset_verts->end(); it++) {
+        printf(" %d,", *it);
+    }
     printf("\n");
 }
 
@@ -88,7 +88,7 @@ void print_tables(std::vector<Table*> tables) {
 
 //---
 
-int get_solution(Table* table) {
+Set* get_solution(Table* table) {
     /*
      * Constructs the final solution. 
      * Adds the vertices in the final table coloring to the soln set.
@@ -112,12 +112,19 @@ int get_solution(Table* table) {
     
     if(soln_index==-1) printf("ERROR: soln row not found.\n");
         
+    //Add verts (set as IN_DOMSET) in the coloring to the soln set. 
     Row* soln_row = table->get_row(soln_index);
-    return soln_row->get_Ac();
+    for(int i=0; i<soln_row->coloring.size(); i++) {
+        if(soln_row->coloring[i]==IN_DOMSET) {
+            soln_row->domset_verts->insert(table->vertices[i]);         //NOTE for testing
+        }
+    }
+    
+    return soln_row->domset_verts;
 }
 
 
-int calc_domset(Graph* graph, TreeDecomp* decomp, 
+std::vector<Set*> calc_domset(Graph* graph, TreeDecomp* decomp, 
                               Set* optional_verts) {
     /*
      * Calculates the minimum dominating set given a tree decomp.
@@ -128,14 +135,19 @@ int calc_domset(Graph* graph, TreeDecomp* decomp,
     */
     std::vector<std::vector<po_bag>> postorder = decomp->get_post_order();
 
-    int domset_size=0;
+    Set* dom_set;
+    std::vector<Set*> component_domsets;
     for(int j=0; j<decomp->components_bags.size(); j++) {
         Table* final_table = calculate_tables(graph, decomp->components_bags[j], 
                                               postorder[j], optional_verts);
-        domset_size +=get_solution(final_table); 
+        dom_set = get_solution(final_table); 
         
+        printf("\n");
+        for(auto it=dom_set->begin(); it!=dom_set->end(); it++) printf("soln set verts=%d\n", *it);
+        
+        component_domsets.push_back(dom_set); 
     }
-    return domset_size;
+    return component_domsets;
 }
 
 
@@ -146,7 +158,7 @@ Table* calculate_tables(Graph* graph, std::vector<Set*>& bags,
      * Dynamic programming algorithm, for dominating set on graphs 
      * w/ bounded treewidth.
      * 
-     * For NICE tree decompositions. For both annotated and regular dominating set. 
+     * NOTE For NICE tree decompositions. For both annotated and regular dominating set. 
      */
     std::vector<Table*> tables;
     
@@ -426,13 +438,29 @@ void update_forget_table(Table* child_table, Set* optional_verts, int v) {
         //it's either not the annotated version or x is not optional
         if(!is_xoptional) {  
             if(color_v!=NOT_DOMINATED && Aj <= Ai) {
+                if(color_v==IN_DOMSET)  {
+                    //Adds the forgotten vertex to the soln set if necessary
+                    row_par->domset_verts->insert(v);
+                }
+                else if(color_v==DOMINATED) {
+                    row_par->domset_verts->remove(v); 
+                    row_par->domset_verts = row_par->domset_verts->set_union(row_child->domset_verts);
+                }
                 row_par->update_Ac(Aj);
             }    
-        } else { //annotated version and x IS an optional vertex. 
+        } else { //annotated version and x IS an optional vertex. TODO double check
             if(Aj <= Ai) {
+                if(color_v==IN_DOMSET)  {
+                    //Adds the forgotten vertex to the soln set if necessary
+                    row_par->domset_verts->insert(v);
+                } else {  // when color_v is DOMINATED or NOT_DOMINATED
+                    row_par->domset_verts->remove(v); 
+                    row_par->domset_verts = row_par->domset_verts->set_union(row_child->domset_verts);
+                }
                 row_par->update_Ac(Aj);
             }
         }
+        
         curr_index++;
     }
 
@@ -646,6 +674,7 @@ void minAi_c(Table* childk, Table* childj, Set* optional_verts, Row* row_k, Row*
     Row* rj = childj->get_row(A_jcprime_ind_final);
     Row* rk = childk->get_row(A_kprimeprime_ind_final);
     
+    row_k->domset_verts = rj->domset_verts->set_union(rk->domset_verts);
     row_k->update_Ac(min_Ai);
 }
 

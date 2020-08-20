@@ -29,7 +29,8 @@ private:
 public:
     std::vector<int> coloring;      //all possible colorings for the xi verts
     
-    //Set* domset_verts = new Set();  //Holds domset soln verts
+    //NOTE this is for testing
+    Set* domset_verts = new Set();  //Holds domset soln verts
     
     Row();
     Row(const Row* r);

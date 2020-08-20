@@ -12,7 +12,7 @@
 
 
 Table* calculate_tables(Graph*, std::vector<Set*>&, std::vector<po_bag>&, Set*);
-int calc_domset(Graph*, TreeDecomp*, Set*);
+std::vector<Set*> calc_domset(Graph*, TreeDecomp*, Set*);
 
 Table* initialize_leaf_table(Graph*, Set*, Set*);
 void update_introduce_table(Graph*, Table*, Set*, Set*, int);
