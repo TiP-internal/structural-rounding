@@ -2,7 +2,7 @@
 CC=g++
 CCFLAGS=-O3 -std=c++11 -fPIC
 
-INCLUDES=-Isr_apx/graph/ -Isr_apx/util/ -Isr_apx/setmap/ -Isr_apx/vc/apx/ -Isr_apx/vc/exact/ -Isr_apx/vc/lift/ -Isr_apx/bipartite/ -Isr_apx/misc/ -Isr_apx/vc/kernel/ -Isr_apx/treewidth/
+INCLUDES=-Isr_apx/graph/ -Isr_apx/util/ -Isr_apx/setmap/ -Isr_apx/vc/apx/ -Isr_apx/vc/exact/ -Isr_apx/vc/lift/ -Isr_apx/bipartite/ -Isr_apx/misc/ -Isr_apx/vc/kernel/ -Isr_apx/domset/apx/
 
 PYINCLUDE=$(shell python3-config --includes)
 PYFLAGS=$(shell python3-config --ldflags) -L. -L./sr_apx/setmap -L./sr_apx/graph -Wl,-rpath,. -Wl,-rpath,./sr_apx/setmap -Wl,-rpath,./sr_apx/graph
@@ -41,12 +41,14 @@ build/bipartite.o: sr_apx/bipartite/bipartite.cpp sr_apx/bipartite/bipartite.hpp
 	mkdir -p build
 	$(CC) $(CCFLAGS) -c $(INCLUDES) -o build/bipartite.o sr_apx/bipartite/bipartite.cpp
 
-build/treewidth.o: sr_apx/treewidth/treewidth.cpp sr_apx/treewidth/treewidth.hpp
-	mkdir -p build
-	$(CC) $(CCFLAGS) -c $(INCLUDES) -o build/treewidth.o sr_apx/treewidth/treewidth.cpp
 
-lib_sr_apx.so: build/util.o build/matching.o build/graph.o build/vc_apx.o build/vc_exact.o build/vc_lift.o build/vc_kernel.o build/bipartite.o build/treewidth.o sr_apx/setmap/setmap.hpp sr_apx/setmap/setmap.tpp
-	$(CC) -shared -o lib_sr_apx.so build/util.o build/matching.o build/graph.o build/vc_apx.o build/vc_exact.o build/vc_lift.o build/vc_kernel.o build/bipartite.o build/treewidth.o
+build/domset_apx.o: sr_apx/domset/apx/domset_apx.cpp sr_apx/domset/apx/domset_apx.hpp
+	mkdir -p build 
+	$(CC) $(CCFLAGS) -c $(INCLUDES) -o build/domset_apx.o sr_apx/domset/apx/domset_apx.cpp
+
+
+lib_sr_apx.so: build/util.o build/matching.o build/graph.o build/vc_apx.o build/vc_exact.o build/vc_lift.o build/vc_kernel.o build/bipartite.o build/domset_apx.o sr_apx/setmap/setmap.hpp sr_apx/setmap/setmap.tpp
+	$(CC) -shared -o lib_sr_apx.so build/util.o build/matching.o build/graph.o build/vc_apx.o build/vc_exact.o build/vc_lift.o build/vc_kernel.o build/bipartite.o build/domset_apx.o
 
 build/main.o: main.cpp
 	mkdir -p build
@@ -54,6 +56,7 @@ build/main.o: main.cpp
 
 cpp: build/main.o lib_sr_apx.so
 	$(CC) -o main -L. -Wl,-rpath,. build/main.o -l_sr_apx
+
 
 # python ###########################################################################################################
 
