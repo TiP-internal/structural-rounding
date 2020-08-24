@@ -3,6 +3,23 @@
 
 #include "domset_apx.hpp"
 
+//---for testing
+bool is_domset(Graph* graph, Set* domset) {
+    for(auto it=graph->begin(); it!=graph->end(); it++) {
+        int v=*it;
+        bool adjacent = false;
+        
+        for(auto ids=domset->begin(); ids!=domset->end(); ids++) {
+            int u=*ids;
+            if(graph->adjacent(v, u)) {
+                adjacent=true;
+            }
+        }
+        if(!adjacent && !domset->contains(v)) return false;
+    }
+    return true;
+}
+
 int max_deg_vertex(Graph* graph, Set* visited) {
     //finds the maximum degree not in the visited set
     int max_deg_value = 0;
@@ -42,6 +59,6 @@ Set* logn_apx(Graph* graph) {
             visited->insert(*it);
         }
     }
-    
+    delete visited;
     return domset;
 }

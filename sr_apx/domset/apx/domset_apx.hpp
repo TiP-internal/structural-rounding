@@ -5,6 +5,7 @@
 #include "setmap.hpp"
 #include "graph.hpp"
 
+bool is_domset(Graph*, Set*);
 int max_deg_vertex(Graph*, Set*);
 
 Set* logn_apx(Graph*);
