@@ -170,8 +170,8 @@ int Table::get_table_size() {
 }
 
 
+//NOTE for testing
 void Table::print_tablelookups() {
-    //NOTE temporary?
     printf("\n===============Table Lookups==================\n");
     for(auto it=table_lookups.begin(); it!=table_lookups.end(); it++) {
         int key = *it;

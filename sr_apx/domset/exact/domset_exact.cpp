@@ -3,6 +3,7 @@
 
 #include <cstdio>
 
+
 //---for testing
 bool is_domset(Graph* graph, Set* domset) {
     for(auto it=graph->begin(); it!=graph->end(); it++) {
@@ -125,7 +126,7 @@ Set* get_solution(Table* table) {
 
 
 std::vector<Set*> calc_domset(Graph* graph, TreeDecomp* decomp, 
-                              Set* optional_verts) {
+                              Set* optional_verts, Variant variant) {
     /*
      * Calculates the minimum dominating set given a tree decomp.
      * Must calculate for each component in the decomp. 
@@ -139,7 +140,7 @@ std::vector<Set*> calc_domset(Graph* graph, TreeDecomp* decomp,
     std::vector<Set*> component_domsets;
     for(int j=0; j<decomp->components_bags.size(); j++) {
         Table* final_table = calculate_tables(graph, decomp->components_bags[j], 
-                                              postorder[j], optional_verts);
+                                              postorder[j], optional_verts, variant);
         dom_set = get_solution(final_table); 
         
         printf("\n");
@@ -153,13 +154,14 @@ std::vector<Set*> calc_domset(Graph* graph, TreeDecomp* decomp,
 
 Table* calculate_tables(Graph* graph, std::vector<Set*>& bags, 
                         std::vector<po_bag>& postorder, 
-                        Set* optional_verts) {
+                        Set* optional_verts, Variant variant) {
     /*     
      * Dynamic programming algorithm, for dominating set on graphs 
      * w/ bounded treewidth.
      * 
      * NOTE For NICE tree decompositions. For both annotated and regular dominating set. 
      */
+    
     std::vector<Table*> tables;
     
     for(int i=0; i<postorder.size(); i++) {     // O(n -- # of bags)
@@ -179,7 +181,7 @@ Table* calculate_tables(Graph* graph, std::vector<Set*>& bags,
             Table* right_child_table = tables[tables.size()-1];
             
             update_join_table(right_child_table, left_child_table, 
-                              optional_verts);           // reuses the right child table
+                              optional_verts, variant);           // reuses the right child table
             
             tables.erase(tables.begin()+tables.size()-2);   // deletes the left child table. 
 
@@ -203,7 +205,7 @@ Table* calculate_tables(Graph* graph, std::vector<Set*>& bags,
                 printf("intro vert=%d\n", v);
                 
                 Table* child_table = tables[child_bag_table_index];
-                update_introduce_table(graph, child_table, child_bag, optional_verts, v);
+                update_introduce_table(graph, child_table, child_bag, optional_verts, v, variant);
                 
             } else if(parent_bag->size() < child_bag->size()) { // forget node
                 printf("FORGET BAG %d\n", bag_index);
@@ -218,7 +220,7 @@ Table* calculate_tables(Graph* graph, std::vector<Set*>& bags,
                 
                 //update table here
                 Table* child_table = tables[child_bag_table_index];
-                update_forget_table(child_table, optional_verts, v);
+                update_forget_table(child_table, optional_verts, v, variant);
                 
             } else {
                 printf("ERROR: in find_bagtype(), parent and child should not have same size.\n");
@@ -228,7 +230,7 @@ Table* calculate_tables(Graph* graph, std::vector<Set*>& bags,
             //leaf bag, need to initialize table.
             printf("LEAF BAG %d\n", bag_index);
             
-            Table* table = initialize_leaf_table(graph, bags[bag_index], optional_verts);
+            Table* table = initialize_leaf_table(graph, bags[bag_index], optional_verts, variant);
             tables.push_back(table);
             
             std::string type = "Leaf";
@@ -250,7 +252,7 @@ Table* calculate_tables(Graph* graph, std::vector<Set*>& bags,
 //---
 
 
-Table* initialize_leaf_table(Graph* graph, Set* bag, Set* optional_verts) {
+Table* initialize_leaf_table(Graph* graph, Set* bag, Set* optional_verts, Variant variant) {
     /*
      * ni*3^ni
      * 
@@ -277,7 +279,7 @@ Table* initialize_leaf_table(Graph* graph, Set* bag, Set* optional_verts) {
             table->insert_row(r1);
             if(r1->coloring.size()==bag->size()) {  //if bag size==1
                 r1->update_Ac(locally_valid_coloring(graph, optional_verts, 
-                                                 r1, table->vertices));                   //k^2
+                                                 r1, table->vertices, variant));                   //k^2
             }
                     
             r2 = new Row();
@@ -285,7 +287,7 @@ Table* initialize_leaf_table(Graph* graph, Set* bag, Set* optional_verts) {
             table->insert_row(r2);
             if(r2->coloring.size()==bag->size()) {
                 r2->update_Ac(locally_valid_coloring(graph, optional_verts, 
-                                                 r2, table->vertices));                   //k^2
+                                                 r2, table->vertices, variant));                   //k^2
             }
             
             r3 = new Row();
@@ -293,7 +295,7 @@ Table* initialize_leaf_table(Graph* graph, Set* bag, Set* optional_verts) {
             table->insert_row(r3);
             if(r3->coloring.size()==bag->size()) {
                 r3->update_Ac(locally_valid_coloring(graph, optional_verts, 
-                                                 r3, table->vertices));                   //k^2
+                                                 r3, table->vertices, variant));                   //k^2
             }
             
         } else {
@@ -307,7 +309,7 @@ Table* initialize_leaf_table(Graph* graph, Set* bag, Set* optional_verts) {
                 table->insert_row(r2);
                 if(r2->coloring.size()==bag->size()) {
                     r2->update_Ac(locally_valid_coloring(graph, optional_verts, 
-                                                     r2, table->vertices));               //k^2
+                                                     r2, table->vertices, variant));               //k^2
                 }
                 
                 Row* r3 = new Row(r_update);
@@ -315,13 +317,13 @@ Table* initialize_leaf_table(Graph* graph, Set* bag, Set* optional_verts) {
                 table->insert_row(r3);
                 if(r3->coloring.size()==bag->size()) {
                     r3->update_Ac(locally_valid_coloring(graph, optional_verts, 
-                                                     r3, table->vertices));               //k^2
+                                                     r3, table->vertices, variant));               //k^2
                 }
                 
                 table->update_row_add(r_update, IN_DOMSET);
                 if(r_update->coloring.size()==bag->size()) {
                     r_update->update_Ac(locally_valid_coloring(graph, optional_verts, 
-                                                           r_update, table->vertices));   //k^2
+                                                           r_update, table->vertices, variant));   //k^2
                 }
             }
         }
@@ -338,7 +340,8 @@ Table* initialize_leaf_table(Graph* graph, Set* bag, Set* optional_verts) {
 
 
 void update_introduce_table(Graph* graph, Table* child_table, 
-                            Set* child_bag, Set* optional_verts, int v) {
+                            Set* child_bag, Set* optional_verts, 
+                            int v, Variant variant) {
     /*
      * Updates the child table to be the parent. 
      */
@@ -350,22 +353,49 @@ void update_introduce_table(Graph* graph, Table* child_table,
     for(int i=0; i<table_size; i++) {           //3^ni 
         Row* r_update = child_table->get_row(i);                  
                 
-        Row* r2 = new Row(r_update);                            //k, but also *n!!
+        Row* r2 = new Row(r_update);                    //k, but also *n!! (when constructing soln currently)
         r2->append_coloring(DOMINATED);
         child_table->insert_row(r2);
         
-        Row* r3 = new Row(r_update);                            //k
+        Row* r3 = new Row(r_update);                    //k
         r3->append_coloring(NOT_DOMINATED);
         child_table->insert_row(r3);
         
-        //x is IN_DOMSET
+        //----r_update: x is IN_DOMSET=1
         int new_col_key = phi(r_update, neighbors_v, child_table->vertices, v);   //k
-        int A_phi = child_table->lookup_Ac(new_col_key);
+        printf("------------------new_col_key = %d\n", new_col_key);
         
-        r_update->update_Ac(A_phi+1);
-        child_table->update_row_add(r_update, IN_DOMSET);
+        int A_phi;
+        if(variant == Variant::Indep_Dom_Set) {             //Independent variant
+            Set* independent_check = new Set();
+            
+            int incr = new_col_key;
+            int index = 0;
+            //TODO needs testing for longer new_col_keys 
+            while (incr > 0) {                              //k
+                //loops over single digits in int back to front.
+                int c = incr%10;
+                incr /= 10;
+                printf("DIGIT=%d\n", c);
+                
+                if(c==IN_DOMSET) {
+                    int size = child_table->vertices.size();
+                    independent_check->insert(child_table->vertices[size-index]);
+                }
+                index++;
+            }
 
-        //x is DOMINATED=0
+            bool indep = check_independent(graph, independent_check); //k^2
+            if(!indep) A_phi = INF;
+            else A_phi = child_table->lookup_Ac(new_col_key) + 1;
+        } else {
+            A_phi = child_table->lookup_Ac(new_col_key) + 1;  //Dom Set variant
+        }
+        r_update->update_Ac(A_phi);
+        child_table->update_row_add(r_update, IN_DOMSET);
+        //-----
+        
+        //r2: x is DOMINATED=0
         bool is_xoptional = optional_verts->contains(v);  // in optional set or not?  
         
         //it's either not the annotated version or x is not optional
@@ -385,7 +415,7 @@ void update_introduce_table(Graph* graph, Table* child_table,
             //Ai(c x {DOMINATED}) <- Aj(c)  i.e. do nothing
         }
                 
-        //r3: x is NOT_DOMINATED  -- do nothing
+        //r3: x is NOT_DOMINATED=3  -- do nothing
     
     }
     delete neighbors_v;
@@ -396,9 +426,11 @@ void update_introduce_table(Graph* graph, Table* child_table,
 }
 
 
-void update_forget_table(Table* child_table, Set* optional_verts, int v) {
+void update_forget_table(Table* child_table, Set* optional_verts, 
+                         int v, Variant variant) {
     /*
      * Updates the child_table to be the parent. 
+     * NOTE nothing (??) changes for the indpendent variant.
      */   
     int v_index = child_table->get_vertex_col_index(v);      //k
     int table_size = child_table->get_table_size();
@@ -448,7 +480,7 @@ void update_forget_table(Table* child_table, Set* optional_verts, int v) {
                 }
                 row_par->update_Ac(Aj);
             }    
-        } else { //annotated version and x IS an optional vertex. TODO double check
+        } else { //annotated version and x IS an optional vertex. 
             if(Aj <= Ai) {
                 if(color_v==IN_DOMSET)  {
                     //Adds the forgotten vertex to the soln set if necessary
@@ -470,7 +502,8 @@ void update_forget_table(Table* child_table, Set* optional_verts, int v) {
 }
 
 
-void update_join_table(Table* rightchildk, Table* leftchildj, Set* optional_verts) {
+void update_join_table(Table* rightchildk, Table* leftchildj, 
+                       Set* optional_verts, Variant variant) {
     /*
      * j is left  
      * k is right  -- calling table
@@ -499,7 +532,7 @@ void update_join_table(Table* rightchildk, Table* leftchildj, Set* optional_vert
 
 
 int locally_valid_coloring(Graph* graph, Set* optional_verts, Row* row, 
-                           std::vector<int> &vertices) {
+                           std::vector<int> &vertices, Variant variant) {
     /*
      * NOTE Could replace vertices vector w/ bag Set
      * A_c is the size of the dominating set of the specific coloring in the row.
@@ -519,14 +552,21 @@ int locally_valid_coloring(Graph* graph, Set* optional_verts, Row* row,
         
         k^2
      */
+    Set* independent_check;
+    
     int A_c = 0;
     bool valid = false;
     for(int i=0; i<vertices.size(); i++) {  //at most k
         int xt = vertices[i];
         int coloring_i = row->coloring[i];
+        
+        //If finding independent dominating set, create new set.
+        if(variant == Variant::Indep_Dom_Set) independent_check = new Set();
 
         if(coloring_i == IN_DOMSET) {
             A_c++;
+            
+            if(variant == Variant::Indep_Dom_Set) independent_check->insert(xt);
         }
         
         if(coloring_i == DOMINATED) {  //if a vertex is set to DOMINATED
@@ -547,14 +587,45 @@ int locally_valid_coloring(Graph* graph, Set* optional_verts, Row* row,
             if(!actually_dominated) return INF;
         }
     }
+    
+    if(variant == Variant::Indep_Dom_Set) {
+        bool indep = true;
+        if(independent_check->size() >= 2) {
+            indep = check_independent(graph, independent_check);
+        }
+        
+        if(!indep) return INF;  // vertices are not independet
+        delete independent_check;
+    }
+    
+    
     return A_c;
+}
+
+
+bool check_independent(Graph* graph, Set* independent_check) {
+    /*
+     * returns true if none of the vertices in the set are adjacent (are independent),
+     * returns false is two vertices are adjacent.
+     */
+    for(auto it=independent_check->begin(); it!=independent_check->end(); it++) {
+        int u = *it;
+        for(auto itt=independent_check->begin(); itt!=independent_check->end(); itt++) {
+            int v = *itt;
+            
+            if(u!=v && graph->adjacent(u, v)) return false; // are adjacent
+        }
+    }
+    return true;
 }
 
 
 void minAi_c(Table* childk, Table* childj, Set* optional_verts, Row* row_k, Row* row_j) {
     /*
      * NOTE: this is where storing the vertices vector is important. Look into not storing
-     * it in table. 
+     * it in table.
+     *
+     * NOTE: nothing (??) needs changing for independent variant. 
      */
 
     //First, find all possible c' and c'' which divide c.

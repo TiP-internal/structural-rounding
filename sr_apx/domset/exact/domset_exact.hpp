@@ -11,16 +11,21 @@
 #include "treedecomp.hpp"
 
 
-Table* calculate_tables(Graph*, std::vector<Set*>&, std::vector<po_bag>&, Set*);
-std::vector<Set*> calc_domset(Graph*, TreeDecomp*, Set*);
+enum class Variant {Indep_Dom_Set, Perf_Dom_Set};  //Normal dominating set is default.
 
-Table* initialize_leaf_table(Graph*, Set*, Set*);
-void update_introduce_table(Graph*, Table*, Set*, Set*, int);
-void update_forget_table(Table*, Set*, int);
-void update_join_table(Table*, Table*, Set*);
+
+Table* calculate_tables(Graph*, std::vector<Set*>&, std::vector<po_bag>&, Set*, Variant);
+std::vector<Set*> calc_domset(Graph*, TreeDecomp*, Set*, Variant);
+
+Table* initialize_leaf_table(Graph*, Set*, Set*, Variant);
+void update_introduce_table(Graph*, Table*, Set*, Set*, int, Variant);
+void update_forget_table(Table*, Set*, int, Variant);
+void update_join_table(Table*, Table*, Set*, Variant);
     
 
-int locally_valid_coloring(Graph*, Set*, Row*, std::vector<int> &);
+int locally_valid_coloring(Graph*, Set*, Row*, std::vector<int> &, Variant);
+bool check_independent(Graph*, Set*);
+
 void minAi_c(Table*, Table*, Set*, Row*, Row*);
 int phi(Row*, Set*, std::vector<int>, int);
     
@@ -32,6 +37,5 @@ bool is_ann_domset(Graph*, Set*, Set*);
 void print_row(Row*);
 void print_table(Table*, std::string);
 void print_tables(std::vector<Table*>);
-//void print_lookups(Table*);
 
 #endif
