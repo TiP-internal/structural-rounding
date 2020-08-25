@@ -11,7 +11,8 @@
 #include "treedecomp.hpp"
 
 
-enum class Variant {Indep_Dom_Set, Perf_Dom_Set};  //Normal dominating set is default.
+//Normal dominating set is default.
+enum class Variant {Indep_Dom_Set, Perf_Dom_Set};  
 
 
 Table* calculate_tables(Graph*, std::vector<Set*>&, std::vector<po_bag>&, Set*, Variant);
@@ -30,9 +31,13 @@ void minAi_c(Table*, Table*, Set*, Row*, Row*);
 int phi(Row*, Set*, std::vector<int>, int);
     
 
-//For testing
+//---For testing
 bool is_domset(Graph*, std::vector<int>);
 bool is_ann_domset(Graph*, Set*, Set*);
+bool is_indepen_domset(Graph*, Set*);
+bool is_indepen_ann_domset(Graph*, Set*, Set*); 
+bool is_perf_domset(Graph*, Set*);
+bool is_per_ann_domset(Graph*, Set*, Set*);
 
 void print_row(Row*);
 void print_table(Table*, std::string);

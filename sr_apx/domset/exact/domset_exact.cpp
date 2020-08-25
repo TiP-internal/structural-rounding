@@ -5,18 +5,18 @@
 
 
 //---for testing
-bool is_domset(Graph* graph, Set* domset) {
+bool is_domset(Graph* graph, Set* domset) {    
     for(auto it=graph->begin(); it!=graph->end(); it++) {
         int v=*it;
         bool adjacent = false;
-        //for(int i=0; i<domset->size(); i++) {
+        
         for(auto ids=domset->begin(); ids!=domset->end(); ids++) {
             int u=*ids;
             if(graph->adjacent(v, u)) {
                 adjacent=true;
             }
         }
-        if(!adjacent) return false;
+        if(!adjacent && !domset->contains(v)) return false;
     }
     return true;
 }
@@ -40,10 +40,89 @@ bool is_ann_domset(Graph* graph, Set* domset, Set* NX) {
                 adjacent=true;
             }
         }
-        if(!adjacent) return false;
+        if(!adjacent && !domset->contains(v)) return false;
     }
     return true;
 }
+
+bool is_indepen_domset(Graph* graph, Set* domset) {
+    //is domset    
+    bool is_ds = is_domset(graph, domset);
+    if(!is_ds) return false;
+    
+    //is independent
+    for(auto ids=domset->begin(); ids!=domset->end(); ids++) {
+        int u=*ids;
+        for(auto idss=domset->begin(); idss!=domset->end(); idss++) {
+            int v=*idss;
+            if(graph->adjacent(v, u)) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+bool is_indepen_ann_domset(Graph* graph, Set* domset, Set* NX) {
+    //is ann domset
+    bool is_ads = is_ann_domset(graph, domset, NX);
+    if(!is_ads) return false;
+    
+    //is independent
+    for(auto ids=domset->begin(); ids!=domset->end(); ids++) {
+        int u=*ids;
+        for(auto idss=domset->begin(); idss!=domset->end(); idss++) {
+            int v=*idss;
+            if(graph->adjacent(v, u)) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+bool is_perf_domset(Graph* graph, Set* domset) {
+    //is domset    
+    bool is_ds = is_domset(graph, domset);
+    if(!is_ds) return false;
+    
+    //is perfect
+    for(auto it=graph->begin(); it!=graph->end(); it++) {
+        int u=*it;
+        
+        if(!domset->contains(u)) {
+            int count = 0;
+            for(auto itt=domset->begin(); itt!=domset->end(); itt++) {
+                int v=*it;
+                if(u!=v && domset->contains(v)) count++;
+                if(count > 1) return false;
+            }
+        }
+    }
+    return true;
+}
+
+bool is_per_ann_domset(Graph* graph, Set* domset, Set* NX) {
+    //is ann domset    
+    bool is_ads = is_ann_domset(graph, domset, NX);
+    if(!is_ads) return false;
+    
+    //is perfect
+    for(auto it=graph->begin(); it!=graph->end(); it++) {
+        int u=*it;
+        
+        if(!domset->contains(u)) {
+            int count = 0;
+            for(auto itt=domset->begin(); itt!=domset->end(); itt++) {
+                int v=*it;
+                if(u!=v && domset->contains(v)) count++;
+                if(count > 1) return false;
+            }
+        }
+    }
+    return true;
+}
+
 
 void print_row(Row* row) {
     printf("|");
