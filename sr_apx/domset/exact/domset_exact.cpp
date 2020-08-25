@@ -481,15 +481,23 @@ void update_introduce_table(Graph* graph, Table* child_table,
         if(!is_xoptional) {  
             //need to check that the introduced vertex w. the coloring of DOMINATED is justified.
             bool in_ds=false;
+            int num_dominators = 0; //for perfect ds variant
             for(auto it=neighbors_v->begin(); it!=neighbors_v->end(); it++) { //*k^2!!
                 int index = child_table->get_vertex_col_index(*it);  
                 
                 //x has a neighbor IN_DOMSET
                 if(r2->coloring[index]==IN_DOMSET) {
                     in_ds = true;
+                    num_dominators++;
                 }
             }
             if(!in_ds) r2->update_Ac(INF);
+            
+            //TODO needs testing.
+            if(variant==Variant::Perf_Dom_Set) {  
+                //More than one dominator for the perfect ds variant not allowed.
+                if(num_dominators>1) r2->update_Ac(INF);
+            }
         } else { //annotated version and x IS an optional vertex, dont need to justify.
             //Ai(c x {DOMINATED}) <- Aj(c)  i.e. do nothing
         }
@@ -555,7 +563,8 @@ void update_forget_table(Table* child_table, Set* optional_verts,
                 }
                 else if(color_v==DOMINATED) {
                     row_par->domset_verts->remove(v); 
-                    row_par->domset_verts = row_par->domset_verts->set_union(row_child->domset_verts);
+                    //row_par->domset_verts = row_par->domset_verts->set_union(row_child->domset_verts);
+                    row_par->domset_verts = row_child->domset_verts;  //NOTE shallow copy
                 }
                 row_par->update_Ac(Aj);
             }    
@@ -566,7 +575,8 @@ void update_forget_table(Table* child_table, Set* optional_verts,
                     row_par->domset_verts->insert(v);
                 } else {  // when color_v is DOMINATED or NOT_DOMINATED
                     row_par->domset_verts->remove(v); 
-                    row_par->domset_verts = row_par->domset_verts->set_union(row_child->domset_verts);
+                    //row_par->domset_verts = row_par->domset_verts->set_union(row_child->domset_verts);
+                    row_par->domset_verts = row_child->domset_verts;  //NOTE shallow copy
                 }
                 row_par->update_Ac(Aj);
             }
@@ -644,13 +654,13 @@ int locally_valid_coloring(Graph* graph, Set* optional_verts, Row* row,
 
         if(coloring_i == IN_DOMSET) {
             A_c++;
-            
             if(variant == Variant::Indep_Dom_Set) independent_check->insert(xt);
         }
         
         if(coloring_i == DOMINATED) {  //if a vertex is set to DOMINATED
             bool actually_dominated = false;
             bool is_xtoptional = optional_verts->contains(xt);  // in optional set or not?
+            int num_dominators = 0;
             
             //xt is not optional, or it's the annotated version and it is optional
             if(!is_xtoptional) {  
@@ -658,15 +668,42 @@ int locally_valid_coloring(Graph* graph, Set* optional_verts, Row* row,
                     int coloring_j = row->coloring[j];
                     
                     if(i!=j && coloring_j== IN_DOMSET) {
-                        if(graph->adjacent(vertices[j], vertices[i])) actually_dominated = true;
+                        if(graph->adjacent(vertices[j], vertices[i])) {
+                            actually_dominated = true;
+                            num_dominators++;
+                        }
                     }
                 }
             } else actually_dominated = true;
+            
+            /* perfect domset variant-each dominated vertex
+             * can only be dominated by exactly one vert in domset
+             * optional or not
+             * TODO needs testing
+             */ 
+            if(variant == Variant::Perf_Dom_Set) {
+                // if x is optional, we still need to check if it
+                // has more than one dominator.
+                if(is_xtoptional) {  
+                    for(int j=0; j<vertices.size(); j++) {  //at most k
+                        int coloring_j = row->coloring[j];
+                        
+                        if(i!=j && coloring_j== IN_DOMSET) {
+                            if(graph->adjacent(vertices[j], vertices[i])) {
+                                num_dominators++;
+                            }
+                        }
+                    }
+                }
+                
+                if(num_dominators>1) actually_dominated=false;
+            }
             
             if(!actually_dominated) return INF;
         }
     }
     
+    //TODO needs testing
     if(variant == Variant::Indep_Dom_Set) {
         bool indep = true;
         if(independent_check->size() >= 2) {
@@ -676,7 +713,6 @@ int locally_valid_coloring(Graph* graph, Set* optional_verts, Row* row,
         if(!indep) return INF;  // vertices are not independet
         delete independent_check;
     }
-    
     
     return A_c;
 }
