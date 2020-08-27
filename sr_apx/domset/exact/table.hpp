@@ -22,6 +22,11 @@ using namespace std;
 #define INF (int)std::numeric_limits<double>::infinity()
 
 class Row {
+    /*
+     * A_c: 4 bytes
+     * key: 4 bytes
+     * coloring: k*4 bytes
+     */
 private:
     int A_c;                        //domset size
     int key;          
@@ -49,14 +54,14 @@ public:
 
 class Table {
     /*
-     * std::vector<Row*> table:
+     * std::vector<Row*> table:  3^k*4bytes 
      *      - Keeping this (over a Map<Row*>) because we need 
      *        to add rows to the end of the table. ie. in introduce table update. 
      *      - Updating rows as we loop over the table, and appending new rows to
      *        the end. If it was a Map, we could possibly loop over rows we just
      *        added, or miss rows we need to update. 
      * 
-     * Map<int> table_lookups:
+     * Map<int> table_lookups: 3^k*2*4bytes 
      *      - This is a map w. format: 
      *          key=the unique coloring, value=index of row in the table.
      *      - Use this since the colorings are unique per table. This is used 
@@ -67,10 +72,13 @@ class Table {
      *          then readd to the Map. --Though each step should be constant time. 
      *          (except when updating the forget keys, this takes linear).
      * 
-     * std::vector<int> vertices:
+     * std::vector<int> vertices: k*4bytes
      *      - Vector of the vertices in the current bag.
      *      - Each row coloring corresponds to a vertex. Indices match between 
      *        colorings and the vertices. 
+     * 
+     * (3^k+3^k*2+k)*4bytes
+     * 
      */
 private:
     std::vector<Row*> table;  

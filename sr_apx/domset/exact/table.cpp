@@ -20,6 +20,11 @@ Row::Row(const Row* r) {  //copy constructor
     }
     this->A_c = r->A_c;
     this->key = r->key;
+    
+    //NOTE do something about this
+    for(auto it=r->domset_verts->begin(); it!=r->domset_verts->end(); it++) {
+        this->domset_verts->insert(*it);
+    }
 }
 
 Row::~Row() {

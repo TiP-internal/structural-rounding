@@ -12,7 +12,7 @@
 
 
 //Normal dominating set is default.
-enum class Variant {Indep_Dom_Set, Perf_Dom_Set};  
+enum class Variant {Dom_Set, Indep_Dom_Set, Perf_Dom_Set};  
 
 
 Table* calculate_tables(Graph*, std::vector<Set*>&, std::vector<po_bag>&, Set*, Variant);
@@ -24,21 +24,22 @@ void update_forget_table(Table*, Set*, int, Variant);
 void update_join_table(Table*, Table*, Set*, Variant);
     
 
+//Helpers
+void intro_vert_indomset_update(Graph*, Table*, Set*, Row*, int, Variant);
+void intro_vert_dominated_update(Graph*, Table*, Set*, Set*, 
+                                 Row*, Row*, int, Variant);
+
 int locally_valid_coloring(Graph*, Set*, Row*, std::vector<int> &, Variant);
+
+bool intro_indep_check(Graph*, Table*, std::vector<int>&, int);
 bool check_independent(Graph*, Set*);
+int get_num_dominators(Graph*, Row*, std::vector<int>&, int);
 
 void minAi_c(Table*, Table*, Set*, Row*, Row*);
 int phi(Row*, Set*, std::vector<int>, int);
-    
 
-//---For testing
-bool is_domset(Graph*, std::vector<int>);
-bool is_ann_domset(Graph*, Set*, Set*);
-bool is_indepen_domset(Graph*, Set*);
-bool is_indepen_ann_domset(Graph*, Set*, Set*); 
-bool is_perf_domset(Graph*, Set*);
-bool is_per_ann_domset(Graph*, Set*, Set*);
 
+//For testing
 void print_row(Row*);
 void print_table(Table*, std::string);
 void print_tables(std::vector<Table*>);
