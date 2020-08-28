@@ -1,9 +1,9 @@
 
 #include <Python.h>
 
-#include "vc_lift.hpp"
-#include "pygraph.hpp"
-#include "pyset.hpp"
+#include "sr_apx/vc/lift/vc_lift.hpp"
+#include "sr_apx/graph/pygraph.hpp"
+#include "sr_apx/setmap/pyset.hpp"
 
 static PyObject* vc_lift_naivelift(PyObject* self, PyObject* args) {
 	PyObject* g;

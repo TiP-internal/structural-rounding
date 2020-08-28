@@ -1,11 +1,9 @@
 
 #include <Python.h>
 
-#include "vc_apx.hpp"
-#include "graph.hpp"
-#include "setmap.hpp"
-#include "pyset.hpp"
-#include "pygraph.hpp"
+#include "sr_apx/vc/apx/vc_apx.hpp"
+#include "sr_apx/setmap/pyset.hpp"
+#include "sr_apx/graph/pygraph.hpp"
 
 static PyObject* vc_apx_dfsapx(PyObject* self, PyObject* args) {
 	PyObject* graph;

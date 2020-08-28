@@ -1,6 +1,6 @@
 
-#include "graph.hpp"
-#include "util.hpp"
+#include "sr_apx/graph/graph.hpp"
+#include "sr_apx/util/util.hpp"
 
 #include <iostream>
 #include <fstream>

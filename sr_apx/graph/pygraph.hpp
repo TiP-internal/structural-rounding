@@ -3,7 +3,7 @@
 #define PYGRAPH_H
 
 #include <Python.h>
-#include "graph.hpp"
+#include "sr_apx/graph/graph.hpp"
 
 typedef struct {
 	PyObject_HEAD

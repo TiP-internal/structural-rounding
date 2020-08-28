@@ -1,10 +1,9 @@
 
 #include <Python.h>
 
-#include "vc_exact.hpp"
-#include "pygraph.hpp"
-#include "pyset.hpp"
-#include "graph.hpp"
+#include "sr_apx/vc/exact/vc_exact.hpp"
+#include "sr_apx/graph/pygraph.hpp"
+#include "sr_apx/setmap/pyset.hpp"
 
 static PyObject* vc_exact_bipexact(PyObject* self, PyObject* args) {
 	PyObject* g;

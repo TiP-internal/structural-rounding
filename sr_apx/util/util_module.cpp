@@ -1,6 +1,6 @@
 
 #include <Python.h>
-#include "util.hpp"
+#include "sr_apx/util/util.hpp"
 
 static PyObject* util_log2(PyObject* self, PyObject* args) {
 	int n;

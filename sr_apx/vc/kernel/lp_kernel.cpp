@@ -1,6 +1,6 @@
 
-#include "lp_kernel.hpp"
-#include "vc_exact.hpp"
+#include "sr_apx/vc/kernel/lp_kernel.hpp"
+#include "sr_apx/vc/exact/vc_exact.hpp"
 
 Set** lp_kernel(Graph* g) {
 

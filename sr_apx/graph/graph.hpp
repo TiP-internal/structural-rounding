@@ -2,7 +2,7 @@
 #ifndef GRAPH_H
 #define GRAPH_H
 
-#include "setmap.hpp"
+#include "sr_apx/setmap/setmap.hpp"
 
 class Graph {
 public:

@@ -1,10 +1,9 @@
 
 #include <Python.h>
 
-#include "lp_kernel.hpp"
-#include "pygraph.hpp"
-#include "pyset.hpp"
-#include "graph.hpp"
+#include "sr_apx/vc/kernel/lp_kernel.hpp"
+#include "sr_apx/graph/pygraph.hpp"
+#include "sr_apx/setmap/pyset.hpp"
 
 static PyObject* vc_kernel_lpkernel(PyObject* self, PyObject* args) {
     PyObject* g;

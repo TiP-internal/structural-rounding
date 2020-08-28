@@ -2,8 +2,8 @@
 #ifndef VC_LIFT_H
 #define VC_LIFT_H
 
-#include "graph.hpp"
-#include "setmap.hpp"
+#include "sr_apx/graph/graph.hpp"
+#include "sr_apx/setmap/setmap.hpp"
 
 Set* naive_lift(Graph*, Set*, Set*);
 Set* greedy_lift(Graph*, Set*, Set*);

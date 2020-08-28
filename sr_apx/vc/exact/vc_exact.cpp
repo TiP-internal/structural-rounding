@@ -1,7 +1,7 @@
 
-#include "vc_exact.hpp"
-#include "bipartite.hpp"
-#include "matching.hpp"
+#include "sr_apx/vc/exact/vc_exact.hpp"
+#include "sr_apx/bipartite/bipartite.hpp"
+#include "sr_apx/misc/matching.hpp"
 
 #include <cstdio>
 #include <vector>

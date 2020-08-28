@@ -6,13 +6,13 @@
 
 #include "time.h"
 
-#include "graph.hpp"
-#include "bipartite.hpp"
-#include "setmap.hpp"
+#include "sr_apx/graph/graph.hpp"
+#include "sr_apx/bipartite/bipartite.hpp"
+#include "sr_apx/setmap/setmap.hpp"
 
-#include "vc_apx.hpp"
-#include "vc_exact.hpp"
-#include "vc_lift.hpp"
+#include "sr_apx/vc/apx/vc_apx.hpp"
+#include "sr_apx/vc/exact/vc_exact.hpp"
+#include "sr_apx/vc/lift/vc_lift.hpp"
 
 // helper function declarations ////////////////////////////////////////////////
 

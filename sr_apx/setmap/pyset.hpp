@@ -3,7 +3,7 @@
 #define PYSET_H
 
 #include <Python.h>
-#include "setmap.hpp"
+#include "sr_apx/setmap/setmap.hpp"
 
 typedef struct {
 	PyObject_HEAD

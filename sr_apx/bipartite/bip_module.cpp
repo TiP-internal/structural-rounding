@@ -1,9 +1,9 @@
 
 #include <Python.h>
 
-#include "bipartite.hpp"
-#include "pyset.hpp"
-#include "pygraph.hpp"
+#include "sr_apx/bipartite/bipartite.hpp"
+#include "sr_apx/setmap/pyset.hpp"
+#include "sr_apx/graph/pygraph.hpp"
 
 static PyObject* bipartite_verifybip(PyObject* self, PyObject* args) {
 	PyObject* g;

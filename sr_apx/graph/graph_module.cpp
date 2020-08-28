@@ -1,9 +1,9 @@
 
 #include <Python.h>
 
-#include "graph.hpp"
-#include "pyset.hpp"
-#include "pygraph.hpp"
+#include "sr_apx/graph/graph.hpp"
+#include "sr_apx/setmap/pyset.hpp"
+#include "sr_apx/graph/pygraph.hpp"
 
 // graph type /////////////////////////////////////////
 

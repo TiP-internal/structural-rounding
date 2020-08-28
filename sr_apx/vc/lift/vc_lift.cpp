@@ -1,8 +1,8 @@
 
-#include "vc_lift.hpp"
-#include "vc_apx.hpp"
-#include "vc_exact.hpp"
-#include "bipartite.hpp"
+#include "sr_apx/vc/lift/vc_lift.hpp"
+#include "sr_apx/vc/apx/vc_apx.hpp"
+#include "sr_apx/vc/exact/vc_exact.hpp"
+#include "sr_apx/bipartite/bipartite.hpp"
 
 Set* naive_lift(Graph* graph, Set* octset, Set* partial) {
 	Set* cover = new Set();

@@ -94,7 +94,7 @@ public:
 	void reserve(int);
 };
 
-#include "setmap.tpp"
+#include "sr_apx/setmap/setmap.tpp"
 
 using Set = Map<NullObj>;
 

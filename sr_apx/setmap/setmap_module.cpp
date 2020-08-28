@@ -1,7 +1,7 @@
 
 #include <Python.h>
-#include "setmap.hpp"
-#include "pyset.hpp"
+#include "sr_apx/setmap/setmap.hpp"
+#include "sr_apx/setmap/pyset.hpp"
 
 // set type //////////////////////////////
 
