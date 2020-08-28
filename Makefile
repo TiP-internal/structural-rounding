@@ -10,42 +10,33 @@ PYFLAGS=$(shell python3-config --ldflags) -L. -L./sr_apx/setmap -L./sr_apx/graph
 # cpp #####################################################################################################
 
 build/util.o: sr_apx/util/util.cpp sr_apx/util/util.hpp
-	mkdir -p build
 	$(CC) $(CCFLAGS) -c $(INCLUDES) -o build/util.o sr_apx/util/util.cpp
 
 build/matching.o: sr_apx/misc/matching.cpp sr_apx/misc/matching.hpp
-	mkdir -p build
 	$(CC) $(CCFLAGS) -c $(INCLUDES) -o build/matching.o sr_apx/misc/matching.cpp
 
 build/graph.o: sr_apx/graph/graph.cpp sr_apx/graph/graph.hpp
-	mkdir -p build
 	$(CC) $(CCFLAGS) -c $(INCLUDES) -o build/graph.o sr_apx/graph/graph.cpp
 
 build/vc_apx.o: sr_apx/vc/apx/vc_apx.cpp sr_apx/vc/apx/vc_apx.hpp
-	mkdir -p build
 	$(CC) $(CCFLAGS) -c $(INCLUDES) -o build/vc_apx.o sr_apx/vc/apx/vc_apx.cpp
 
 build/vc_exact.o: sr_apx/vc/exact/vc_exact.cpp sr_apx/vc/exact/vc_exact.hpp
-	mkdir -p build
 	$(CC) $(CCFLAGS) -c $(INCLUDES) -o build/vc_exact.o sr_apx/vc/exact/vc_exact.cpp
 
 build/vc_lift.o: sr_apx/vc/lift/vc_lift.cpp sr_apx/vc/lift/vc_lift.hpp
-	mkdir -p build
 	$(CC) $(CCFLAGS) -c $(INCLUDES) -o build/vc_lift.o sr_apx/vc/lift/vc_lift.cpp
 
 build/vc_kernel.o: sr_apx/vc/kernel/lp_kernel.cpp sr_apx/vc/kernel/lp_kernel.hpp
-	mkdir -p build
 	$(CC) $(CCFLAGS) -c $(INCLUDES) -o build/vc_kernel.o sr_apx/vc/kernel/lp_kernel.cpp
 
 build/bipartite.o: sr_apx/bipartite/bipartite.cpp sr_apx/bipartite/bipartite.hpp
-	mkdir -p build
 	$(CC) $(CCFLAGS) -c $(INCLUDES) -o build/bipartite.o sr_apx/bipartite/bipartite.cpp
 
 lib_sr_apx.so: build/util.o build/matching.o build/graph.o build/vc_apx.o build/vc_exact.o build/vc_lift.o build/vc_kernel.o build/bipartite.o sr_apx/setmap/setmap.hpp sr_apx/setmap/setmap.tpp
 	$(CC) -shared -o lib_sr_apx.so build/util.o build/matching.o build/graph.o build/vc_apx.o build/vc_exact.o build/vc_lift.o build/vc_kernel.o build/bipartite.o
 
 build/main.o: main.cpp
-	mkdir -p build
 	$(CC) -O3 -std=c++11 -c $(INCLUDES) -o build/main.o main.cpp
 
 cpp: build/main.o lib_sr_apx.so
@@ -54,7 +45,6 @@ cpp: build/main.o lib_sr_apx.so
 # python ###########################################################################################################
 
 build/util_module.o: sr_apx/util/util_module.cpp
-	mkdir -p build
 	$(CC) $(CCFLAGS) -c $(INCLUDES) $(PYINCLUDE) -o build/util_module.o sr_apx/util/util_module.cpp
 
 sr_apx/util/lib_util.so: lib_sr_apx.so build/util_module.o
@@ -126,3 +116,6 @@ clean:
 	rm -f sr_apx/vc/exact/lib_vc_exact.so
 	rm -f sr_apx/vc/lift/lib_vc_lift.so
 	rm -f sr_apx/vc/kernel/lib_lp_kernel.so
+
+# ensures build directory exists when make is invoked
+$(shell mkdir -p build)
