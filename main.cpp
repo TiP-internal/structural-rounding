@@ -6,13 +6,7 @@
 
 #include "time.h"
 
-#include "sr_apx/graph/graph.hpp"
-#include "sr_apx/bipartite/bipartite.hpp"
-#include "sr_apx/setmap/setmap.hpp"
-
-#include "sr_apx/vc/apx/vc_apx.hpp"
-#include "sr_apx/vc/exact/vc_exact.hpp"
-#include "sr_apx/vc/lift/vc_lift.hpp"
+#include "sr_apx/sr_apx.hpp"
 
 // helper function declarations ////////////////////////////////////////////////
 
