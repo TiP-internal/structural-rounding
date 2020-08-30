@@ -20,16 +20,9 @@ Row::Row(const Row* r) {  //copy constructor
     }
     this->A_c = r->A_c;
     this->key = r->key;
-    
-    //NOTE do something about this
-    for(auto it=r->domset_verts->begin(); it!=r->domset_verts->end(); it++) {
-        this->domset_verts->insert(*it);
-    }
 }
 
-Row::~Row() {
-    //delete domset_verts;
-}
+Row::~Row() {}
 
 int Row::get_Ac() {
     return A_c;
@@ -46,7 +39,6 @@ int Row::get_key() {
 void Row::update_key(int newKey) {
     key = newKey;
 }
-
 
 void Row::append_coloring(int val) {
     //val should only ever be a single int (1,2, or 3)
@@ -73,20 +65,49 @@ void Row::remove_from_coloring(int v_index) {
 }
 
 
-//------
+RowConstruct::RowConstruct() : Row() {
+    this->childl_ind = -1;
+    this->childr_ind = -1;
+}
+
+RowConstruct::RowConstruct(const Row* r) : Row(r) {}
+
+RowConstruct::RowConstruct(const RowConstruct* r) : Row(r) {
+    this->childl_ind=r->childl_ind;
+    this->childr_ind=r->childr_ind;
+}
+
+int RowConstruct::get_childl_table_ind() {
+    return childl_ind;
+}
+
+void RowConstruct::set_childl_table_ind(int childl_ind) {
+    this->childl_ind=childl_ind;
+}
+
+int RowConstruct::get_childr_table_ind() {
+    return childr_ind;
+}
+
+void RowConstruct::set_childr_table_ind(int childr_ind) {
+    this->childr_ind=childr_ind;
+}
 
 
-Table::Table() {}
+template<class T>
+Table<T>::Table() {}
 
 
-Table::~Table() {
+template<class T>
+Table<T>::~Table() {
     for(int i=0; i<table.size(); i++) delete table[i];
 }
 
 
-int Table::get_vertex_col_index(int v) {
+template<class T>
+int Table<T>::get_vertex_col_index(int v) {
     /*
-     * TODO k time
+     * k time
      */
     int index = -1;
     for(int i=0; i<this->vertices.size(); i++) {
@@ -96,24 +117,29 @@ int Table::get_vertex_col_index(int v) {
 }
 
 
-int Table::lookup_table_index(int key) {
+template<class T>
+int Table<T>::lookup_table_index(int key) {
     //Returns the INDEX of the row in the table.
     if(!table_lookups.contains(key)) return -1;
     return table_lookups[key];
 }
 
-Row* Table::lookup_row(int key) {
+
+template<typename T>
+T Table<T>::lookup_row(int key) {
     //Returns the row from the table w. the given key
     int index = lookup_table_index(key);
     return get_row(index);
 }
 
-Row* Table::get_row(int index) {
+template<class T>
+T Table<T>::get_row(int index) {
     //Returns the row from the table at the given index.
     return table[index];
 }
 
-int Table::lookup_Ac(int key) {
+template<class T>
+int Table<T>::lookup_Ac(int key) {
     /*
      * Given a key, returns the Ac value of the row corresponding
      * to that key.
@@ -122,38 +148,44 @@ int Table::lookup_Ac(int key) {
     return table[index]->get_Ac();
 }
 
-
-void Table::insert_row(Row* r) {
-    int index = table.size();
-    table.push_back(r);         //adds row to the table vector.
-        
-    //key is the concatenated coloring, value is the index in table.
-    table_lookups.insert(r->get_key(), index);
+template<class T>
+void Table<T>::insert_row(T r) {
+    //only inserts if r not already inserted 
+    if(lookup_table_index(r->get_key()) == -1) {
+        int index = table.size();
+        table.push_back(r);         //adds row to the table vector.
+            
+        //key is the concatenated coloring, value is the index in table.
+        table_lookups.insert(r->get_key(), index);
+    }
 }
 
-
-void Table::delete_row(int index) {
+template<class T>
+void Table<T>::delete_row(int index) {
     table.erase(table.begin()+index);  //*3^ni
 }
 
-
-void Table::table_lookups_insert(int key, int table_index) {
+template<class T>
+void Table<T>::table_lookups_insert(int key, int table_index) {
     //Adds an entry to table_lookups_insert Map
     table_lookups.insert(key, table_index);
 }
 
 
-void Table::table_lookups_remove(int key) {
+template<class T>
+void Table<T>::table_lookups_remove(int key) {
     //Removes an entry from the table_lookups Map
     table_lookups.erase(key);
 }
 
-bool Table::table_lookups_contains(int key) {
+template<class T>
+bool Table<T>::table_lookups_contains(int key) {
     return table_lookups.contains(key);
 }
 
 
-void Table::update_row_add(Row* r, int value) {
+template<class T>
+void Table<T>::update_row_add(T r, int value) {
     /* must update key in table_lookups whenever we add values
      * to the current coloring.
      * 
@@ -169,14 +201,15 @@ void Table::update_row_add(Row* r, int value) {
     table_lookups.insert(r->get_key(), index);  //same index, updated key
 }
 
-
-int Table::get_table_size() {
+template<class T>
+int Table<T>::get_table_size() {
     return table_lookups.size();
 }
 
 
 //NOTE for testing
-void Table::print_tablelookups() {
+template<class T>
+void Table<T>::print_tablelookups() {
     printf("\n===============Table Lookups==================\n");
     for(auto it=table_lookups.begin(); it!=table_lookups.end(); it++) {
         int key = *it;
@@ -185,5 +218,8 @@ void Table::print_tablelookups() {
     
     printf("\n===========================================\n\n\n");
 }
+
+template class Table<Row*>;
+template class Table<RowConstruct*>;
 
 
