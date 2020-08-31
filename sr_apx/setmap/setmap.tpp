@@ -3,6 +3,8 @@
 #include <cstddef>
 #include <new>
 
+namespace sr_apx {
+
 #define DEFAULT_SIZE 3
 #define LINEAR_PROBE 4
 
@@ -69,7 +71,7 @@ Map<T>::Map() {
 
 template<class T>
 Map<T>::Map(int size) {
-	initialize(log2(size));
+	initialize(sr_apx::util::log2(size));
 }
 
 template<class T>
@@ -238,7 +240,7 @@ void Map<T>::reserve(int size) {
 	if (size < load) {
 		return;
 	}
-	rehash(log2(size) + 1);
+	rehash(sr_apx::util::log2(size) + 1);
 }
 
 template<class T>
@@ -266,4 +268,6 @@ typename Map<T>::Iterator Map<T>::begin() {
 template<class T>
 typename Map<T>::Iterator Map<T>::end() {
 	return Iterator(1 << logsize, this);
+}
+
 }

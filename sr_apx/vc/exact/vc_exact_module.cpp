@@ -11,8 +11,8 @@ static PyObject* vc_exact_bipexact(PyObject* self, PyObject* args) {
 		return NULL;
 	}
 
-	Graph* graph = ((PyGraph*) g)->g;
-	return make_PySet(bip_exact(graph), false);
+	sr_apx::Graph* graph = ((PyGraph*) g)->g;
+	return make_PySet(sr_apx::vc::exact::bip_exact(graph), false);
 }
 
 static PyMethodDef vc_exact_methods[] = {

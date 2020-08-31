@@ -11,9 +11,9 @@ static PyObject* vc_kernel_lpkernel(PyObject* self, PyObject* args) {
         return NULL;
     }
 
-    Graph* graph = ((PyGraph*) g)->g;
+    sr_apx::Graph* graph = ((PyGraph*) g)->g;
 
-    Set** kernel = lp_kernel(graph);
+    sr_apx::Set** kernel = sr_apx::vc::kernel::lp_kernel(graph);
     PyObject* in = make_PySet(kernel[0], false);
     PyObject* out = make_PySet(kernel[1], false);
     delete[] kernel;

@@ -7,6 +7,8 @@
 
 #define BUFFER_SIZE 1024
 
+namespace sr_apx {
+
 Graph::Graph(int n) {
 	adjlist.reserve(n);
 }
@@ -112,7 +114,7 @@ Graph* read_sparse6(const char* filename) {
 		}
 	}
 
-	int k = log2(n);
+	int k = sr_apx::util::log2(n);
 	Graph* graph = new Graph(n);
 
 	int bitbuffer = 0;
@@ -223,4 +225,6 @@ Graph* read_dimacs(const char* filename) {
 
 	f.close();
 	return g;
+}
+
 }

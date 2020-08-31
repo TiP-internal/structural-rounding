@@ -2,6 +2,8 @@
 #include "sr_apx/vc/kernel/lp_kernel.hpp"
 #include "sr_apx/vc/exact/vc_exact.hpp"
 
+namespace sr_apx::vc::kernel {
+
 Set** lp_kernel(Graph* g) {
 
     int n = g->size();
@@ -21,7 +23,7 @@ Set** lp_kernel(Graph* g) {
         }
     }
 
-    Set* cover = bip_exact(h);
+    Set* cover = exact::bip_exact(h);
 
     Set* in = new Set();
     Set* out = new Set();
@@ -45,4 +47,6 @@ Set** lp_kernel(Graph* g) {
     ret[0] = in;
     ret[1] = out;
     return ret;
+}
+
 }

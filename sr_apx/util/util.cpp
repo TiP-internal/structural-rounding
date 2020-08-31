@@ -1,6 +1,8 @@
 
 #include "sr_apx/util/util.hpp"
 
+namespace sr_apx::util {
+
 int log2(int n) {
 	int k = 0;
 	while ((1 << k) < n) {
@@ -16,4 +18,6 @@ int pow(int b, int e) {
 	}
 
 	return x;
+}
+
 }

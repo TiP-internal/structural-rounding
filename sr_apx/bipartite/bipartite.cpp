@@ -6,6 +6,8 @@
 #include <iostream>
 #include <fstream>
 
+namespace sr_apx::bipartite {
+
 Set* prescribed_octset(Graph* graph, const char* filename) {
 	std::ifstream f;
 	f.open(filename, std::ios::in);
@@ -158,3 +160,5 @@ Set* vertex_delete(Graph* graph) {
 
 	return octset;
 }
+
+} // end of sr_apx namepsace

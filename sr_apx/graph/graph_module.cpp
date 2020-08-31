@@ -30,10 +30,10 @@ static PyObject* Graph_new(PyTypeObject* type, PyObject* args, PyObject* kwrds) 
 static int Graph_init(PyGraph* self, PyObject* args) {
 	int n;
 	if (!PyArg_ParseTuple(args, "i", &n)) {
-		self->g = new Graph();
+		self->g = new sr_apx::Graph();
 	}
 	else {
-		self->g = new Graph(n);
+		self->g = new sr_apx::Graph(n);
 	}
 
 	return 0;
@@ -115,8 +115,8 @@ static PyObject* Graph_subgraph(PyGraph* self, PyObject* args) {
 		return NULL;
 	}
 
-	Set* vertices = ((PySet*) s)->s;
-	Graph* subg = self->g->subgraph(vertices);
+	sr_apx::Set* vertices = ((PySet*) s)->s;
+	sr_apx::Graph* subg = self->g->subgraph(vertices);
 	return make_PyGraph(subg);
 }
 
@@ -143,7 +143,7 @@ static PySequenceMethods Graph_sequence_methods = {
 typedef struct {
 	PyObject_HEAD
 	PyGraph* g;
-	Map<Set>::Iterator current;
+	sr_apx::Map<sr_apx::Set>::Iterator current;
 	int len;
 } PyGraphIter;
 
@@ -212,7 +212,7 @@ static PyObject* Graph_iter(PyGraph* self) {
 
 	Py_INCREF(self);
 	iter->g = self;
-	iter->current = Map<Set>::Iterator(&(self->g->adjlist));
+	iter->current = sr_apx::Map<sr_apx::Set>::Iterator(&(self->g->adjlist));
 	iter->len = self->g->size();
 	PyObject_GC_Track(iter);
 	return (PyObject*) iter;
@@ -246,7 +246,7 @@ static PyObject* graph_read_sparse6(PyObject* self, PyObject* args) {
 	char* s;
 	Py_ssize_t len;
 	PyBytes_AsStringAndSize(bytes, &s, &len);
-	PyObject* g = make_PyGraph(read_sparse6(s));
+	PyObject* g = make_PyGraph(sr_apx::read_sparse6(s));
 	Py_DECREF(bytes);
 	return g;
 }
@@ -260,7 +260,7 @@ static PyObject* graph_read_edge_list(PyObject* self, PyObject* args) {
 	char* s;
 	Py_ssize_t len;
 	PyBytes_AsStringAndSize(bytes, &s, &len);
-	PyObject* g = make_PyGraph(read_edge_list(s));
+	PyObject* g = make_PyGraph(sr_apx::read_edge_list(s));
 	Py_DECREF(bytes);
 	return g;
 }
@@ -310,7 +310,7 @@ PyMODINIT_FUNC PyInit_lib_graph() {
 
 // cpp api /////////////////////////////////////
 
-PyObject* make_PyGraph(Graph* base) {
+PyObject* make_PyGraph(sr_apx::Graph* base) {
 	PyGraph* ret = (PyGraph*) Graph_new(&Graph_type, NULL, NULL);
 	ret->g = base;
 	return (PyObject*) ret;

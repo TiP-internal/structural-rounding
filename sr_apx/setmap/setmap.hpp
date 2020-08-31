@@ -2,6 +2,8 @@
 #ifndef SETMAP_H
 #define SETMAP_H
 
+namespace sr_apx {
+
 // key values for empty and erased elems in the array
 #define EMPTY -1
 #define ERASED -2
@@ -94,8 +96,10 @@ public:
 	void reserve(int);
 };
 
-#include "sr_apx/setmap/setmap.tpp"
-
 using Set = Map<NullObj>;
+
+}
+
+#include "sr_apx/setmap/setmap.tpp"
 
 #endif

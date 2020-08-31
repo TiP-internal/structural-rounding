@@ -4,6 +4,8 @@
 #include <vector>
 #include <deque>
 
+namespace sr_apx::misc {
+
 Map<int>* bipartite_matching(Graph* graph, Set* left, Set* right) {
 	Map<int>* match = new Map<int>();
 
@@ -90,4 +92,6 @@ Map<int>* bipartite_matching(Graph* graph, Set* left, Set* right) {
 	}
 
 	return match;
+}
+
 }

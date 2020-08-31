@@ -6,9 +6,11 @@
 #include <cstdio>
 #include <vector>
 
+namespace sr_apx::vc::exact {
+
 Set* bip_exact(Graph* graph) {
 	Set* empty = new Set();
-	Set** od = verify_bipartite(graph, empty);
+	Set** od = bipartite::verify_bipartite(graph, empty);
 	delete empty;
 
 	if (od[0]->size() > 0) {
@@ -20,7 +22,7 @@ Set* bip_exact(Graph* graph) {
 	Set* right = od[2];
 	delete[] od;
 
-	Map<int>* match = bipartite_matching(graph, left, right);
+	Map<int>* match = misc::bipartite_matching(graph, left, right);
 
 	Set* cover = new Set();
 	Set visited;
@@ -64,4 +66,6 @@ Set* bip_exact(Graph* graph) {
 	delete match;
 
 	return cover;
+}
+
 }

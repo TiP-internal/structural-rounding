@@ -4,6 +4,8 @@
 
 #include "sr_apx/setmap/setmap.hpp"
 
+namespace sr_apx {
+
 class Graph {
 public:
 	Map<Set> adjlist;
@@ -27,5 +29,7 @@ public:
 Graph* read_sparse6(const char*);
 Graph* read_edge_list(const char*);
 Graph* read_dimacs(const char*);
+
+}
 
 #endif

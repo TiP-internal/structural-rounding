@@ -7,9 +7,9 @@
 
 typedef struct {
 	PyObject_HEAD
-	Graph* g;
+	sr_apx::Graph* g;
 } PyGraph;
 
-PyObject* make_PyGraph(Graph*);
+PyObject* make_PyGraph(sr_apx::Graph*);
 
 #endif

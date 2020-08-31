@@ -2,6 +2,8 @@
 #include "sr_apx/vc/apx/vc_apx.hpp"
 #include <vector>
 
+namespace sr_apx::vc::apx {
+
 Set* dfs_apx(Graph* g) {
 	Set* cover = new Set();
 
@@ -140,4 +142,6 @@ Set* std_apx(Graph* g) {
 	}
 
 	return cover;
+}
+
 }

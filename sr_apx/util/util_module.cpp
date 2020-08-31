@@ -8,7 +8,7 @@ static PyObject* util_log2(PyObject* self, PyObject* args) {
 		return NULL;
 	}
 
-	int x = log2(n);
+	int x = sr_apx::util::log2(n);
 	return PyLong_FromLong(x);
 }
 
@@ -18,7 +18,7 @@ static PyObject* util_pow(PyObject* self, PyObject* args) {
 		return NULL;
 	}
 
-	int x = pow(b, e);
+	int x = sr_apx::util::pow(b, e);
 	return PyLong_FromLong(x);
 }
 

@@ -7,10 +7,10 @@
 
 typedef struct {
 	PyObject_HEAD
-	Set* s;
+	sr_apx::Set* s;
 	bool borrowed;
 } PySet;
 
-PyObject* make_PySet(Set*, bool);
+PyObject* make_PySet(sr_apx::Set*, bool);
 
 #endif
