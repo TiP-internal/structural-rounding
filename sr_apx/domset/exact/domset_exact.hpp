@@ -17,14 +17,16 @@ enum class Variant {Dom_Set, Indep_Dom_Set, Perf_Dom_Set};
 template<class T>
 int get_soln_row_index(Table<T>*);
 void add_to_solution(Set*, RowConstruct*, std::vector<int>&);
-int get_solution(Table<Row*>* table);                                       //decision version
+int get_solution(Table<Row*>* table);                                       //optimization version
 Set* get_solution(std::vector<Table<RowConstruct*>*>&, Set*, RowConstruct*);//constructive version
 
 Set* construct_domset(Graph*, TreeDecomp*, Set*, Variant);  //constructive version
-int calc_min_domset(Graph*, TreeDecomp*, Set*, Variant);    //decision version
+int calc_min_domset(Graph*, TreeDecomp*, Set*, Variant);    //optimization version
 
 
 //--- Constructive Version
+Set* treedecomp_reduction(Graph*, std::vector<Set*>&, std::vector<po_bag>);
+
 void calculate_tables(Graph*, std::vector<Set*>&, 
                       std::vector<po_bag>&, std::vector<Table<RowConstruct*>*>&,
                       Set*, Variant);
@@ -40,7 +42,7 @@ Table<RowConstruct*>* update_join_table(Table<RowConstruct*>*,
                                         Table<RowConstruct*>*, Set*, Variant);
 
 
-//----- Decision version
+//----- Optimization version
 Table<Row*>* calculate_tables(Graph*, std::vector<Set*>&, std::vector<po_bag>&, Set*, Variant); 
 Table<Row*>* initialize_leaf_table(Graph*, Set*, Set*, Variant);
 void update_introduce_table(Graph*, Table<Row*>*, Set*, Set*, int, Variant);
@@ -55,6 +57,9 @@ int get_num_dominators(Graph*, Row*, std::vector<int>&, int);
 bool intro_indep_check(Graph*, std::vector<int>&, std::vector<int>&, int);
 bool check_independent(Graph*, Set*);
 int phi(Row*, Set*, std::vector<int>&, int);
+void remove_node_from_postack(std::vector<po_bag> &, po_bag &); 
+void remove_edge_from_postack(std::vector<po_bag> &, po_bag &);
+bool is_special_subset(Set*, Set*, Set*);
 
 template<class T>
 int* minAi_c(Table<T>*, Table<T>*, Set*, Row*, Row*);
@@ -66,7 +71,6 @@ template<class T>
 void intro_vert_dominated_update(Graph*, Table<T>*, Set*, Set*, 
                                  T, T, int, Variant);
 
-
 //-----For testing
 void print_row(Row*);
 void print_row(RowConstruct*);
@@ -76,5 +80,7 @@ void print_table(Table<T>*, std::string);
 
 template<class T>
 void print_tables(std::vector<Table<T>*>&);
+void print_postorder(std::vector<po_bag>);
+void print_pobag(po_bag);
 
 #endif

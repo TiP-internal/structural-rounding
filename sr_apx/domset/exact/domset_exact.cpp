@@ -44,7 +44,7 @@ void add_to_solution(Set* dom_set, RowConstruct* row, std::vector<int> &vertices
 
 int get_solution(Table<Row*>* table) {
     /*
-     * Finds the size of the final solution for the decision version of DOMSet 
+     * Finds the size of the final solution for the optimization version of DOMSet 
      */    
     int soln_index = get_soln_row_index(table);
     
@@ -130,7 +130,7 @@ Set* construct_domset(Graph* graph, TreeDecomp* decomp,
 int calc_min_domset(Graph* graph, TreeDecomp* decomp, 
                  Set* optional_verts, Variant variant) {
     /*
-     * Used for the decision version. Finds the size of the smallest dom set.
+     * Used for the optimization version. Finds the size of the smallest dom set.
      */
     
     std::vector<std::vector<po_bag>> postorder = decomp->get_post_order();
@@ -149,8 +149,207 @@ int calc_min_domset(Graph* graph, TreeDecomp* decomp,
 }
 
 
-
 //---- Constructive Version
+Set* treedecomp_reduction(Graph* graph, std::vector<Set*> &bags, std::vector<po_bag> postorder) {
+    /*
+     * Tree Decomposition reduction rules to reduce the number of stored tables. 
+     * 
+     * Returns a set of integers, corresponding to bag indices which are the 'anchor' bags, 
+     * meaning the tables created for these bags must be stored. All other tables can be merged 
+     * (ie. not stored separately).
+     * 
+     * Method from [Betzler, Neidermeier, & Uhlmann, '04].
+     * 
+     * NOTE not passing postorder as reference because we need to modify it here.
+     */
+    Set* reduced_bags = new Set();
+    
+    Set* removed_elems = new Set();
+    Set* removed_nodes = new Set();
+    
+    bool cont = true;
+    while(cont) {
+        bool rule1=true, rule2=true, rule3=true, rule4=true, rule5=true;
+        
+        /* Rule 1: if bag Xi contains at least one element that is not in any other bag,
+         * and the element is not contained in the removed elemens set,
+         * put Xi in solution and add its elements to the removed elemens set. 
+         */
+        for(int i=0; i<bags.size(); i++) {
+            bool add_bag=false;
+            Set* curr_bag = bags[i];
+            
+            //not in soln and hasnt been removed from tree
+            if(!reduced_bags->contains(i) && !removed_nodes->contains(i)) {
+                for(auto it=curr_bag->begin(); it!=curr_bag->end(); it++) {
+                    bool unique_v=true;
+                    int v=*it;
+                    
+                    if(!removed_elems->contains(v)) {
+                        for(int j=0; j<bags.size(); j++) {
+                            Set* b = bags[j];
+                            if(i!=j && !removed_nodes->contains(j) && b->contains(v)) unique_v=false;
+                        }
+                        
+                        if(unique_v) add_bag=true;
+                    }
+                }
+            }
+            if(add_bag) {
+                reduced_bags->insert(i);
+                removed_elems->add_all(curr_bag);                
+            } else rule1=false;
+        }
+        //---------------------------------------------------------
+        
+        /* Rule 2:
+         * 
+         */
+        bool removed_elem=false;
+        for(int i=0; i<postorder.size(); i++) {
+            po_bag po = postorder[i];
+            
+            int xi_index = po.parent_bag_index;
+            int xj_index = po.bag_index;  //current
+            //printf("par ind=%d, curr ind=%d\n", xi_index, xj_index);
+            
+            //child is xj, par is xi
+            //curr po's parent is not the root, and there exists and edge between par and child.
+            if(xi_index!=-1 && xi_index!=-2 && !removed_elem) { 
+                bool subset = is_special_subset(bags[xi_index], bags[xj_index], removed_elems);
+                
+                if(subset && pow(3, bags[xi_index]->size()) >= pow(3, bags[xj_index]->size())) {
+                    //then connect each nbr node of i (except j) w/ j and delete i from T.
+                    removed_nodes->insert(po.parent_bag_index);
+                    remove_node_from_postack(postorder, postorder[i]); //remove the parent
+                    removed_elem=true;  //only delete one bag per iteration of while loop
+                } 
+            } 
+        }
+        if(!removed_elem) rule2=false; //did not remove an element
+        
+        //---------------------------------------------------------
+        
+        /* Rule 3:
+         * 
+         */
+        bool found_v=false;
+        Set* verts = graph->get_vertices();  //n time.
+        //n^3 time! NOTE look for better way.
+        for(auto it=verts->begin(); it!=verts->end(); it++) { 
+            int a=*it;
+            if(!removed_elems->contains(a)) {
+                for(auto itt=verts->begin(); itt!=verts->end(); itt++) {
+                    int b=*itt;
+                    if(!removed_elems->contains(b)) {
+                        if(a!=b){
+                            bool implies=true; //presense of a in bag implies presense of b
+                            for(int i=0; i<bags.size(); i++) {
+                                Set* curr_bag=bags[i];
+                                if(!reduced_bags->contains(i) && !removed_nodes->contains(i)) {
+                                    if(!curr_bag->contains(a) && curr_bag->contains(b)) implies=false;
+                                }
+                            }
+                            if(implies) {
+                                removed_elems->insert(b); //remove b from all bags.
+                                found_v=true;
+                            }
+                        }
+                    }
+                }
+            }
+        } if(!found_v) rule3=false;
+        
+        //---------------------------------------------------------
+        
+        /* Rule 4:
+         * 
+         */
+        bool removed_edge=false;
+        for(int i=0; i<postorder.size(); i++) {
+            po_bag po = postorder[i];
+            
+            int xi_index = po.parent_bag_index;
+            int xj_index = po.bag_index;  //current
+            
+            //child is xj, par is xi
+            //curr po not the root, and there is an edge
+            if(xi_index!=-1 && xi_index!=-2) { 
+                Set* intersect = bags[xj_index]->set_intersection(bags[xi_index]);
+                bool empty=true;
+                for(auto it=intersect->begin(); it!=intersect->end(); it++) {
+                    int v=*it;
+                    if(!removed_elems->contains(v)) empty=false;
+                }
+                delete intersect;
+                
+                if(empty) {
+                    //delete this edge
+                    remove_edge_from_postack(postorder, postorder[i]); //removes edge between curr po and parent
+                    removed_edge=true;
+                }
+            }
+        }
+        if(!removed_edge) rule4=false;  //no edges removed
+        
+        //---------------------------------------------------------
+        
+        /* Rule 5:
+         * 
+         */
+        bool removed_elem2=false;
+        for(int i=0; i<postorder.size(); i++) {
+            po_bag po = postorder[i];
+            
+            //here xi is the parent and current po
+            int xi_index = po.bag_index;
+            
+            if(po.num_children>1) { //not applicable to nodes w/ only one child
+                po_bag child1, child2;
+                int po_xj1=-3;  //child 1 po index
+                int po_xj2=-3;  //child 2 po index
+                
+                //get indices of po_bags in postorder vec
+                //if the edge was already deleted, the equality wouldnt pass, so it works
+                for(int j=0; j<postorder.size(); j++) {
+                    if(postorder[j].parent_bag_index==xi_index) {
+                        if(po_xj1==-3) {
+                            po_xj1=j; child1=postorder[j];
+                        } else if(po_xj1!=-3 && po_xj2==-3) {
+                            po_xj2=j; child2=postorder[j];
+                        }
+                    }
+                }
+                
+                int bag_index_xj1 = child1.bag_index; 
+                int bag_index_xj2 = child2.bag_index;
+                
+                Set* un = bags[bag_index_xj1]->set_union(bags[bag_index_xj2]);
+                //if only one of the children was subset of parent, it would
+                //have been caught by second rule (should have at least).
+                bool subset = is_special_subset(un, bags[xi_index], removed_elems);
+                
+                int w_xi = pow(3, bags[xi_index]->size());
+                int w_xj = pow(3, bags[bag_index_xj1]->size()) + pow(3, bags[bag_index_xj2]->size());
+                if(subset && w_xi>=w_xj) {
+                    removed_nodes->insert(po.bag_index);
+                    remove_node_from_postack(postorder, postorder[po_xj1]); //remove the parent
+                    removed_elem2=true;  //only delete one bag per iteration of while loop
+                }
+            }
+        }
+        if(!removed_elem2) rule5=false; //did not remove an element
+        
+        
+        //printf("rule1=%d, rule2=%d, rule3=%d, rule4=%d, rule5=%d\n", rule1, rule2, rule3, rule4, rule5);
+        if(!rule1 && !rule2 && !rule3 && !rule4 && !rule5) cont=false;  //if no rules reduced, quit.
+    }
+    
+    
+    delete removed_elems, removed_nodes;
+    return reduced_bags;
+}
+
 
 void calculate_tables(Graph* graph, std::vector<Set*> &bags, 
                       std::vector<po_bag> &postorder, std::vector<Table<RowConstruct*>*> &tables, 
@@ -160,7 +359,7 @@ void calculate_tables(Graph* graph, std::vector<Set*> &bags,
      * w/ bounded treewidth.
      * 
      * NOTE constructive version and does not reuse tables. To save memory, it
-     * will eventually only store anchor tables, method from [SOURCE].
+     * will eventually only store anchor tables.
      * 
      * NOTE For NICE tree decompositions. For both annotated and regular dominating set. 
      */
@@ -482,7 +681,7 @@ Table<RowConstruct*>* update_join_table(Table<RowConstruct*>* rightchildk,
 
 
 
-//------ Decision Version 
+//------ Optimization Version 
 
 
 Table<Row*>* calculate_tables(Graph* graph, std::vector<Set*>& bags, std::vector<po_bag>& postorder, 
@@ -491,7 +690,7 @@ Table<Row*>* calculate_tables(Graph* graph, std::vector<Set*>& bags, std::vector
      * Dynamic programming algorithm, for dominating set on graphs 
      * w/ bounded treewidth.
      * 
-     * NOTE decision version and reuses tables.
+     * NOTE optimization version and reuses tables.
      * NOTE For NICE tree decompositions. For both annotated and regular dominating set. 
      */
     
@@ -867,8 +1066,7 @@ int locally_valid_coloring(Graph* graph, Set* optional_verts, Row* row,
 
 
 int get_num_dominators(Graph* graph, Row* row, std::vector<int> &vertices, int target_vert) {
-    //returns number of vertices dominating target_vert.
-    
+    //returns number of vertices dominating target_vert.    
     int num_dominators=0;
     for(int j=0; j<vertices.size(); j++) {  //at most k
         int coloring_j = row->coloring[j];
@@ -949,6 +1147,72 @@ int phi(Row* row, Set* neighbors, std::vector<int> &vertices, int introduced_v) 
         }
     }
     return new_col;
+}
+
+
+void remove_node_from_postack(std::vector<po_bag> &postorder, po_bag &child1_po) {
+    /*
+     * must get xi's parent index
+     * set xj's parent index from xi to xi's parent.
+     * if xi has more than one child, set the other childs parent to xi's parent
+     * 
+     * delete xi from T
+     */
+    int po_xi_ind = -1;  //index in po stack
+    int xi_par_ind=-1;   // parent of child1's parent (child1's grandparent)
+    int num_xi_child=-1;
+    
+    //get the parents to be removed info
+    for(int j=0; j<postorder.size(); j++) {
+        if(postorder[j].bag_index==child1_po.parent_bag_index) po_xi_ind=j;
+    }
+    xi_par_ind = postorder[po_xi_ind].parent_bag_index;
+    num_xi_child = postorder[po_xi_ind].num_children;
+    
+    postorder.erase(postorder.begin()+po_xi_ind);
+    
+    //reset parent of xj (curr po) and if xi had more children, their parent too.
+    child1_po.parent_bag_index = xi_par_ind;
+    
+    //NOTE test
+    if(num_xi_child>1) {
+        for(int j=0; j<postorder.size(); j++) {
+            if(postorder[j].parent_bag_index==xi_par_ind) {
+                postorder[j].parent_bag_index = xi_par_ind;
+            }
+        }
+    }
+}
+
+
+void remove_edge_from_postack(std::vector<po_bag> &postorder, po_bag &child_po) {
+    //removes edge between curr po and parent
+    
+    //sets parent of childs num children--
+    int po_xi_ind = -1;  //index in po stack
+    //get the parent's po index
+    for(int j=0; j<postorder.size(); j++) {
+        if(postorder[j].bag_index==child_po.parent_bag_index) po_xi_ind=j;
+    }
+    postorder[po_xi_ind].num_children--;
+    
+    //sets child par index to -2 (no parent but not root)
+    child_po.parent_bag_index=-2;
+}
+
+
+bool is_special_subset(Set* A, Set* B, Set* excluded) {
+    //Is set A\excluded a subset of set B\excluded?
+    bool is_sub = false;
+    for(auto it=A->begin(); it!=A->end(); it++) {
+        int x = *it;
+        
+        if(!excluded->contains(x)) {
+            if (!B->contains(x)) is_sub = false;
+            else is_sub=true;
+        }
+    }
+    return is_sub;
 }
 
 
@@ -1085,13 +1349,32 @@ template<class T>
 void intro_vert_indomset_update(Graph* graph, Table<T>* child_table, 
                                 Set* neighbors_v, T row, 
                                 int v, Variant variant) {
+    //introducing a vertex w/ coloring set to in dominating set.
     int new_col_key = phi(row, neighbors_v, child_table->vertices, v);   //k
     int A_phi;
-    
+    bool is_perf=true;
     //Independent variant
     if(variant == Variant::Indep_Dom_Set) {  
         bool indep = intro_indep_check(graph, child_table->vertices, row->coloring, v);
         if(!indep) A_phi = INF;
+        else {
+            A_phi = child_table->lookup_Ac(new_col_key);
+            if(A_phi!=INF) A_phi++; 
+        }
+    } else if(variant == Variant::Perf_Dom_Set) {
+        //gets neighbors of the newly added vertex
+        //if a neighbor is not in domset and has more than one neighbor in domset, Ac=inf
+        for(auto it=neighbors_v->begin(); it!=neighbors_v->end(); it++) {
+            int nb = *it;
+            int c_index = child_table->get_vertex_col_index(nb);
+            int cp = row->coloring[c_index];
+            if(cp==DOMINATED) {
+                int num_doms_rnb = get_num_dominators(graph, row, child_table->vertices, nb);
+                if(graph->adjacent(nb, v)) num_doms_rnb++;  //v not in the child table vertices vec.
+                if(num_doms_rnb > 1) is_perf = false;
+            } 
+        }
+        if(!is_perf) A_phi = INF;
         else {
             A_phi = child_table->lookup_Ac(new_col_key);
             if(A_phi!=INF) A_phi++; 
@@ -1130,7 +1413,7 @@ void intro_vert_dominated_update(Graph* graph, Table<T>* child_table,
                     //more than one dominator now.
                     int xt = child_table->vertices[index];
                     int num_doms_rup_nb = get_num_dominators(graph, r_update, 
-                                                            child_table->vertices, xt);
+                                                             child_table->vertices, xt);
                     if(num_doms_rup_nb > 1) ru_isperfect=false;
                 }
             }
@@ -1217,6 +1500,21 @@ void print_tables(std::vector<Table<T>*> &tables) {
     }
 }
 
+void print_postorder(std::vector<po_bag> postorder) {
+    printf("\n------POSTorder\n");
 
+    for(int j=0; j<postorder.size(); j++) {
+        //printf("postorder: ind=%d, num_childs=%d\n", po[j].bag_index, po[j].num_children);
+        print_pobag(postorder[j]);
+    }
+    printf("---------\n\n");
+}
+
+void print_pobag(po_bag po) {
+    printf("bag index=%d\n", po.bag_index);
+    printf("num children=%d\n", po.num_children);
+    printf("parent bag index=%d\n", po.parent_bag_index);
+    printf("\n");
+}
 
 
