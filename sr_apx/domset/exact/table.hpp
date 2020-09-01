@@ -30,6 +30,9 @@ class Row {
 private:
     int A_c;                        //domset size
     int key;   
+    
+    int childl_ind;
+    int childr_ind;
 public:
     std::vector<int> coloring;      //all possible colorings for the xi verts
     
@@ -45,27 +48,15 @@ public:
     
     int get_key();
     void update_key(int);
-};
-
-
-class RowConstruct: public Row {
-private:
-    int childl_ind;
-    int childr_ind;
-public:
+    
     int get_childl_table_ind();
     void set_childl_table_ind(int);
     
     int get_childr_table_ind();
     void set_childr_table_ind(int);
-    
-    RowConstruct();
-    RowConstruct(const Row*);
-    RowConstruct(const RowConstruct*);
 };
 
 
-template <class T>
 class Table {
     /*
      * std::vector<Row*> table:  3^k*4bytes 
@@ -95,7 +86,7 @@ class Table {
      * 
      */
 private:
-    std::vector<T> table;  
+    std::vector<Row*> table;  
     Map<int> table_lookups;    
     
 public:
@@ -107,8 +98,8 @@ public:
     
     ~Table();
     
-    void update_row_add(T, int);
-    void insert_row(T);
+    void update_row_add(Row*, int);
+    void insert_row(Row*);
     void delete_row(int);
     
     void table_lookups_insert(int, int);
@@ -118,8 +109,11 @@ public:
     int lookup_table_index(int);
     int lookup_Ac(int);
     
-    T lookup_row(int);
-    T get_row(int);
+    Row* lookup_row(int);
+    Row* get_row(int);
+    
+    Row* create_row(Row*, int);
+    Row* create_row(int);
     
     int get_table_size();
     int get_vertex_col_index(int);

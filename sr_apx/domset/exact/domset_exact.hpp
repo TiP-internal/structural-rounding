@@ -14,11 +14,10 @@
 enum class Variant {Dom_Set, Indep_Dom_Set, Perf_Dom_Set};  
 
 //---- Calculating Solution 
-template<class T>
-int get_soln_row_index(Table<T>*);
-void add_to_solution(Set*, RowConstruct*, std::vector<int>&);
-int get_solution(Table<Row*>* table);                                       //optimization version
-Set* get_solution(std::vector<Table<RowConstruct*>*>&, Set*, RowConstruct*);//constructive version
+int get_soln_row_index(Table*);
+void add_to_solution(Set*, Row*, std::vector<int>&);
+int get_solution(Table* table);                             //optimization version
+Set* get_solution(std::vector<Table*>&, Set*, Row*);        //constructive version
 
 Set* construct_domset(Graph*, TreeDecomp*, Set*, Variant);  //constructive version
 int calc_min_domset(Graph*, TreeDecomp*, Set*, Variant);    //optimization version
@@ -28,27 +27,19 @@ int calc_min_domset(Graph*, TreeDecomp*, Set*, Variant);    //optimization versi
 Set* treedecomp_reduction(Graph*, std::vector<Set*>&, std::vector<po_bag>);
 
 void calculate_tables(Graph*, std::vector<Set*>&, 
-                      std::vector<po_bag>&, std::vector<Table<RowConstruct*>*>&,
-                      Set*, Variant);
+                      std::vector<po_bag>&, std::vector<Table*>&,
+                      Set*, Set*, Variant);
 
-Table<RowConstruct*>* initialize_leaf_table_const(Graph*, Set*, Set*, Variant);
-
-Table<RowConstruct*>* update_introduce_table(Graph*, Table<RowConstruct*>*,
-                                             Set*, Set*, int, Variant);
-
-Table<RowConstruct*>* update_forget_table(Table<RowConstruct*>*, Set*, int, Variant);
-
-Table<RowConstruct*>* update_join_table(Table<RowConstruct*>*, 
-                                        Table<RowConstruct*>*, Set*, Variant);
+Table* initialize_leaf_table(Graph*, Set*, Set*, Variant);
+Table* update_introduce_table(Graph*, Table*, Set*, Set*, int, Variant);
+Table* update_forget_table(Table*, Set*, int, Variant);
+Table* update_join_table(Table*, Table*, Set*, Variant);
 
 
-//----- Optimization version
-Table<Row*>* calculate_tables(Graph*, std::vector<Set*>&, std::vector<po_bag>&, Set*, Variant); 
-Table<Row*>* initialize_leaf_table(Graph*, Set*, Set*, Variant);
-void update_introduce_table(Graph*, Table<Row*>*, Set*, Set*, int, Variant);
-void update_forget_table(Table<Row*>*, Set*, int, Variant);
-void update_join_table(Table<Row*>*, Table<Row*>*, Set*, Variant);
-    
+//----- Updates the child table to be par table.
+void merge_introduce_table(Graph*, Table*, Set*, Set*, int, Variant);
+void merge_forget_table(Table*, Set*, int, Variant);
+void merge_join_table(Table*, Table*, Set*, Variant);
 
 
 //Helpers
@@ -60,26 +51,15 @@ int phi(Row*, Set*, std::vector<int>&, int);
 void remove_node_from_postack(std::vector<po_bag> &, po_bag &); 
 void remove_edge_from_postack(std::vector<po_bag> &, po_bag &);
 bool is_special_subset(Set*, Set*, Set*);
-
-template<class T>
-int* minAi_c(Table<T>*, Table<T>*, Set*, Row*, Row*);
-
-template<class T>
-void intro_vert_indomset_update(Graph*, Table<T>*, Set*, T, int, Variant);
-
-template<class T>
-void intro_vert_dominated_update(Graph*, Table<T>*, Set*, Set*, 
-                                 T, T, int, Variant);
+int* minAi_c(Table*, Table*, Set*, Row*, Row*);
+void intro_vert_indomset_update(Graph*, Table*, Set*, Row*, int, Variant);
+void intro_vert_dominated_update(Graph*, Table*, Set*, Set*, Row*, Row*, int, Variant);
 
 //-----For testing
 void print_row(Row*);
-void print_row(RowConstruct*);
+void print_table(Table*, std::string);
 
-template<class T>
-void print_table(Table<T>*, std::string);
-
-template<class T>
-void print_tables(std::vector<Table<T>*>&);
+void print_tables(std::vector<Table*>&);
 void print_postorder(std::vector<po_bag>);
 void print_pobag(po_bag);
 
