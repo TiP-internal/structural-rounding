@@ -30,11 +30,11 @@ int Graph::size() {
 	return adjlist.size();
 }
 
-Map<Set>::Iterator Graph::begin() {
+Map<Set>::iterator Graph::begin() {
 	return adjlist.begin();
 }
 
-Map<Set>::Iterator Graph::end() {
+Map<Set>::iterator Graph::end() {
 	return adjlist.end();
 }
 
@@ -55,9 +55,9 @@ int Graph::degree(int u) {
 Graph* Graph::subgraph(Set* vertices) {
 	Graph* subg = new Graph(vertices->size());
 
-	for (Set::Iterator iu = vertices->begin(); iu != vertices->end(); ++iu) {
+	for (Set::iterator iu = vertices->begin(); iu != vertices->end(); ++iu) {
 		int u = *iu;
-		for (Set::Iterator iv = adjlist[u].begin(); iv != adjlist[u].end(); ++iv) {
+		for (Set::iterator iv = adjlist[u].begin(); iv != adjlist[u].end(); ++iv) {
 			int v = *iv;
 			if (vertices->contains(v)) {
 				subg->add_edge(u, v);

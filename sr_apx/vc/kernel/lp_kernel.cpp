@@ -12,7 +12,7 @@ Set** lp_kernel(Graph* g) {
     Set* right = new Set();
 
     for (auto iu = g->begin(); iu != g->end(); ++iu) {
-        int u = *iu;
+        int u = iu->first;
 
         left->insert(u);
         right->insert(u + n);
@@ -29,7 +29,7 @@ Set** lp_kernel(Graph* g) {
     Set* out = new Set();
 
     for (auto iu = g->begin(); iu != g->end(); ++iu) {
-        int u = *iu;
+        int u = iu->first;
         if (cover->contains(u) && cover->contains(u + 2 * n)) {
             in->insert(u);
         }

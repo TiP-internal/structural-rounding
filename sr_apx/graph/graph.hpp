@@ -18,8 +18,8 @@ public:
 	int degree(int);
 	bool adjacent(int, int);
 
-	Map<Set>::Iterator begin();
-	Map<Set>::Iterator end();
+	Map<Set>::iterator begin();
+	Map<Set>::iterator end();
 	Set* neighbors(int);
 
 	Graph* subgraph(Set*);

@@ -97,7 +97,7 @@ static PySequenceMethods Set_sequence_methods = {
 typedef struct {
 	PyObject_HEAD
 	PySet* s;
-	sr_apx::Set::Iterator current;
+	sr_apx::Set::iterator current;
 	int len;
 } PySetIter;
 
@@ -166,7 +166,7 @@ static PyObject* Set_iter(PySet* self) {
 
 	Py_INCREF(self);
 	iter->s = self;
-	iter->current = sr_apx::Set::Iterator(self->s);
+	iter->current = self->s->begin();
 	iter->len = self->s->size();
 	PyObject_GC_Track(iter);
 	return (PyObject*) iter;

@@ -31,7 +31,7 @@ Set** verify_bipartite(Graph* graph, Set* os) {
 	Set* octset = new Set();
 
 	Set visited;
-	for (Set::Iterator it = os->begin(); it != os->end(); ++it) {
+	for (Set::iterator it = os->begin(); it != os->end(); ++it) {
 		visited.insert(*it);
 	}
 
@@ -42,11 +42,11 @@ Set** verify_bipartite(Graph* graph, Set* os) {
 
 	while (visited.size() < graph->size() || !queue.empty()) {
 		if (queue.empty()) {
-			while (visited.contains(*git)) {
+			while (visited.contains(git->first)) {
 				++git;
 			}
 
-			current = *git;
+			current = git->first;
 			visited.insert(current);
 		}
 		else {
@@ -55,7 +55,7 @@ Set** verify_bipartite(Graph* graph, Set* os) {
 		}
 
 		Set* nbrs = graph->neighbors(current);
-		for (Set::Iterator it = nbrs->begin(); it != nbrs->end(); ++it) {
+		for (Set::iterator it = nbrs->begin(); it != nbrs->end(); ++it) {
 			int nbr = *it;
 			if (os->contains(nbr) || octset->contains(nbr)) {
 				continue;
@@ -96,11 +96,11 @@ void remove_indset(Graph* graph, Set* available) {
 	Map<int> deg;
 	Map<Set> revdeg;
 
-	for (Set::Iterator iu = available->begin(); iu != available->end(); ++iu) {
+	for (Set::iterator iu = available->begin(); iu != available->end(); ++iu) {
 		int u = *iu;
 		deg[u] = 0;
 		Set* nbrs = graph->neighbors(u);
-		for (Set::Iterator iv = nbrs->begin(); iv != nbrs->end(); ++iv) {
+		for (Set::iterator iv = nbrs->begin(); iv != nbrs->end(); ++iv) {
 			int v = *iv;
 			if (available->contains(v)) {
 				deg[u] += 1;
@@ -112,11 +112,7 @@ void remove_indset(Graph* graph, Set* available) {
 
 	while (deg.size() > 0) {
 		int mindeg;
-		for (mindeg = 0; mindeg <= deg[*(deg.begin())]; ++mindeg) {
-			if (revdeg[mindeg].size() > 0) {
-				break;
-			}
-		}
+		for (mindeg = 0; revdeg[mindeg].size() == 0; ++mindeg);
 
 		int u = *(revdeg[mindeg].begin());
 		revdeg[mindeg].erase(u);
@@ -124,7 +120,7 @@ void remove_indset(Graph* graph, Set* available) {
 		available->erase(u);
 
 		Set* unbrs = graph->neighbors(u);
-		for (Set::Iterator iv = unbrs->begin(); iv != unbrs->end(); ++iv) {
+		for (Set::iterator iv = unbrs->begin(); iv != unbrs->end(); ++iv) {
 			int v = *iv;
 			if (!deg.contains(v)) {
 				continue;
@@ -134,7 +130,7 @@ void remove_indset(Graph* graph, Set* available) {
 			deg.erase(v);
 
 			Set* vnbrs = graph->neighbors(v);
-			for (Set::Iterator iw = vnbrs->begin(); iw != vnbrs->end(); ++iw) {
+			for (Set::iterator iw = vnbrs->begin(); iw != vnbrs->end(); ++iw) {
 				int w = *iw;
 				if (!deg.contains(w)) {
 					continue;
@@ -152,7 +148,7 @@ void remove_indset(Graph* graph, Set* available) {
 Set* vertex_delete(Graph* graph) {
 	Set* octset = new Set();
 	for (auto it = graph->begin(); it != graph->end(); ++it) {
-		octset->insert(*it);
+		octset->insert(it->first);
 	}
 
 	remove_indset(graph, octset);

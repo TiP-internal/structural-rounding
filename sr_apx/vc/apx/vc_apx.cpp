@@ -15,11 +15,11 @@ Set* dfs_apx(Graph* g) {
 	while (visited.size() < g->size()) {
 		int current;
 		if (stack.empty()) {
-			while (visited.contains(*vitr)) {
+			while (visited.contains(vitr->first)) {
 				++vitr;
 			}
 
-			current = *vitr;
+			current = vitr->first;
 		}
 		else {
 			current = stack.back();
@@ -79,9 +79,9 @@ Set* heuristic_apx(Graph* g) {
 	int maxdeg = 0;
 
 	for (auto it = g->begin(); it != g->end(); ++it) {
-		int degree = g->degree(*it);
-		deg[*it] = degree;
-		revdeg[degree].insert(*it);
+		int degree = g->degree(it->first);
+		deg[it->first] = degree;
+		revdeg[degree].insert(it->first);
 		maxdeg = degree > maxdeg ? degree : maxdeg;
 	}
 
@@ -108,9 +108,9 @@ Set* std_apx(Graph* g) {
 	int maxdeg = 0;
 
 	for (auto it = g->begin(); it != g->end(); ++it) {
-		int degree = g->degree(*it);
-		deg[*it] = degree;
-		revdeg[degree].insert(*it);
+		int degree = g->degree(it->first);
+		deg[it->first] = degree;
+		revdeg[degree].insert(it->first);
 		maxdeg = degree > maxdeg ? degree : maxdeg;
 	}
 

@@ -143,7 +143,7 @@ static PySequenceMethods Graph_sequence_methods = {
 typedef struct {
 	PyObject_HEAD
 	PyGraph* g;
-	sr_apx::Map<sr_apx::Set>::Iterator current;
+	sr_apx::Map<sr_apx::Set>::iterator current;
 	int len;
 } PyGraphIter;
 
@@ -177,7 +177,7 @@ static PyObject* GraphIter_iternext(PyGraphIter* self) {
 		return NULL;
 	}
 
-	PyObject* ret = PyLong_FromLong(*(self->current));
+	PyObject* ret = PyLong_FromLong(self->current->first);
 
 	++(self->current);
 	--(self->len);
@@ -212,7 +212,7 @@ static PyObject* Graph_iter(PyGraph* self) {
 
 	Py_INCREF(self);
 	iter->g = self;
-	iter->current = sr_apx::Map<sr_apx::Set>::Iterator(&(self->g->adjlist));
+	iter->current = self->g->adjlist.begin();
 	iter->len = self->g->size();
 	PyObject_GC_Track(iter);
 	return (PyObject*) iter;

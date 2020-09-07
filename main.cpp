@@ -124,11 +124,11 @@ int main(int argc, char* argv[]) {
 		sr_apx::Set** od = sr_apx::bipartite::verify_bipartite(graph, oct);
 
 		sr_apx::Set* bippart = new sr_apx::Set();
-		for (sr_apx::Set::Iterator left_it = od[1]->begin(); left_it != od[1]->end(); left_it++) {
+		for (sr_apx::Set::iterator left_it = od[1]->begin(); left_it != od[1]->end(); left_it++) {
 			int left = *left_it;
 			bippart->insert(left);
 		}
-		for (sr_apx::Set::Iterator right_it = od[2]->begin(); right_it != od[2]->end(); right_it++) {
+		for (sr_apx::Set::iterator right_it = od[2]->begin(); right_it != od[2]->end(); right_it++) {
 			int right = *right_it;
 			bippart->insert(right);
 		}

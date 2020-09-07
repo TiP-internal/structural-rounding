@@ -28,7 +28,7 @@ Set* bip_exact(Graph* graph) {
 	Set visited;
 	std::vector<int> stack;
 
-	for (Set::Iterator iu = left->begin(); iu != left->end(); ++iu) {
+	for (Set::iterator iu = left->begin(); iu != left->end(); ++iu) {
 		int u = *iu;
 		cover->insert(u);
 		if (!match->contains(u)) {
@@ -44,7 +44,7 @@ Set* bip_exact(Graph* graph) {
 
 		cover->erase(current);
 
-		for (Set::Iterator inbr = graph->neighbors(current)->begin(); inbr != graph->neighbors(current)->end(); ++inbr) {
+		for (Set::iterator inbr = graph->neighbors(current)->begin(); inbr != graph->neighbors(current)->end(); ++inbr) {
 			int nbr = *inbr;
 
 			if (!match->contains(nbr)) {

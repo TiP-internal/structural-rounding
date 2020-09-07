@@ -18,7 +18,7 @@ Map<int>* bipartite_matching(Graph* graph, Set* left, Set* right) {
 		Map<int> distance;
 		Set unmatched;
 
-		for (Set::Iterator iu = left->begin(); iu != left->end(); ++iu) {
+		for (Set::iterator iu = left->begin(); iu != left->end(); ++iu) {
 			int u = *iu;
 			if (!match->contains(u)) {
 				distance[u] = 0;
@@ -31,7 +31,7 @@ Map<int>* bipartite_matching(Graph* graph, Set* left, Set* right) {
 			int current = queue.front();
 			queue.pop_front();
 
-			for (Set::Iterator inbr = graph->neighbors(current)->begin(); inbr != graph->neighbors(current)->end(); ++inbr) {
+			for (Set::iterator inbr = graph->neighbors(current)->begin(); inbr != graph->neighbors(current)->end(); ++inbr) {
 				int nbr = *inbr;
 				if (!match->contains(nbr)) {
 					continue;
@@ -61,7 +61,7 @@ Map<int>* bipartite_matching(Graph* graph, Set* left, Set* right) {
 			stack.pop_back();
 
 			parent[current] = previous;
-			for (Set::Iterator inbr = graph->neighbors(current)->begin(); inbr != graph->neighbors(current)->end(); ++inbr) {
+			for (Set::iterator inbr = graph->neighbors(current)->begin(); inbr != graph->neighbors(current)->end(); ++inbr) {
 				int nbr = *inbr;
 				if (!match->contains(nbr)) {
 					update = true;
@@ -71,9 +71,12 @@ Map<int>* bipartite_matching(Graph* graph, Set* left, Set* right) {
 					int n = nbr;
 
 					while (c != -1) {
-						match->at(n) = c;
-						int temp = match->at(c);
-						match->at(c) = n;
+						match->operator[](n) = c;
+						int temp = -1;
+						if (match->count(c) > 0) {
+							temp = match->at(c);
+						}
+						match->operator[](c) = n;
 						n = temp;
 						c = parent[c];
 					}

@@ -31,7 +31,7 @@ build/vc_kernel.o: sr_apx/vc/kernel/lp_kernel.cpp sr_apx/vc/kernel/lp_kernel.hpp
 build/bipartite.o: sr_apx/bipartite/bipartite.cpp sr_apx/bipartite/bipartite.hpp
 	$(CC) $(CCFLAGS) -c -o build/bipartite.o sr_apx/bipartite/bipartite.cpp
 
-lib_sr_apx.so: build/util.o build/matching.o build/graph.o build/vc_apx.o build/vc_exact.o build/vc_lift.o build/vc_kernel.o build/bipartite.o sr_apx/setmap/setmap.hpp sr_apx/setmap/setmap.tpp
+lib_sr_apx.so: build/util.o build/matching.o build/graph.o build/vc_apx.o build/vc_exact.o build/vc_lift.o build/vc_kernel.o build/bipartite.o sr_apx/setmap/setmap.hpp
 	$(CC) -shared -o lib_sr_apx.so build/util.o build/matching.o build/graph.o build/vc_apx.o build/vc_exact.o build/vc_lift.o build/vc_kernel.o build/bipartite.o
 
 build/main.o: main.cpp
@@ -48,7 +48,7 @@ build/util_module.o: sr_apx/util/util_module.cpp
 sr_apx/util/lib_util.so: lib_sr_apx.so build/util_module.o
 	$(CC) -shared -o sr_apx/util/lib_util.so build/util_module.o $(PYFLAGS) -l_sr_apx
 
-build/setmap_module.o: sr_apx/setmap/setmap.tpp sr_apx/setmap/setmap.hpp sr_apx/setmap/setmap_module.cpp sr_apx/setmap/pyset.hpp
+build/setmap_module.o: sr_apx/setmap/setmap.hpp sr_apx/setmap/setmap_module.cpp sr_apx/setmap/pyset.hpp
 	$(CC) $(CCFLAGS) -c $(PYINCLUDE) -o build/setmap_module.o sr_apx/setmap/setmap_module.cpp
 
 sr_apx/setmap/lib_setmap.so: lib_sr_apx.so build/setmap_module.o
