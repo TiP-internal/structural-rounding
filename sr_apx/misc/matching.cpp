@@ -6,8 +6,8 @@
 
 namespace sr_apx::misc {
 
-Map<int>* bipartite_matching(Graph* graph, Set* left, Set* right) {
-	Map<int>* match = new Map<int>();
+Map<int> bipartite_matching(const Graph& graph, const Set& left, const Set& right) {
+	Map<int> match;
 
 	bool update = true;
 
@@ -18,9 +18,8 @@ Map<int>* bipartite_matching(Graph* graph, Set* left, Set* right) {
 		Map<int> distance;
 		Set unmatched;
 
-		for (Set::iterator iu = left->begin(); iu != left->end(); ++iu) {
-			int u = *iu;
-			if (!match->contains(u)) {
+		for (int u : left) {
+			if (!match.contains(u)) {
 				distance[u] = 0;
 				queue.push_back(u);
 				unmatched.insert(u);
@@ -31,15 +30,16 @@ Map<int>* bipartite_matching(Graph* graph, Set* left, Set* right) {
 			int current = queue.front();
 			queue.pop_front();
 
-			for (Set::iterator inbr = graph->neighbors(current)->begin(); inbr != graph->neighbors(current)->end(); ++inbr) {
-				int nbr = *inbr;
-				if (!match->contains(nbr)) {
+			for (int nbr : graph.neighbors(current)) {
+				if (!match.contains(nbr)) {
 					continue;
 				}
 
-				if (!distance.contains(match->at(nbr))) {
-					distance[match->at(nbr)] = distance[current] + 1;
-					queue.push_back(match->at(nbr));
+				int m = match.at(nbr);
+
+				if (!distance.contains(m)) {
+					distance[m] = distance[current] + 1;
+					queue.push_back(m);
 				}
 			}
 		}
@@ -61,9 +61,8 @@ Map<int>* bipartite_matching(Graph* graph, Set* left, Set* right) {
 			stack.pop_back();
 
 			parent[current] = previous;
-			for (Set::iterator inbr = graph->neighbors(current)->begin(); inbr != graph->neighbors(current)->end(); ++inbr) {
-				int nbr = *inbr;
-				if (!match->contains(nbr)) {
+			for (int nbr : graph.neighbors(current)) {
+				if (!match.contains(nbr)) {
 					update = true;
 
 					stack.clear();
@@ -71,12 +70,12 @@ Map<int>* bipartite_matching(Graph* graph, Set* left, Set* right) {
 					int n = nbr;
 
 					while (c != -1) {
-						match->operator[](n) = c;
+						match[n] = c;
 						int temp = -1;
-						if (match->count(c) > 0) {
-							temp = match->at(c);
+						if (match.contains(c)) {
+							temp = match.at(c);
 						}
-						match->operator[](c) = n;
+						match[c] = n;
 						n = temp;
 						c = parent[c];
 					}
@@ -84,9 +83,9 @@ Map<int>* bipartite_matching(Graph* graph, Set* left, Set* right) {
 					break;
 				}
 
-				if (distance[match->at(nbr)] == distance[current] + 1) {
+				if (distance[match.at(nbr)] == distance[current] + 1) {
 					stack.push_back(current);
-					stack.push_back(match->at(nbr));
+					stack.push_back(match.at(nbr));
 				}
 			}
 

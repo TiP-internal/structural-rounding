@@ -7,7 +7,7 @@
 
 namespace sr_apx::misc {
 
-Map<int>* bipartite_matching(Graph*, Set*, Set*);
+Map<int> bipartite_matching(const Graph&, const Set&, const Set&);
 
 }
 

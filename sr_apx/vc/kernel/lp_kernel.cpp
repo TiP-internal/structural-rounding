@@ -4,49 +4,38 @@
 
 namespace sr_apx::vc::kernel {
 
-Set** lp_kernel(Graph* g) {
+std::tuple<Set, Set> lp_kernel(const Graph& g) {
+    Graph h(g.size() * 2);
+    Set left;
+    Set right;
 
-    int n = g->size();
-    Graph* h = new Graph();
-    Set* left = new Set();
-    Set* right = new Set();
-
-    for (auto iu = g->begin(); iu != g->end(); ++iu) {
+    for (Map<Set>::const_iterator iu = g.begin(); iu != g.end(); ++iu) {
         int u = iu->first;
 
-        left->insert(u);
-        right->insert(u + n);
+        left.insert(u);
+        right.insert(-u - 1);
 
-        for (auto inbr = g->neighbors(u)->begin(); inbr != g->neighbors(u)->end(); ++inbr) {
-            int nbr = *inbr;
-            h->add_edge(u, nbr + 2 * n);
+        for (int nbr : g.neighbors(u)) {
+            h.add_edge(u, -nbr - 1);
         }
     }
 
-    Set* cover = exact::bip_exact(h);
+    Set cover = exact::bip_exact(h);
 
-    Set* in = new Set();
-    Set* out = new Set();
+    Set in;
+    Set out;
 
-    for (auto iu = g->begin(); iu != g->end(); ++iu) {
+    for (Map<Set>::const_iterator iu = g.begin(); iu != g.end(); ++iu) {
         int u = iu->first;
-        if (cover->contains(u) && cover->contains(u + 2 * n)) {
-            in->insert(u);
+        if (cover.contains(u) && cover.contains(-u - 1)) {
+            in.insert(u);
         }
-        else if (!cover->contains(u) && !cover->contains(u + 2 * n)) {
-            out->insert(u);
+        else if (!cover.contains(u) && !cover.contains(-u - 1)) {
+            out.insert(u);
         }
     }
 
-    delete h;
-    delete left;
-    delete right;
-    delete cover;
-
-    Set** ret = new Set*[2];
-    ret[0] = in;
-    ret[1] = out;
-    return ret;
+    return {std::move(in), std::move(out)};
 }
 
 }

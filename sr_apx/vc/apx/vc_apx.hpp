@@ -6,10 +6,10 @@
 #include "sr_apx/graph/graph.hpp"
 
 namespace sr_apx::vc::apx {
-
-Set* dfs_apx(Graph*);
-Set* std_apx(Graph*);
-Set* heuristic_apx(Graph*);
+	
+Set dfs_apx(const Graph&);
+Set std_apx(const Graph&);
+Set heuristic_apx(const Graph&);
 
 }
 

@@ -7,7 +7,7 @@
 
 namespace sr_apx::vc::exact {
 
-Set* bip_exact(Graph*);
+Set bip_exact(const Graph&);
 
 }
 

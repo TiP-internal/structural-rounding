@@ -7,14 +7,14 @@
 
 namespace sr_apx::vc::lift {
 
-Set* naive_lift(Graph*, Set*, Set*);
-Set* greedy_lift(Graph*, Set*, Set*);
-Set* apx_lift(Graph*, Set*, Set*);
-Set* oct_lift(Graph*, Set*, Set*);
-Set* bip_lift(Graph*, Set*, Set*);
-Set* recursive_lift(Graph*, Set*, Set*);
-Set* recursive_oct_lift(Graph*, Set*, Set*);
-Set* recursive_bip_lift(Graph*, Set*, Set*);
+Set naive_lift(const Graph&, const Set&, const Set&);
+Set greedy_lift(const Graph&, const Set&, const Set&);
+Set apx_lift(const Graph&, const Set&, const Set&);
+Set oct_lift(const Graph&, const Set&, const Set&);
+Set bip_lift(const Graph&, const Set&, const Set&);
+Set recursive_lift(const Graph&, const Set&, const Set&);
+Set recursive_oct_lift(const Graph&, const Set&, const Set&);
+Set recursive_bip_lift(const Graph&, const Set&, const Set&);
 
 }
 

@@ -2,23 +2,25 @@
 #include "sr_apx/graph/graph.hpp"
 #include "sr_apx/util/util.hpp"
 
+#include <stdexcept>
 #include <iostream>
 #include <fstream>
 
-#define BUFFER_SIZE 1024
-
 namespace sr_apx {
 
-Graph::Graph(int n) {
-	adjlist.reserve(n);
+Graph::Graph(int n): adjlist(n) {}
+
+bool Graph::adjacent(int u, int v) const {
+	Map<Set>::const_iterator loc = adjlist.find(u);
+	if (loc == adjlist.end()) {
+		return false;
+	}
+
+    return loc->second.contains(v);
 }
 
-Graph::~Graph() {
-	adjlist.clear();
-}
-
-bool Graph::adjacent(int u, int v) {
-    return adjlist[u].contains(v);
+bool Graph::contains_vertex(int u) const {
+	return adjlist.contains(u);
 }
 
 void Graph::add_edge(int u, int v) {
@@ -26,7 +28,7 @@ void Graph::add_edge(int u, int v) {
 	adjlist[v].insert(u);
 }
 
-int Graph::size() {
+int Graph::size() const {
 	return adjlist.size();
 }
 
@@ -38,29 +40,43 @@ Map<Set>::iterator Graph::end() {
 	return adjlist.end();
 }
 
-Set* Graph::neighbors(int u) {
-	if (!adjlist.contains(u)) {
-		return NULL;
-	}
-	return &(adjlist[u]);
+Map<Set>::const_iterator Graph::begin() const {
+	return adjlist.cbegin();
 }
 
-int Graph::degree(int u) {
-	if (!adjlist.contains(u)) {
+Map<Set>::const_iterator Graph::end()const  {
+	return adjlist.cend();
+}
+
+Set& Graph::neighbors(int u) {
+	return adjlist.at(u);
+}
+
+const Set& Graph::neighbors(int u) const {
+	return adjlist.at(u);
+}
+
+int Graph::degree(int u) const {
+	Map<Set>::const_iterator loc = adjlist.find(u);
+	if (loc == adjlist.end()) {
 		return 0;
 	}
-	return adjlist[u].size();
+
+	return loc->second.size();
 }
 
-Graph* Graph::subgraph(Set* vertices) {
-	Graph* subg = new Graph(vertices->size());
+Graph Graph::subgraph(const Set& vertices) const {
+	Graph subg(vertices.size());
 
-	for (Set::iterator iu = vertices->begin(); iu != vertices->end(); ++iu) {
-		int u = *iu;
-		for (Set::iterator iv = adjlist[u].begin(); iv != adjlist[u].end(); ++iv) {
-			int v = *iv;
-			if (vertices->contains(v)) {
-				subg->add_edge(u, v);
+	for (int u : vertices) {
+		Map<Set>::const_iterator loc = adjlist.find(u);
+		if (loc == adjlist.end()) {
+			continue;
+		}
+
+		for (int v : loc->second) {
+			if (vertices.contains(v)) {
+				subg.add_edge(u, v);
 			}
 		}
 	}
@@ -69,26 +85,25 @@ Graph* Graph::subgraph(Set* vertices) {
 }
 
 void Graph::remove_vertex(int vertex) {
-	if (degree(vertex) == 0) {
-		adjlist.erase(vertex);
+	Map<Set>::iterator loc = adjlist.find(vertex);
+	if (loc == adjlist.end()) {
 		return;
 	}
 
-	for (int nbr : *(neighbors(vertex))) {
-		neighbors(nbr)->erase(vertex);
+	for (int nbr : loc->second) {
+		loc->second.erase(vertex);
 	}
 
 	adjlist.erase(vertex);
 }
 
-Graph* read_sparse6(const char* filename) {
+Graph read_sparse6(const char* filename) {
 	std::ifstream f;
 	f.open(filename, std::ios::in | std::ios::binary);
 	char c[7];
 	f.read(c, 1);
 	if (c[0] != ':') {
-		printf("%s\n", "not sparse6");
-		return NULL;
+		throw std::invalid_argument("graph is not sparse6");
 	}
 
 	int n;
@@ -114,21 +129,23 @@ Graph* read_sparse6(const char* filename) {
 		}
 	}
 
+	static constexpr int buffer_size = 1024;
+
 	int k = sr_apx::util::log2(n);
-	Graph* graph = new Graph(n);
+	Graph graph(n);
 
 	int bitbuffer = 0;
 	int bitavailable = 0;
 
 	int position = 0;
 	int available = 0;
-	char buffer[BUFFER_SIZE];
+	char buffer[buffer_size];
 
 	int v = 0;
 	while (position < available || !f.eof()) {
 		if (bitavailable < 1) {
 			if (position == available) {
-				f.read(buffer, BUFFER_SIZE);
+				f.read(buffer, buffer_size);
 				available = f.gcount();
 				position = 0;
 			}
@@ -142,7 +159,7 @@ Graph* read_sparse6(const char* filename) {
 
 		while (bitavailable < k) {
 			if (position == available) {
-				f.read(buffer, BUFFER_SIZE);
+				f.read(buffer, buffer_size);
 				available = f.gcount();
 				position = 0;
 			}
@@ -166,7 +183,7 @@ Graph* read_sparse6(const char* filename) {
 			v = x;
 		}
 		else {
-			graph->add_edge(x, v);
+			graph.add_edge(x, v);
 		}
 	}
 
@@ -174,29 +191,27 @@ Graph* read_sparse6(const char* filename) {
 	return graph;
 }
 
-Graph* read_edge_list(const char* filename) {
+Graph read_edge_list(const char* filename) {
 	std::ifstream f;
 	f.open(filename, std::ios::in);
 
-	Graph* g = new Graph();
+	Graph g;
 
 	char s[100];
 	f.getline(s, 100);
 	while (f.getline(s, 100)) {
 		int u, v;
 		sscanf(s, "%d %d", &u, &v);
-		g->add_edge(u, v);
+		g.add_edge(u, v);
 	}
 
 	f.close();
 	return g;
 }
 
-Graph* read_dimacs(const char* filename) {
+Graph read_dimacs(const char* filename) {
 	std::ifstream f;
 	f.open(filename, std::ios::in);
-
-	Graph* g = new Graph();
 
 	char s[100];
 	f.getline(s, 100);
@@ -204,6 +219,8 @@ Graph* read_dimacs(const char* filename) {
 
 	int n;
 	sscanf(s, "%d", &n);
+
+	Graph g(n);
 
 	int nextu;
 	int nextv;
@@ -219,7 +236,7 @@ Graph* read_dimacs(const char* filename) {
 				continue;
 			}
 
-			g->add_edge(u, v);
+			g.add_edge(u, v);
 		}
 	}
 

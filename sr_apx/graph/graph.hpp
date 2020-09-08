@@ -7,28 +7,34 @@
 namespace sr_apx {
 
 class Graph {
-public:
 	Map<Set> adjlist;
 
-	Graph() {};
-	Graph(int);
-	~Graph();
+public:
+	Graph() = default;
+	explicit Graph(int);
+
 	void add_edge(int, int);
-	int size();
-	int degree(int);
-	bool adjacent(int, int);
+	void remove_vertex(int);
+
+	int size() const;
+	int degree(int) const;
+	bool adjacent(int, int) const;
+	bool contains_vertex(int) const;
 
 	Map<Set>::iterator begin();
 	Map<Set>::iterator end();
-	Set* neighbors(int);
+	Map<Set>::const_iterator begin() const;
+	Map<Set>::const_iterator end() const;
 
-	Graph* subgraph(Set*);
-	void remove_vertex(int);
+	Set& neighbors(int);
+	const Set& neighbors(int) const;
+
+	Graph subgraph(const Set&) const;
 };
 
-Graph* read_sparse6(const char*);
-Graph* read_edge_list(const char*);
-Graph* read_dimacs(const char*);
+Graph read_sparse6(const char*);
+Graph read_edge_list(const char*);
+Graph read_dimacs(const char*);
 
 }
 
