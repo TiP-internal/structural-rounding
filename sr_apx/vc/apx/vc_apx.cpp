@@ -127,8 +127,8 @@ Set std_apx(const Graph& g) {
 				continue;
 			}
 
-			if (g.degree(nbr) > md) {
-				md = g.degree(nbr);
+			if (deg[nbr] > md) {
+				md = deg[nbr];
 				v = nbr;
 			}
 		}
