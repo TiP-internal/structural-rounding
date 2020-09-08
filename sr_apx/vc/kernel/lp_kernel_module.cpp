@@ -13,10 +13,12 @@ static PyObject* vc_kernel_lpkernel(PyObject* self, PyObject* args) {
 
     sr_apx::Graph* graph = ((PyGraph*) g)->g;
 
-    sr_apx::Set** kernel = sr_apx::vc::kernel::lp_kernel(graph);
-    PyObject* in = make_PySet(kernel[0], false);
-    PyObject* out = make_PySet(kernel[1], false);
-    delete[] kernel;
+    sr_apx::Set i;
+    sr_apx::Set o;
+    std::tie(i, o) = sr_apx::vc::kernel::lp_kernel(*graph);
+
+    PyObject* in = make_PySet(std::move(i));
+    PyObject* out = make_PySet(std::move(o));
     return Py_BuildValue("OO", in, out);
 }
 

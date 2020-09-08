@@ -87,7 +87,7 @@ static PyObject* Graph_contains(PyGraph* self, PyObject* args) {
 		return NULL;
 	}
 
-	if (self->g->adjlist.contains(u)) {
+	if (self->g->contains_vertex(u)) {
 		Py_RETURN_TRUE;
 	}
 	else {
@@ -97,7 +97,7 @@ static PyObject* Graph_contains(PyGraph* self, PyObject* args) {
 
 static int Graph_contains_in(PyGraph* self, PyObject* key) {
 	int u = PyLong_AsLong(key);
-	return self->g->adjlist.contains(u);
+	return self->g->contains_vertex(u);
 }
 
 static PyObject* Graph_neighbors(PyGraph* self, PyObject* args) {
@@ -106,7 +106,7 @@ static PyObject* Graph_neighbors(PyGraph* self, PyObject* args) {
 		return NULL;
 	}
 
-	return make_PySet(self->g->neighbors(u), true);
+	return make_PySet(&(self->g->neighbors(u)));
 }
 
 static PyObject* Graph_subgraph(PyGraph* self, PyObject* args) {
@@ -116,8 +116,18 @@ static PyObject* Graph_subgraph(PyGraph* self, PyObject* args) {
 	}
 
 	sr_apx::Set* vertices = ((PySet*) s)->s;
-	sr_apx::Graph* subg = self->g->subgraph(vertices);
-	return make_PyGraph(subg);
+	sr_apx::Graph subg = self->g->subgraph(*vertices);
+	return make_PyGraph(std::move(subg));
+}
+
+static PyObject* Graph_removevertex(PyGraph* self, PyObject* args) {
+	int u;
+	if (!PyArg_ParseTuple(args, "i", &u)) {
+		return NULL;
+	}
+
+	self->g->remove_vertex(u);
+	Py_RETURN_NONE;
 }
 
 static PyMethodDef Graph_methods[] = {
@@ -130,6 +140,7 @@ static PyMethodDef Graph_methods[] = {
 	{"adjacent", (PyCFunction) Graph_adjacent, METH_VARARGS, "gets whether two vertices are connected by an edge"},
 	{"neighbors", (PyCFunction) Graph_neighbors, METH_VARARGS, "gets the set of neighbors"},
 	{"subgraph", (PyCFunction) Graph_subgraph, METH_VARARGS, "creates a subgraph containing the specified vertices"},
+	{"remove_vertex", (PyCFunction) Graph_removevertex, METH_VARARGS, "removes a vertex from the graph"},
 	{NULL},
 };
 
@@ -169,7 +180,7 @@ static PyObject* GraphIter_len(PyGraphIter* self) {
 }
 
 static PyObject* GraphIter_iternext(PyGraphIter* self) {
-	if (self->current == self->g->g->adjlist.end()) {
+	if (self->current == self->g->g->end()) {
 		PyGraph* temp = self->g;
 		self->g = NULL;
 		Py_DECREF(temp);
@@ -212,7 +223,7 @@ static PyObject* Graph_iter(PyGraph* self) {
 
 	Py_INCREF(self);
 	iter->g = self;
-	iter->current = self->g->adjlist.begin();
+	iter->current = self->g->begin();
 	iter->len = self->g->size();
 	PyObject_GC_Track(iter);
 	return (PyObject*) iter;
@@ -310,8 +321,8 @@ PyMODINIT_FUNC PyInit_lib_graph() {
 
 // cpp api /////////////////////////////////////
 
-PyObject* make_PyGraph(sr_apx::Graph* base) {
+PyObject* make_PyGraph(sr_apx::Graph&& base) {
 	PyGraph* ret = (PyGraph*) Graph_new(&Graph_type, NULL, NULL);
-	ret->g = base;
+	ret->g = new sr_apx::Graph(std::move(base));
 	return (PyObject*) ret;
 }

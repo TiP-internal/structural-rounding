@@ -18,7 +18,7 @@ static PyObject* vc_lift_naivelift(PyObject* self, PyObject* args) {
 	sr_apx::Set* octset = ((PySet*) o)->s;
 	sr_apx::Set* partial = ((PySet*) p)->s;
 
-	return make_PySet(sr_apx::vc::lift::naive_lift(graph, octset, partial), false);
+	return make_PySet(sr_apx::vc::lift::naive_lift(*graph, *octset, *partial));
 }
 
 static PyObject* vc_lift_greedylift(PyObject* self, PyObject* args) {
@@ -34,7 +34,7 @@ static PyObject* vc_lift_greedylift(PyObject* self, PyObject* args) {
 	sr_apx::Set* octset = ((PySet*) o)->s;
 	sr_apx::Set* partial = ((PySet*) p)->s;
 
-	return make_PySet(sr_apx::vc::lift::greedy_lift(graph, octset, partial), false);
+	return make_PySet(sr_apx::vc::lift::greedy_lift(*graph, *octset, *partial));
 }
 
 static PyObject* vc_lift_apxlift(PyObject* self, PyObject* args) {
@@ -50,7 +50,7 @@ static PyObject* vc_lift_apxlift(PyObject* self, PyObject* args) {
 	sr_apx::Set* octset = ((PySet*) o)->s;
 	sr_apx::Set* partial = ((PySet*) p)->s;
 
-	return make_PySet(sr_apx::vc::lift::apx_lift(graph, octset, partial), false);
+	return make_PySet(sr_apx::vc::lift::apx_lift(*graph, *octset, *partial));
 }
 
 static PyObject* vc_lift_octlift(PyObject* self, PyObject* args) {
@@ -66,7 +66,7 @@ static PyObject* vc_lift_octlift(PyObject* self, PyObject* args) {
 	sr_apx::Set* octset = ((PySet*) o)->s;
 	sr_apx::Set* partial = ((PySet*) p)->s;
 
-	return make_PySet(sr_apx::vc::lift::oct_lift(graph, octset, partial), false);
+	return make_PySet(sr_apx::vc::lift::oct_lift(*graph, *octset, *partial));
 }
 
 static PyObject* vc_lift_biplift(PyObject* self, PyObject* args) {
@@ -82,7 +82,7 @@ static PyObject* vc_lift_biplift(PyObject* self, PyObject* args) {
 	sr_apx::Set* octset = ((PySet*) o)->s;
 	sr_apx::Set* partial = ((PySet*) p)->s;
 
-	return make_PySet(sr_apx::vc::lift::bip_lift(graph, octset, partial), false);
+	return make_PySet(sr_apx::vc::lift::bip_lift(*graph, *octset, *partial));
 }
 
 static PyObject* vc_lift_recursivelift(PyObject* self, PyObject* args) {
@@ -98,7 +98,7 @@ static PyObject* vc_lift_recursivelift(PyObject* self, PyObject* args) {
 	sr_apx::Set* octset = ((PySet*) o)->s;
 	sr_apx::Set* partial = ((PySet*) p)->s;
 
-	return make_PySet(sr_apx::vc::lift::recursive_lift(graph, octset, partial), false);
+	return make_PySet(sr_apx::vc::lift::recursive_lift(*graph, *octset, *partial));
 }
 
 static PyObject* vc_lift_recoctlift(PyObject* self, PyObject* args) {
@@ -114,7 +114,7 @@ static PyObject* vc_lift_recoctlift(PyObject* self, PyObject* args) {
 	sr_apx::Set* octset = ((PySet*) o)->s;
 	sr_apx::Set* partial = ((PySet*) p)->s;
 
-	return make_PySet(sr_apx::vc::lift::recursive_oct_lift(graph, octset, partial), false);
+	return make_PySet(sr_apx::vc::lift::recursive_oct_lift(*graph, *octset, *partial));
 }
 
 static PyObject* vc_lift_recbiplift(PyObject* self, PyObject* args) {
@@ -130,7 +130,7 @@ static PyObject* vc_lift_recbiplift(PyObject* self, PyObject* args) {
 	sr_apx::Set* octset = ((PySet*) o)->s;
 	sr_apx::Set* partial = ((PySet*) p)->s;
 
-	return make_PySet(sr_apx::vc::lift::recursive_bip_lift(graph, octset, partial), false);
+	return make_PySet(sr_apx::vc::lift::recursive_bip_lift(*graph, *octset, *partial));
 }
 
 static PyMethodDef vc_lift_methods[] = {

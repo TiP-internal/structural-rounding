@@ -228,9 +228,16 @@ PyMODINIT_FUNC PyInit_lib_setmap() {
 
 // cpp api //////////////////////////////////////////////
 
-PyObject* make_PySet(sr_apx::Set* base, bool b) {
+PyObject* make_PySet(sr_apx::Set* base) {
 	PySet* ret = (PySet*) Set_new(&Set_type, NULL, NULL);
-	ret->borrowed = b;
+	ret->borrowed = true;
 	ret->s = base;
+	return (PyObject*) ret;
+}
+
+PyObject* make_PySet(sr_apx::Set&& base) {
+	PySet* ret = (PySet*) Set_new(&Set_type, NULL, NULL);
+	ret->borrowed = false;
+	ret->s = new sr_apx::Set(std::move(base));
 	return (PyObject*) ret;
 }

@@ -15,11 +15,15 @@ static PyObject* bipartite_verifybip(PyObject* self, PyObject* args) {
 	sr_apx::Graph* graph = ((PyGraph*) g)->g;
 	sr_apx::Set* os = ((PySet*) s)->s;
 
-	sr_apx::Set** od = sr_apx::bipartite::verify_bipartite(graph, os);
-	PyObject* l = make_PySet(od[1], false);
-	PyObject* r = make_PySet(od[2], false);
-	PyObject* o = make_PySet(od[0], false);
-	delete[] od;
+	sr_apx::Set octset;
+	sr_apx::Set left;
+	sr_apx::Set right;
+
+	std::tie(octset, left, right) = sr_apx::bipartite::verify_bipartite(*graph, *os);
+
+	PyObject* l = make_PySet(std::move(left));
+	PyObject* r = make_PySet(std::move(right));
+	PyObject* o = make_PySet(std::move(octset));
 	return Py_BuildValue("OOO", o, l, r);
 }
 
@@ -37,8 +41,8 @@ static PyObject* bipartite_prescribed(PyObject* self, PyObject* args) {
 
 	sr_apx::Graph* graph = ((PyGraph*) g)->g;
 
-	sr_apx::Set* oct = sr_apx::bipartite::prescribed_octset(graph, s);
-	PyObject* o = make_PySet(oct, false);
+	sr_apx::Set oct = sr_apx::bipartite::prescribed_octset(*graph, s);
+	PyObject* o = make_PySet(std::move(oct));
 	return o;
 }
 
@@ -48,10 +52,10 @@ static PyObject* bipartite_vertexdelete(PyObject* self, PyObject* args) {
 		return NULL;
 	}
 
-	PyGraph* graph = (PyGraph*) g;
+	sr_apx::Graph* graph = ((PyGraph*) g)->g;
 
-	sr_apx::Set* oct = sr_apx::bipartite::vertex_delete(graph->g);
-	PyObject* o = make_PySet(oct, false);
+	sr_apx::Set oct = sr_apx::bipartite::vertex_delete(*graph);
+	PyObject* o = make_PySet(std::move(oct));
 	return o;
 }
 
