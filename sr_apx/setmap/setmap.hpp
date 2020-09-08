@@ -194,17 +194,18 @@ public:
 		to implement both iterators and const_iterators.
 	*/
 	template<class IterType>
-	struct table_iterator {
+	class table_iterator {
+		// reference to the storage array
+		bucket* base = nullptr;
+
+	public:
+		// current index in the storage array
+		size_type index = -1;
+
 		using iterator_category = std::forward_iterator_tag;
 		using difference_type = std::ptrdiff_t;
 		using pointer = value_type*;
 		using reference = value_type&;
-
-		// reference to the storage array
-		bucket* base = nullptr;
-
-		// current index in the storage array
-		size_type index = -1;
 
 		table_iterator(bucket* b, size_type i): base(b), index(i) {}
 
