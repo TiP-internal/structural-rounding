@@ -271,8 +271,10 @@ public:
 	}
 
 	table(const table& other): Hash(other), Equal(other) {
-		rehash_impl(other.capacity);
-		insert_nocheck(other.begin(), other.end());
+		if (other.load > 0) {
+			rehash_impl(other.capacity);
+			insert_nocheck(other.begin(), other.end());
+		}
 	}
 
 	table(table&& other) noexcept: table() {
@@ -296,8 +298,12 @@ public:
 		Hash::operator=(other);
 		Equal::operator=(other);
 		clear();
-		rehash_impl(other.capacity);
-		insert_nocheck(other.begin(), other.end());
+		
+		if (other.load > 0) {
+			rehash_impl(other.capacity);
+			insert_nocheck(other.begin(), other.end());
+		}
+
 		return *this;
 	}
 
@@ -640,6 +646,7 @@ protected:
 		for (InputIt it = first; it != last; ++it) {
 			value_type temp(*it);
 			insert_impl_nocheck(Hash::operator()(temp) & (capacity - 1), 0, std::move(temp));
+			++load;
 		}
 	}
 
