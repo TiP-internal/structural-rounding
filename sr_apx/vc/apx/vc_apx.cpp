@@ -49,7 +49,7 @@ Set dfs_apx(const Graph& g) {
 	return cover;
 }
 
-void remove_vertex(const Graph& g, Map<int>& deg, Map<Set>& revdeg, int u) {
+void remove_vertex(const Graph& g, Map<int>& deg, std::vector<Set>& revdeg, int u) {
 	for (int nbr : g.neighbors(u)) {
 		if (!deg.contains(nbr)) {
 			continue;
@@ -74,14 +74,15 @@ Set heuristic_apx(const Graph& g) {
 	Set cover;
 
 	Map<int> deg(g.size());
-	Map<Set> revdeg;
+	std::vector<Set> revdeg;
 	int maxdeg = 0;
 
 	for (Map<Set>::const_iterator it = g.begin(); it != g.end(); ++it) {
 		int degree = g.degree(it->first);
 		deg[it->first] = degree;
-		revdeg[degree].insert(it->first);
 		maxdeg = degree > maxdeg ? degree : maxdeg;
+		revdeg.resize(maxdeg + 1);
+		revdeg[degree].insert(it->first);
 	}
 
 	while (deg.size() > 0) {
@@ -102,14 +103,15 @@ Set std_apx(const Graph& g) {
 	Set cover;
 
 	Map<int> deg(g.size());
-	Map<Set> revdeg;
+	std::vector<Set> revdeg;
 	int maxdeg = 0;
 
 	for (Map<Set>::const_iterator it = g.begin(); it != g.end(); ++it) {
 		int degree = g.degree(it->first);
 		deg[it->first] = degree;
-		revdeg[degree].insert(it->first);
 		maxdeg = degree > maxdeg ? degree : maxdeg;
+		revdeg.resize(maxdeg + 1);
+		revdeg[degree].insert(it->first);
 	}
 
 	while (deg.size() > 0) {

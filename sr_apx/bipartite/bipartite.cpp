@@ -1,6 +1,7 @@
 
 #include "sr_apx/bipartite/bipartite.hpp"
 
+#include <vector>
 #include <deque>
 #include <iostream>
 #include <fstream>
@@ -84,17 +85,21 @@ std::tuple<Set, Set, Set> verify_bipartite(const Graph& graph, const Set& os) {
 
 void remove_indset(const Graph& graph, Set& available) {
 	Map<int> deg;
-	Map<Set> revdeg;
+	std::vector<Set> revdeg;
 
+	int maxdeg = 0;
 	for (int u : available) {
-		deg[u] = 0;
+		int degree = 0;
 		for (int v : graph.neighbors(u)) {
 			if (available.contains(v)) {
-				deg[u] += 1;
+				degree += 1;
 			}
 		}
 
-		revdeg[deg[u]].insert(u);
+		maxdeg = degree > maxdeg ? degree : maxdeg;
+		deg[u] = degree;
+		revdeg.resize(maxdeg + 1);
+		revdeg[degree].insert(u);
 	}
 
 	while (deg.size() > 0) {
