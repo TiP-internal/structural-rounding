@@ -5,10 +5,18 @@
 #include "setmap.hpp"
 #include "graph.hpp"
 
-bool is_domset(Graph*, Set*);
+
+Set* logn_apx(Graph*);              // basic greedy alg.
+Set* mod_exp_c_apx(Graph*, int);    // [Bourgeois et al. 2009]
+Set* Hk_minus_half_apx(Graph*, Set*);     // [Duh & Furer 1997]
+
+
+//helpers
 int max_deg_vertex(Graph*, Set*);
+int largest_harmonic_num(int);
 
-Set* logn_apx(Graph*);
 
+//for TESTING
+bool is_domset(Graph*, Set*);
 
 #endif
