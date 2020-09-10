@@ -346,8 +346,10 @@ Set* balanced_separators(Graph* graph, int beta) {
             }
         }
     }
-//     bool test = test_separators(graph, A, B, beta);
-//     printf("is valid sep? %d\n", test);
+    
+    //NOTE to double check the separators separate correctly.
+    //bool test = test_separators(graph, A, B, beta);
+    //printf("is valid sep? %d\n", test);
     
     delete A;
     delete B;
@@ -525,19 +527,19 @@ Set* balanced_separators(Graph* graph, Set* W, int beta) {
         }
     }
     
-    //For testing. Tests whether the vertex separators are valid separators.
-//     bool test = test_separators(graph, A, B, A_count, B_count, beta);
-//     if (!test) {
-// 
-//         printf("W: ");
-//         for(auto it=W->begin(); it!=W->end(); it++) printf(" %d,", *it);
-//         printf("\n\n");
-//         
-//         printf("beta=%d\n", beta);
-//         printf("A_count=%d, B_count=%d, C_count=%d \n", A_count, B_count, C_count);
-//         printf("ERROR: is valid sep? %d\n", test);
-//         
-//     }
+    //NOTE For testing. Tests whether the vertex separators are valid separators.
+    //bool test = test_separators(graph, A, B, A_count, B_count, beta);
+    //if (!test) {
+
+    //    printf("W: ");
+    //    for(auto it=W->begin(); it!=W->end(); it++) printf(" %d,", *it);
+    //    printf("\n\n");
+        
+    //    printf("beta=%d\n", beta);
+    //    printf("A_count=%d, B_count=%d, C_count=%d \n", A_count, B_count, C_count);
+    //    printf("ERROR: is valid sep? %d\n", test);
+        
+    //}
     
     delete A;
     delete B;
@@ -553,11 +555,11 @@ bool test_separators(Graph* graph, Set* A, Set* B, int A_count, int B_count, int
     /*
      * Tests that there are not edges between the two sets.
      */
-//     printf("is |A|=%d <=? beta=%d\n", A->size(), beta);
-//     printf("is |B|=%d <=? beta=%d\n", B->size(), beta);
+    //printf("is |A|=%d <=? beta=%d\n", A->size(), beta);
+    //printf("is |B|=%d <=? beta=%d\n", B->size(), beta);
     
-//     if(A->size() > beta) return false;  
-//     if(B->size() > beta) return false;
+    //if(A->size() > beta) return false;  
+    //if(B->size() > beta) return false;
     
     if(A_count > beta) {
         printf("A: ");
