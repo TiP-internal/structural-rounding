@@ -42,23 +42,36 @@ void merge_forget_table(Table*, Set*, int, Variant);
 void merge_join_table(Table*, Table*, Set*, Variant);
 
 
-//Helpers
-int locally_valid_coloring(Graph*, Set*, Row*, std::vector<int>&, Variant);
-int get_num_dominators(Graph*, Row*, std::vector<int>&, int);
-bool intro_indep_check(Graph*, std::vector<int>&, std::vector<int>&, int);
-bool check_independent(Graph*, Set*);
-int phi(Row*, Set*, std::vector<int>&, int);
+//-----Table reduction helpers
+bool is_exclusive_to_singlebag(std::vector<Set*>&, Set*, Set*, Set*);
+bool is_child_subset(std::vector<Set*>&, std::vector<po_bag>&, Set*, Set*);
+bool is_a_implies_b(Graph*, std::vector<Set*>&, Set*, Set*, Set*);
+bool is_empty_bag_intersect(std::vector<Set*>&, std::vector<po_bag>&, Set*);
+bool is_treelike_subcollection(std::vector<Set*>&, std::vector<po_bag>&, 
+                               Set*, Set*);
+
 void remove_node_from_postack(std::vector<po_bag> &, po_bag &); 
 void remove_edge_from_postack(std::vector<po_bag> &, po_bag &);
 bool is_special_subset(Set*, Set*, Set*);
+
+
+//-----Helpers
+//Dominating Set 
+int locally_valid_coloring(Graph*, Set*, Row*, std::vector<int>&, Variant);
+int phi(Row*, Set*, std::vector<int>&, int);
 int* minAi_c(Table*, Table*, Set*, Row*, Row*);
 void intro_vert_indomset_update(Graph*, Table*, Set*, Row*, int, Variant);
 void intro_vert_dominated_update(Graph*, Table*, Set*, Set*, Row*, Row*, int, Variant);
 
+//Independent dominating set + Perfect dominating set
+int get_num_dominators(Graph*, Row*, std::vector<int>&, int);
+bool intro_indep_check(Graph*, std::vector<int>&, std::vector<int>&, int);
+bool check_independent(Graph*, Set*);
+
+
 //-----For testing
 void print_row(Row*);
 void print_table(Table*, std::string);
-
 void print_tables(std::vector<Table*>&);
 void print_postorder(std::vector<po_bag>);
 void print_pobag(po_bag);

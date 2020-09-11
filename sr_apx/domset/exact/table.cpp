@@ -212,7 +212,3 @@ void Table::print_tablelookups() {
     printf("\n===========================================\n\n\n");
 }
 
-// template class Table<Row*>;
-// template class Table<RowConstruct*>;
-
-
