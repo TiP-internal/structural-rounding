@@ -72,7 +72,7 @@ std::vector<std::vector<po_bag>> TreeDecomp::get_post_order() {
     for(auto ib=components_bags.begin(); ib!=components_bags.end(); ib++) {  //for each comp.
         std::vector<Set*> bag_comp = *ib;
         std::deque<std::deque<int>> po_stack = components_po_stacks[i];
-         
+
         std::vector<po_bag> po_comp;  
         std::deque<int> pars = po_stack[0]; 
         po_stack.pop_front();
@@ -85,12 +85,9 @@ std::vector<std::vector<po_bag>> TreeDecomp::get_post_order() {
     return post_order;
 }
 
-//NOTE tracks the number of recursive calls made. For each call, we take a new parent from pars.
-//The index of this corresponds to the index of leaves in the leaf_stack. 
-int NUM_CALLS=0;  
 void TreeDecomp::post_order_helper(std::deque<int> &pars, 
                                    std::deque<std::deque<int>> &leaf_stack, 
-                                   std::vector<po_bag>& po, 
+                                    std::vector<po_bag>& po, 
                                    int parent, int grandparent) {
     /*
      * Finds post order for the given component. 
@@ -105,16 +102,12 @@ void TreeDecomp::post_order_helper(std::deque<int> &pars,
      * 
      */
     int parent_ind = parent;
+    int par_i = get_par_index(pars, parent_ind); 
+    //TODO could add this to recursive call
     
-    //NOTE this is doing the same thing as NUM_CALLS, but takes much more time
-    //int par_i = get_par_index(pars, parent_ind); 
+    //printf("parent_ind=%d, par_i=%d\n", parent_ind, par_i);
     
-    if(NUM_CALLS>=leaf_stack.size()) {
-        printf("WARNING: NUM_CALLS in TreeDecomp::post_order_helper incorrect.\n");
-    } 
-    
-    std::deque<int> leaves = leaf_stack[NUM_CALLS];
-    NUM_CALLS++;
+    std::deque<int> leaves = leaf_stack[par_i];
     
     //-------left+right  first
     for(auto il=leaves.begin(); il!=leaves.end(); il++) {                  
