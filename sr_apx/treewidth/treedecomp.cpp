@@ -72,8 +72,7 @@ std::vector<std::vector<po_bag>> TreeDecomp::get_post_order() {
     for(auto ib=components_bags.begin(); ib!=components_bags.end(); ib++) {  //for each comp.
         std::vector<Set*> bag_comp = *ib;
         std::deque<std::deque<int>> po_stack = components_po_stacks[i];
-        
-        // std::vector<int> po_comp;  
+
         std::vector<po_bag> po_comp;  
         std::deque<int> pars = po_stack[0]; 
         po_stack.pop_front();

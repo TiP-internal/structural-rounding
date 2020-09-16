@@ -52,7 +52,7 @@ void dfs(Graph* graph, Set* comp, Set* visited, int v) {
 }
 
 
-Set* treewidth_nodeedit(Graph* graph, int w) {
+Set* treewidth_nodeedit(Graph* graph, Set* optional_verts, int w, bool annotated_version) {
     /*
      * TreeWidthNodeEdit() from SR paper. 
      * 
@@ -68,7 +68,7 @@ Set* treewidth_nodeedit(Graph* graph, int w) {
     calculated_treedecomposition(graph, decomp);
     int t = decomp->treewidth();
     
-    delete decomp;                      // NOTE delete or store?
+    delete decomp;                    
     
     
     if ( t <= 32*c1*w*sqrt(log2(w)) ) {  //NOTE double check which log base
@@ -89,7 +89,19 @@ Set* treewidth_nodeedit(Graph* graph, int w) {
             Set* component_set = *ic;
             Graph* component = graph->subgraph_wsingles(component_set);
             
-            S->add_all(treewidth_nodeedit(component, w)); //set union but modifies S
+            Set* edited_vertices = treewidth_nodeedit(component, optional_verts, w, annotated_version);
+            S->add_all(edited_vertices); //set union but modifies S
+            
+            if(annotated_version) {
+                //Add the neighbors of the edit set to the optinally dominated set. 
+                for(auto iev=edited_vertices->begin(); iev!=edited_vertices->end(); iev++) {
+                    int e=*iev;
+                    for(auto ien=component->neighbors(e)->begin(); 
+                        ien!=component->neighbors(e)->end(); ien++) {
+                        optional_verts->insert(*iev);
+                    }
+                }
+            }
             
             delete component_set, component;
         }
@@ -334,8 +346,10 @@ Set* balanced_separators(Graph* graph, int beta) {
             }
         }
     }
-//     bool test = test_separators(graph, A, B, beta);
-//     printf("is valid sep? %d\n", test);
+    
+    //NOTE to double check the separators separate correctly.
+    //bool test = test_separators(graph, A, B, beta);
+    //printf("is valid sep? %d\n", test);
     
     delete A;
     delete B;
@@ -513,19 +527,19 @@ Set* balanced_separators(Graph* graph, Set* W, int beta) {
         }
     }
     
-    //For testing. Tests whether the vertex separators are valid separators.
-//     bool test = test_separators(graph, A, B, A_count, B_count, beta);
-//     if (!test) {
-// 
-//         printf("W: ");
-//         for(auto it=W->begin(); it!=W->end(); it++) printf(" %d,", *it);
-//         printf("\n\n");
-//         
-//         printf("beta=%d\n", beta);
-//         printf("A_count=%d, B_count=%d, C_count=%d \n", A_count, B_count, C_count);
-//         printf("ERROR: is valid sep? %d\n", test);
-//         
-//     }
+    //NOTE For testing. Tests whether the vertex separators are valid separators.
+    //bool test = test_separators(graph, A, B, A_count, B_count, beta);
+    //if (!test) {
+
+    //    printf("W: ");
+    //    for(auto it=W->begin(); it!=W->end(); it++) printf(" %d,", *it);
+    //    printf("\n\n");
+        
+    //    printf("beta=%d\n", beta);
+    //    printf("A_count=%d, B_count=%d, C_count=%d \n", A_count, B_count, C_count);
+    //    printf("ERROR: is valid sep? %d\n", test);
+        
+    //}
     
     delete A;
     delete B;
@@ -541,11 +555,11 @@ bool test_separators(Graph* graph, Set* A, Set* B, int A_count, int B_count, int
     /*
      * Tests that there are not edges between the two sets.
      */
-//     printf("is |A|=%d <=? beta=%d\n", A->size(), beta);
-//     printf("is |B|=%d <=? beta=%d\n", B->size(), beta);
+    //printf("is |A|=%d <=? beta=%d\n", A->size(), beta);
+    //printf("is |B|=%d <=? beta=%d\n", B->size(), beta);
     
-//     if(A->size() > beta) return false;  
-//     if(B->size() > beta) return false;
+    //if(A->size() > beta) return false;  
+    //if(B->size() > beta) return false;
     
     if(A_count > beta) {
         printf("A: ");
