@@ -81,6 +81,18 @@ Graph* Graph::subgraph(Set* vertices) {
 	return subg;
 }
 
+void Graph::remove_vertex(int vertex) {
+	if (degree(vertex) == 0) {
+		adjlist.erase(vertex);
+		return;
+	}
+
+	for (int nbr : *(neighbors(vertex))) {
+		neighbors(nbr)->erase(vertex);
+	}
+
+	adjlist.erase(vertex);
+}
 
 Graph* Graph::subgraph_wsingles(Set* vertices) {
     /*
@@ -111,7 +123,6 @@ Graph* Graph::subgraph_wsingles(Set* vertices) {
 
 	return subg;
 }
-
 
 Graph* read_sparse6(const char* filename) {
 	std::ifstream f;
