@@ -19,9 +19,11 @@ public:
 	Map<Set>::Iterator begin();
 	Map<Set>::Iterator end();
 	Set* neighbors(int);
+        Set* get_vertices(); 
 
 	Graph* subgraph(Set*);
 	void remove_vertex(int);
+  Graph* subgraph_wsingles(Set*);
 };
 
 Graph* read_sparse6(const char*);
