@@ -72,7 +72,7 @@ std::vector<std::vector<po_bag>> TreeDecomp::get_post_order() {
             std::vector<po_bag> rev;
             for (auto it = comp.rbegin(); it != comp.rend(); ++it) {
                 rev.push_back(*it);
-                rev[rev.size() - 1].parent_bag_index = comp.size() - 1 - (*it).parent_bag_index;
+                // rev[rev.size() - 1].parent_bag_index = comp.size() - 1 - (*it).parent_bag_index;
             }
             po.push_back(rev);
         }
@@ -170,15 +170,16 @@ int TreeDecomp::add_bag(int component, int parent, bool last_child, Set* bag) {
         post_order.resize(component + 1);
     }
 
-    // ensures that empty root bag is placed
+    // ensures that root bag exists
     if (components_bags[component].empty()) {
-        components_bags[component].push_back(new Set());
+        components_bags[component].push_back(copyset(bag));
         po_bag p;
         p.bag_index = 0;
         p.num_children = 0;
         p.parent_bag_index = -1;
         p.current_join_child = 0;
         post_order[component].push_back(p);
+        return 0;
     }
 
     int true_parent = post_order[component][parent].current_join_child;

@@ -71,7 +71,7 @@ Set* treewidth_nodeedit(Graph* graph, Set* optional_verts, int w, bool annotated
     delete decomp;
 
 
-    if ( t <= 32*c1*w*sqrt(log2(w)) ) {  //NOTE double check which log base
+    if ( t <= c1*w*sqrt(log2(w)) ) {  //NOTE double check which log base
         Set* empty = new Set();
         return empty;
     }
@@ -179,7 +179,7 @@ void tree_decomp(Graph* graph, Set* Z, Set* W, TreeDecomp* decomp, int component
 
     if(8*Z->size() <= W->size()) {
         int leaf = decomp->add_bag(component, parent, last_child, Z_un_W);
-        decomp->add_bag(component, leaf, true, new Set());
+        // decomp->add_bag(component, leaf, true, new Set());
         return;
     }
 
