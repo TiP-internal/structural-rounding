@@ -150,7 +150,7 @@ int calc_min_domset(Graph* graph, TreeDecomp* decomp,
                          empty, variant);
         delete empty;
 
-        // solnsize += get_solution(tables[tables.size()-1]); //soln size for each component
+        solnsize += get_solution(tables[tables.size()-1]); //soln size for each component
     }
     return solnsize;
 }
@@ -252,7 +252,7 @@ void calculate_tables(Graph* graph, std::vector<Set*> &bags,
             //NOTE needs testing
             for(int j=table_bag_indices.size()-2; j>=0; j--) {
                 int ind=table_bag_indices[j];
-                if(!anchor_tables->contains(ind)) {
+                if(!anchor_tables->contains(ind) && ind_childl == -99) {
                     ind_childl=j;
                     continue;
                 }
