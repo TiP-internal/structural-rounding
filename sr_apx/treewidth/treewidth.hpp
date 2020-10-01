@@ -3,7 +3,7 @@
 #define TREEWIDTH_H
 
 #include <vector>
-#include <deque> 
+#include <deque>
 
 #include "graph.hpp"
 #include "setmap.hpp"
@@ -11,7 +11,7 @@
 
 Set* treewidth_nodeedit(Graph*, Set*, int, bool);
 void calculated_treedecomposition(Graph*, TreeDecomp*);
-Set* tree_decomp(Graph*, Set*, Set*, std::deque<std::deque<int>>&, std::vector<Set*>&);
+void tree_decomp(Graph*, Set*, Set*, TreeDecomp*, int, int, bool);
 
 int find_treewidth(std::vector<Set*> &);
 
