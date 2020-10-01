@@ -13,14 +13,7 @@ int get_soln_row_index(Table* table){
     //finds the row w. smallest solution size.
     for(int i=0; i<table->get_table_size(); i++) {
         Row* row = table->get_row(i);
-
-        bool valid=true;
-        for(int j=0; j<row->coloring.size(); j++) {
-            int c=row->coloring[j];
-            if(c==NOT_DOMINATED) valid=false;
-        }
-
-        if(valid && row->get_Ac() < min_Ai) {
+        if(row->get_Ac() < min_Ai) {
             min_Ai=row->get_Ac();
             soln_index=i;
         }
@@ -139,7 +132,7 @@ int calc_min_domset(Graph* graph, TreeDecomp* decomp,
 
     std::vector<std::vector<po_bag>> postorder = decomp->get_post_order();
     int solnsize=0;
-
+    
     //loop over components
     for(int j=0; j<decomp->components_bags.size(); j++) {
         Set* empty=new Set();
@@ -150,7 +143,7 @@ int calc_min_domset(Graph* graph, TreeDecomp* decomp,
                          empty, variant);
         delete empty;
 
-        // solnsize += get_solution(tables[tables.size()-1]); //soln size for each component
+        solnsize += get_solution(tables[tables.size()-1]); //soln size for each component
     }
     return solnsize;
 }
@@ -239,6 +232,7 @@ void calculate_tables(Graph* graph, std::vector<Set*> &bags,
      *
      * For NICE tree decompositions. For both annotated and regular dominating set.
      */
+    
     std::vector<int> table_bag_indices;  //the bag indices of the current bags in the table.
     for(int i=0; i<postorder.size(); i++) { // O(n)
         int bag_index = postorder[i].bag_index;
@@ -252,18 +246,17 @@ void calculate_tables(Graph* graph, std::vector<Set*> &bags,
             //NOTE needs testing
             for(int j=table_bag_indices.size()-2; j>=0; j--) {
                 int ind=table_bag_indices[j];
-                if(!anchor_tables->contains(ind)) {
+                if(!anchor_tables->contains(ind) && ind_childl==-99) {
                     ind_childl=j;
-                    continue;
                 }
             }
 
             int bag_ind_childl = table_bag_indices[ind_childl];
             int bag_ind_childr = table_bag_indices[ind_childr];
-
+            
             Table* left_child_table = tables[ind_childl];
             Table* right_child_table = tables[ind_childr];
-
+            
             //update table here
             if(anchor_tables->contains(bag_ind_childr) && anchor_tables->contains(bag_ind_childl)) {
                 //NOTE needs testing
@@ -286,6 +279,7 @@ void calculate_tables(Graph* graph, std::vector<Set*> &bags,
                 //if neither are anchors, merge right child into parent table, delete left
                 merge_join_table(right_child_table, left_child_table,
                                  optional_verts, variant);           // reuses the right child table
+                
                 tables.erase(tables.begin()+ind_childl);            // deletes the left child table.
 
                 table_bag_indices.erase(table_bag_indices.begin()+ind_childl);  //left
@@ -322,7 +316,6 @@ void calculate_tables(Graph* graph, std::vector<Set*> &bags,
                 table_bag_indices.push_back(bag_index);
 
             } else if(parent_bag->size() < child_bag->size()) { // forget node
-
                 for(auto it=child_bag->begin(); it!=child_bag->end(); it++) {
                     int u = *it;
                     if(!parent_bag->contains(u)) v = u;
@@ -340,7 +333,7 @@ void calculate_tables(Graph* graph, std::vector<Set*> &bags,
                 }
                 table_bag_indices.push_back(bag_index);
             } else {
-                printf("ERROR: in find_bagtype(), parent and child should not have same size.\n");
+                printf("ERROR in calculate_tables: parent and child should not have same size.\n");
             }
         } else if(num_children==0){    //----------------------------LEAF bag
             //leaf bag, need to initialize table.
@@ -349,7 +342,7 @@ void calculate_tables(Graph* graph, std::vector<Set*> &bags,
             tables.push_back(table);
             table_bag_indices.push_back(bag_index);
         } else {
-                printf("ERROR in number of children in nice decomp.\n");
+                printf("ERROR in calculate_tables: wrong number of children in nice decomp.\n");
         }
     }
 
