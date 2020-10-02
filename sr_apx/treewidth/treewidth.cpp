@@ -10,6 +10,272 @@
 #include <cmath>        // floor
 #include <vector>
 
+TreeDecomp::TreeDecomp() {
+    tw = -1;
+}
+
+TreeDecomp::TreeDecomp(Graph* graph): TreeDecomp() {
+    build_decomposition(graph);
+}
+
+TreeDecomp::~TreeDecomp() {
+    for (Set* s : components_bags) {
+        delete s;
+    }
+}
+
+int TreeDecomp::treewidth() {
+    return tw - 1;
+}
+
+std::vector<po_bag> TreeDecomp::get_post_order() {
+    std::vector<po_bag> po;
+    for (auto it = pre_order.rbegin(); it != pre_order.rend(); ++it) {
+        po.push_back(*it);
+    }
+
+    return po;
+}
+
+Set* copyset(Set* s) {
+    Set* copy = new Set();
+    for (int x : *s) {
+        copy->insert(x);
+    }
+    return copy;
+}
+
+// returns placement of new bag
+// parent_index should be 0 for root bag
+// only modifies pre_order and components_bags
+int TreeDecomp::add_bag(int parent, bool last_child, Set* bag) {
+    // ensures that root bag exists
+    if (components_bags.empty()) {
+        components_bags.push_back(new Set());
+        po_bag p;
+        p.bag_index = 0;
+        p.num_children = 0;
+        p.parent_bag_index = -1;
+        p.current_join_child = 0;
+        pre_order.push_back(p);
+    }
+
+    int true_parent = pre_order[parent].current_join_child;
+
+    if (pre_order[true_parent].num_children > 0 && !last_child) {
+        // create a new join bag to hold the child
+        int index = components_bags.size();
+        components_bags.push_back(copyset(components_bags[true_parent]));
+        po_bag p;
+        p.bag_index = index;
+        p.num_children = 0;
+        p.parent_bag_index = true_parent;
+        p.current_join_child = index;
+        pre_order.push_back(p);
+        pre_order[true_parent].num_children++;
+        pre_order[parent].current_join_child = index;
+        true_parent = index;
+    }
+
+    if (pre_order[true_parent].num_children > 0 || !last_child) {
+        int index = components_bags.size();
+        components_bags.push_back(copyset(components_bags[true_parent]));
+        po_bag p;
+        p.bag_index = index;
+        p.num_children = 0;
+        p.parent_bag_index = true_parent;
+        p.current_join_child = index;
+        pre_order.push_back(p);
+        pre_order[true_parent].num_children++;
+        true_parent = index;
+    }
+
+    // create the child
+    int use_parent = true_parent;
+    Set* use_bag = copyset(components_bags[true_parent]);
+
+    // add introduce bags
+    for (int x : *(components_bags[true_parent])) {
+        // only look at vertices to be added
+        if (bag->contains(x)) {
+            continue;
+        }
+
+        use_bag->erase(x);
+        int index = components_bags.size();
+        components_bags.push_back(copyset(use_bag));
+        po_bag p;
+        p.bag_index = index;
+        p.num_children = 0;
+        p.parent_bag_index = use_parent;
+        p.current_join_child = index;
+        pre_order.push_back(p);
+        pre_order[use_parent].num_children++;
+        use_parent = index;
+    }
+
+    // add forget bags
+    for (int x : *bag) {
+        // only look at vertices to be removed
+        if (components_bags[true_parent]->contains(x)) {
+            continue;
+        }
+
+        use_bag->insert(x);
+        int index = components_bags.size();
+        components_bags.push_back(copyset(use_bag));
+        po_bag p;
+        p.bag_index = index;
+        p.num_children = 0;
+        p.parent_bag_index = use_parent;
+        p.current_join_child = index;
+        pre_order.push_back(p);
+        pre_order[use_parent].num_children++;
+        use_parent = index;
+    }
+
+    tw = tw < bag->size() ? bag->size() : tw;
+
+    // return index of final bag
+    return components_bags.size() - 1;
+}
+
+void TreeDecomp::build_decomposition(Graph* graph) {
+    // tree decomp doesnt quite work correctly when there are multiple components in graph.
+
+    std::vector<Set*> components = connected_components(graph);
+    int n_components = components.size();
+    // decomp->add_components(n_components);
+
+    if(n_components > 1) {
+        for (int i = 0; i + 1 < n_components; ++i) {
+            Set* component_set = components[i];
+            Graph* component = graph->subgraph_wsingles(component_set);
+
+            Set* W = new Set();
+            Set* V = component->get_vertices();
+
+            tree_decomp(component, V, W, 0, false);
+        }
+
+        Set* component_set = components[n_components - 1];
+        Graph* component = graph->subgraph_wsingles(component_set);
+
+        Set* W = new Set();
+        Set* V = component->get_vertices();
+
+        tree_decomp(component, V, W, 0, true);
+
+    }
+    else {
+        Set* W = new Set();
+        Set* V = graph->get_vertices();
+
+        tree_decomp(graph, V, W, 0, true);
+    }
+}
+
+void TreeDecomp::tree_decomp(Graph* graph, Set* Z, Set* W, int parent, bool last_child) {
+    /*
+    * Algorithm 4 from SR.
+    *
+    * Z is initialized to V.
+    * W is initialized to empty set.
+    *
+    * Bags stored in PRE-order traversal order.
+    *
+    * ----------------------- NOTE: this is the bug fix! (though it's not very efficient yet)
+    *
+    * The bug occurred when graph_Z_un_W formed a clique consisting of vertices which
+    * did not satisfy 8*Z->size() <= W->size().
+    *
+    * The way the balanced separator were then calculated was by selecting one of the
+    * vertices as one of the 'shores,' while the rest were added the separator set,
+    * and the other 'shore' was empty.
+    *
+    * So |(S ∪ T)| == |graph_Z_un_W| - 1 and,
+    * this led to there being one connected component of G[(W ∪ Z) \ (S ∪ T)] (sub_g) consisting of one single
+    * vertex, which was the 'shore' found from the balanced separator (we'll call this vertex V).
+    *
+    * these sets were then input into the recursive call of tree_decomp, and the same
+    * separators and components were found, which led to an infinite number of recursive calls.
+    *
+    * NOTE this is fixed by essentially adding all vertices in the clique to the separator set, which
+    * is done in the balanced separators function at the very end.
+    */
+
+    std::vector<Set*> components;
+
+    Set* S_un_T = new Set();
+    Set* Z_un_W = Z->set_union(W);
+
+    int betaS, betaT;
+
+    if(8*Z->size() <= W->size()) {
+        int leaf = add_bag(parent, last_child, Z_un_W);
+        return;
+    }
+
+    betaS = floor(3*W->size()/4);
+    betaT = floor(3*Z_un_W->size()/4);
+
+    Graph* graph_Z_un_W = graph->subgraph_wsingles(Z_un_W);
+
+    //balanced_separators of W in G[Z ∪ W];
+    //NOTE: balanced_separator calls take up something like 98% of the total time the alg. takes to run.
+    Set* S = balanced_separators(graph_Z_un_W, W, betaS);
+
+    /* NOTE this is what takes the most time
+     * balanced_separators of Z ∪ W in G[Z ∪ W];
+     * T = balanced_separators(graph_Z_un_W, Z_un_W, betaT);
+     * Switched to the version below. Less complicated function.
+     */
+    Set* T = balanced_separators(graph_Z_un_W, betaT);
+
+    // let G[V1], · · · , G[Vl] be the connected components of G[(W ∪ Z) \ (S ∪ T)]
+    S_un_T = S->set_union(T);
+
+    Set* Z_un_W_minus_S_un_T = Z_un_W->set_minus(S_un_T);
+
+    Graph* sub_g = graph->subgraph_wsingles(Z_un_W_minus_S_un_T);
+
+    components = connected_components(sub_g);
+
+    delete S, T, sub_g, Z_un_W_minus_S_un_T, graph_Z_un_W;
+
+    Set* W_un_S_un_T = W->set_union(S_un_T);
+    int x = add_bag(parent, last_child, W_un_S_un_T);
+
+    for (int i = 0; i + 1 < components.size(); i++) {
+        Set* Vi = components[i];
+
+        Set* Zi = Z->set_intersection(Vi);
+        Set* Wi = W->set_intersection(Vi);
+        Set* Wi_un_S_un_T = Wi->set_union(S_un_T);
+
+        delete Vi, Wi;
+        tree_decomp(graph, Zi, Wi_un_S_un_T, x, false);
+        delete Zi, Wi_un_S_un_T;
+    }
+
+    if (components.size() > 0) {
+        int i = components.size() - 1;
+        Set* Vi = components[i];
+
+        Set* Zi = Z->set_intersection(Vi);
+        Set* Wi = W->set_intersection(Vi);
+        Set* Wi_un_S_un_T = Wi->set_union(S_un_T);
+
+        delete Vi, Wi;
+
+        tree_decomp(graph, Zi, Wi_un_S_un_T, x, true);
+        delete Zi, Wi_un_S_un_T;
+    }
+
+    delete S_un_T, W, Z, Z_un_W;
+}
+
+
 
 std::vector<Set*> connected_components(Graph* graph) {
     /*
@@ -63,12 +329,8 @@ Set* treewidth_nodeedit(Graph* graph, Set* optional_verts, int w, bool annotated
     Set* W = new Set();
     Set* V = graph->get_vertices();
 
-    TreeDecomp* decomp = new TreeDecomp();
-
-    calculated_treedecomposition(graph, decomp);
-    int t = decomp->treewidth();
-
-    delete decomp;
+    TreeDecomp decomp(graph);
+    int t = decomp.treewidth();
 
 
     if ( t <= c1*w*sqrt(log2(w)) ) {  //NOTE double check which log base
@@ -108,144 +370,6 @@ Set* treewidth_nodeedit(Graph* graph, Set* optional_verts, int w, bool annotated
         return S;
     }
 }
-
-
-void calculated_treedecomposition(Graph* graph, TreeDecomp* decomp) {
-    // tree decomp doesnt quite work correctly when there are multiple components in graph.
-
-    std::vector<Set*> components = connected_components(graph);
-    int n_components = components.size();
-    // decomp->add_components(n_components);
-
-    if(n_components > 1) {
-        for (int i = 0; i + 1 < n_components; ++i) {
-            Set* component_set = components[i];
-            Graph* component = graph->subgraph_wsingles(component_set);
-
-            Set* W = new Set();
-            Set* V = component->get_vertices();
-
-            tree_decomp(component, V, W, decomp, 0, false);
-        }
-
-        Set* component_set = components[n_components - 1];
-        Graph* component = graph->subgraph_wsingles(component_set);
-
-        Set* W = new Set();
-        Set* V = component->get_vertices();
-
-        tree_decomp(component, V, W, decomp, 0, true);
-
-    }
-    else {
-        Set* W = new Set();
-        Set* V = graph->get_vertices();
-
-        tree_decomp(graph, V, W, decomp, 0, true);
-    }
-}
-
-
-void tree_decomp(Graph* graph, Set* Z, Set* W, TreeDecomp* decomp, int parent, bool last_child) {
-    /*
-    * Algorithm 4 from SR.
-    *
-    * Z is initialized to V.
-    * W is initialized to empty set.
-    *
-    * Bags stored in PRE-order traversal order.
-    *
-    * ----------------------- NOTE: this is the bug fix! (though it's not very efficient yet)
-    *
-    * The bug occurred when graph_Z_un_W formed a clique consisting of vertices which
-    * did not satisfy 8*Z->size() <= W->size().
-    *
-    * The way the balanced separator were then calculated was by selecting one of the
-    * vertices as one of the 'shores,' while the rest were added the separator set,
-    * and the other 'shore' was empty.
-    *
-    * So |(S ∪ T)| == |graph_Z_un_W| - 1 and,
-    * this led to there being one connected component of G[(W ∪ Z) \ (S ∪ T)] (sub_g) consisting of one single
-    * vertex, which was the 'shore' found from the balanced separator (we'll call this vertex V).
-    *
-    * these sets were then input into the recursive call of tree_decomp, and the same
-    * separators and components were found, which led to an infinite number of recursive calls.
-    *
-    * NOTE this is fixed by essentially adding all vertices in the clique to the separator set, which
-    * is done in the balanced separators function at the very end.
-    */
-
-    std::vector<Set*> components;
-
-    Set* S_un_T = new Set();
-    Set* Z_un_W = Z->set_union(W);
-
-    int betaS, betaT;
-
-    if(8*Z->size() <= W->size()) {
-        int leaf = decomp->add_bag(parent, last_child, Z_un_W);
-        return;
-    }
-
-    betaS = floor(3*W->size()/4);
-    betaT = floor(3*Z_un_W->size()/4);
-
-    Graph* graph_Z_un_W = graph->subgraph_wsingles(Z_un_W);
-
-    //balanced_separators of W in G[Z ∪ W];
-    //NOTE: balanced_separator calls take up something like 98% of the total time the alg. takes to run.
-    Set* S = balanced_separators(graph_Z_un_W, W, betaS);
-
-    /* NOTE this is what takes the most time
-     * balanced_separators of Z ∪ W in G[Z ∪ W];
-     * T = balanced_separators(graph_Z_un_W, Z_un_W, betaT);
-     * Switched to the version below. Less complicated function.
-     */
-    Set* T = balanced_separators(graph_Z_un_W, betaT);
-
-    // let G[V1], · · · , G[Vl] be the connected components of G[(W ∪ Z) \ (S ∪ T)]
-    S_un_T = S->set_union(T);
-
-    Set* Z_un_W_minus_S_un_T = Z_un_W->set_minus(S_un_T);
-
-    Graph* sub_g = graph->subgraph_wsingles(Z_un_W_minus_S_un_T);
-
-    components = connected_components(sub_g);
-
-    delete S, T, sub_g, Z_un_W_minus_S_un_T, graph_Z_un_W;
-
-    Set* W_un_S_un_T = W->set_union(S_un_T);
-    int x = decomp->add_bag(parent, last_child, W_un_S_un_T);
-
-    for (int i = 0; i + 1 < components.size(); i++) {
-        Set* Vi = components[i];
-
-        Set* Zi = Z->set_intersection(Vi);
-        Set* Wi = W->set_intersection(Vi);
-        Set* Wi_un_S_un_T = Wi->set_union(S_un_T);
-
-        delete Vi, Wi;
-        tree_decomp(graph, Zi, Wi_un_S_un_T, decomp, x, false);
-        delete Zi, Wi_un_S_un_T;
-    }
-
-    if (components.size() > 0) {
-        int i = components.size() - 1;
-        Set* Vi = components[i];
-
-        Set* Zi = Z->set_intersection(Vi);
-        Set* Wi = W->set_intersection(Vi);
-        Set* Wi_un_S_un_T = Wi->set_union(S_un_T);
-
-        delete Vi, Wi;
-
-        tree_decomp(graph, Zi, Wi_un_S_un_T, decomp, x, true);
-        delete Zi, Wi_un_S_un_T;
-    }
-
-    delete S_un_T, W, Z, Z_un_W;
-}
-
 
 int min_deg_vert(Graph* graph) {
     float md_v = std::numeric_limits<float>::infinity();

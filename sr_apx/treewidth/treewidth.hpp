@@ -2,18 +2,41 @@
 #ifndef TREEWIDTH_H
 #define TREEWIDTH_H
 
-#include <vector>
-#include <deque>
-
 #include "graph.hpp"
 #include "setmap.hpp"
-#include "treedecomp.hpp"
+
+#include <vector>
+
+struct po_bag {  //for postorder bag.
+    int bag_index;
+    int num_children;  //leaf if num_children==0
+    int parent_bag_index;
+    int current_join_child;
+};
+
+class TreeDecomp {
+private:
+    int tw;
+    std::vector<po_bag> pre_order;
+
+	int add_bag(int parent, bool last_child, Set* bag);
+	void tree_decomp(Graph*, Set*, Set*, int, bool);
+
+public:
+    //vector of vectors for each component
+    std::vector<Set*> components_bags;
+
+    TreeDecomp();
+	TreeDecomp(Graph*);
+    ~TreeDecomp();
+
+	void build_decomposition(Graph*);
+
+    int treewidth();
+    std::vector<po_bag> get_post_order();
+};
 
 Set* treewidth_nodeedit(Graph*, Set*, int, bool);
-void calculated_treedecomposition(Graph*, TreeDecomp*);
-void tree_decomp(Graph*, Set*, Set*, TreeDecomp*, int, bool);
-
-int find_treewidth(std::vector<Set*> &);
 
 Set* balanced_separators(Graph*, int);        //greedy alg. from (Althoby et al. 2020)
 Set* balanced_separators(Graph*, Set*, int);  //bal. seps for set W.

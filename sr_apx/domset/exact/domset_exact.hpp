@@ -2,18 +2,17 @@
 #ifndef DOMSET_EXACT_H
 #define DOMSET_EXACT_H
 
-#include <vector> 
-#include <deque> 
+#include <vector>
 
 #include "graph.hpp"
 #include "setmap.hpp"
 #include "table.hpp"
-#include "treedecomp.hpp"
+#include "treewidth.hpp"
 
 
-enum class Variant {Dom_Set, Indep_Dom_Set, Perf_Dom_Set};  
+enum class Variant {Dom_Set, Indep_Dom_Set, Perf_Dom_Set};
 
-//---- Calculating Solution 
+//---- Calculating Solution
 int get_soln_row_index(Table*);
 void add_to_solution(Set*, Row*, std::vector<int>&);
 int get_solution(Table* table);                             //optimization version
@@ -26,7 +25,7 @@ int calc_min_domset(Graph*, TreeDecomp*, Set*, Variant);    //optimization versi
 //--- Constructive Version
 Set* treedecomp_reduction(Graph*, std::vector<Set*>&, std::vector<po_bag>);
 
-void calculate_tables(Graph*, std::vector<Set*>&, 
+void calculate_tables(Graph*, std::vector<Set*>&,
                       std::vector<po_bag>&, std::vector<Table*>&,
                       Set*, Set*, Variant);
 
@@ -47,16 +46,16 @@ bool is_exclusive_to_singlebag(std::vector<Set*>&, Set*, Set*, Set*);
 bool is_child_subset(std::vector<Set*>&, std::vector<po_bag>&, Set*, Set*);
 bool is_a_implies_b(Graph*, std::vector<Set*>&, Set*, Set*, Set*);
 bool is_empty_bag_intersect(std::vector<Set*>&, std::vector<po_bag>&, Set*);
-bool is_treelike_subcollection(std::vector<Set*>&, std::vector<po_bag>&, 
+bool is_treelike_subcollection(std::vector<Set*>&, std::vector<po_bag>&,
                                Set*, Set*);
 
-void remove_node_from_postack(std::vector<po_bag> &, po_bag &); 
+void remove_node_from_postack(std::vector<po_bag> &, po_bag &);
 void remove_edge_from_postack(std::vector<po_bag> &, po_bag &);
 bool is_special_subset(Set*, Set*, Set*);
 
 
 //-----Helpers
-//Dominating Set 
+//Dominating Set
 int locally_valid_coloring(Graph*, Set*, Row*, std::vector<int>&, Variant);
 int phi(Row*, Set*, std::vector<int>&, int);
 int* minAi_c(Table*, Table*, Set*, Row*, Row*);
