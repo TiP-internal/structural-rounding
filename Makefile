@@ -68,6 +68,14 @@ cpp: build/main.o lib_sr_apx.so
 	$(CC) -o main -L. -Wl,-rpath,. build/main.o -l_sr_apx
 
 
+build/exp.o: exp.cpp
+	mkdir -p build
+	$(CC) -O3 -std=c++11 -c $(INCLUDES) -o build/exp.o exp.cpp
+
+exp: build/exp.o lib_sr_apx.so
+	$(CC) -o exp -L. -Wl,-rpath,. build/exp.o -l_sr_apx
+
+
 # python ###########################################################################################################
 
 build/util_module.o: sr_apx/util/util_module.cpp
