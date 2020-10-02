@@ -11,7 +11,7 @@
 
 Set* treewidth_nodeedit(Graph*, Set*, int, bool);
 void calculated_treedecomposition(Graph*, TreeDecomp*);
-void tree_decomp(Graph*, Set*, Set*, TreeDecomp*, int, int, bool);
+void tree_decomp(Graph*, Set*, Set*, TreeDecomp*, int, bool);
 
 int find_treewidth(std::vector<Set*> &);
 

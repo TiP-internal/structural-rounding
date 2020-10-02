@@ -102,24 +102,20 @@ Set* construct_domset(Graph* graph, TreeDecomp* decomp,
      * Must calculate for each component in the decomp.
      * Calculates annotated or regular version of the dom set.
     */
-    std::vector<std::vector<po_bag>> postorder = decomp->get_post_order();
+    std::vector<po_bag> postorder = decomp->get_post_order();
 
     Set* dom_set = new Set();
+    std::vector<Table*> tables;
 
-    //loop over components
-    for(int j=0; j<decomp->components_bags.size(); j++) {
-        std::vector<Table*> tables;
+    Set* anchors = treedecomp_reduction(graph, decomp->components_bags, postorder);
 
-        Set* anchors = treedecomp_reduction(graph, decomp->components_bags[j], postorder[j]);
+    calculate_tables(graph, decomp->components_bags,
+                     postorder, tables, optional_verts,
+                     anchors, variant);
 
-        calculate_tables(graph, decomp->components_bags[j],
-                         postorder[j], tables, optional_verts,
-                         anchors, variant);
+    get_solution(tables, dom_set);
 
-        get_solution(tables, dom_set);
-
-        delete anchors;
-    }
+    delete anchors;
     return dom_set;
 }
 
@@ -130,22 +126,16 @@ int calc_min_domset(Graph* graph, TreeDecomp* decomp,
      * Used for the optimization version. Finds the size of the smallest dom set.
      */
 
-    std::vector<std::vector<po_bag>> postorder = decomp->get_post_order();
-    int solnsize=0;
-    
-    //loop over components
-    for(int j=0; j<decomp->components_bags.size(); j++) {
-        Set* empty=new Set();
-        std::vector<Table*> tables;
+    std::vector<po_bag> postorder = decomp->get_post_order();
+    Set* empty=new Set();
+    std::vector<Table*> tables;
 
-        calculate_tables(graph, decomp->components_bags[j],
-                         postorder[j], tables, optional_verts,
-                         empty, variant);
-        delete empty;
+    calculate_tables(graph, decomp->components_bags,
+                     postorder, tables, optional_verts,
+                     empty, variant);
+    delete empty;
 
-        solnsize += get_solution(tables[tables.size()-1]); //soln size for each component
-    }
-    return solnsize;
+    return get_solution(tables[tables.size()-1]);
 }
 
 
@@ -232,7 +222,7 @@ void calculate_tables(Graph* graph, std::vector<Set*> &bags,
      *
      * For NICE tree decompositions. For both annotated and regular dominating set.
      */
-    
+
     std::vector<int> table_bag_indices;  //the bag indices of the current bags in the table.
     for(int i=0; i<postorder.size(); i++) { // O(n)
         int bag_index = postorder[i].bag_index;
@@ -253,10 +243,10 @@ void calculate_tables(Graph* graph, std::vector<Set*> &bags,
 
             int bag_ind_childl = table_bag_indices[ind_childl];
             int bag_ind_childr = table_bag_indices[ind_childr];
-            
+
             Table* left_child_table = tables[ind_childl];
             Table* right_child_table = tables[ind_childr];
-            
+
             //update table here
             if(anchor_tables->contains(bag_ind_childr) && anchor_tables->contains(bag_ind_childl)) {
                 //NOTE needs testing
@@ -279,7 +269,7 @@ void calculate_tables(Graph* graph, std::vector<Set*> &bags,
                 //if neither are anchors, merge right child into parent table, delete left
                 merge_join_table(right_child_table, left_child_table,
                                  optional_verts, variant);           // reuses the right child table
-                
+
                 tables.erase(tables.begin()+ind_childl);            // deletes the left child table.
 
                 table_bag_indices.erase(table_bag_indices.begin()+ind_childl);  //left

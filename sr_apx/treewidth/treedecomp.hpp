@@ -19,19 +19,19 @@ struct po_bag {  //for postorder bag.
 class TreeDecomp {
 private:
     int tw;
-    std::vector<std::vector<po_bag>> pre_order;
+    std::vector<po_bag> pre_order;
 
 public:
     //vector of vectors for each component
-    std::vector<std::vector<Set*>> components_bags;
+    std::vector<Set*> components_bags;
 
-    int add_bag(int component, int parent, bool last_child, Set* bag);
+    int add_bag(int parent, bool last_child, Set* bag);
 
     TreeDecomp();
     ~TreeDecomp();
 
     int treewidth();
-    std::vector<std::vector<po_bag>> get_post_order();
+    std::vector<po_bag> get_post_order();
 };
 
 #endif

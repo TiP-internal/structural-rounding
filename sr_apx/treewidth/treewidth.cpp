@@ -117,29 +117,36 @@ void calculated_treedecomposition(Graph* graph, TreeDecomp* decomp) {
     int n_components = components.size();
     // decomp->add_components(n_components);
 
-    int i = 0;
     if(n_components > 1) {
-        for (auto ic=components.begin(); ic!=components.end(); ic++) {
-
-            Set* component_set = *ic;
+        for (int i = 0; i + 1 < n_components; ++i) {
+            Set* component_set = components[i];
             Graph* component = graph->subgraph_wsingles(component_set);
 
             Set* W = new Set();
             Set* V = component->get_vertices();
 
-            tree_decomp(component, V, W, decomp, i, 0, true);
-            i++;
+            tree_decomp(component, V, W, decomp, 0, false);
         }
-    } else {
+
+        Set* component_set = components[n_components - 1];
+        Graph* component = graph->subgraph_wsingles(component_set);
+
+        Set* W = new Set();
+        Set* V = component->get_vertices();
+
+        tree_decomp(component, V, W, decomp, 0, true);
+
+    }
+    else {
         Set* W = new Set();
         Set* V = graph->get_vertices();
 
-        tree_decomp(graph, V, W, decomp, 0, 0, true);
+        tree_decomp(graph, V, W, decomp, 0, true);
     }
 }
 
 
-void tree_decomp(Graph* graph, Set* Z, Set* W, TreeDecomp* decomp, int component, int parent, bool last_child) {
+void tree_decomp(Graph* graph, Set* Z, Set* W, TreeDecomp* decomp, int parent, bool last_child) {
     /*
     * Algorithm 4 from SR.
     *
@@ -176,8 +183,7 @@ void tree_decomp(Graph* graph, Set* Z, Set* W, TreeDecomp* decomp, int component
     int betaS, betaT;
 
     if(8*Z->size() <= W->size()) {
-        int leaf = decomp->add_bag(component, parent, last_child, Z_un_W);
-        // decomp->add_bag(component, leaf, true, new Set());
+        int leaf = decomp->add_bag(parent, last_child, Z_un_W);
         return;
     }
 
@@ -209,7 +215,7 @@ void tree_decomp(Graph* graph, Set* Z, Set* W, TreeDecomp* decomp, int component
     delete S, T, sub_g, Z_un_W_minus_S_un_T, graph_Z_un_W;
 
     Set* W_un_S_un_T = W->set_union(S_un_T);
-    int x = decomp->add_bag(component, parent, last_child, W_un_S_un_T);
+    int x = decomp->add_bag(parent, last_child, W_un_S_un_T);
 
     for (int i = 0; i + 1 < components.size(); i++) {
         Set* Vi = components[i];
@@ -219,7 +225,7 @@ void tree_decomp(Graph* graph, Set* Z, Set* W, TreeDecomp* decomp, int component
         Set* Wi_un_S_un_T = Wi->set_union(S_un_T);
 
         delete Vi, Wi;
-        tree_decomp(graph, Zi, Wi_un_S_un_T, decomp, component, x, false);
+        tree_decomp(graph, Zi, Wi_un_S_un_T, decomp, x, false);
         delete Zi, Wi_un_S_un_T;
     }
 
@@ -233,7 +239,7 @@ void tree_decomp(Graph* graph, Set* Z, Set* W, TreeDecomp* decomp, int component
 
         delete Vi, Wi;
 
-        tree_decomp(graph, Zi, Wi_un_S_un_T, decomp, component, x, true);
+        tree_decomp(graph, Zi, Wi_un_S_un_T, decomp, x, true);
         delete Zi, Wi_un_S_un_T;
     }
 
