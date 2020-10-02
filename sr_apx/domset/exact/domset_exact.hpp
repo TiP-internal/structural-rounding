@@ -27,7 +27,8 @@ Set* treedecomp_reduction(Graph*, std::vector<Set*>&, std::vector<po_bag>);
 
 void calculate_tables(Graph*, std::vector<Set*>&,
                       std::vector<po_bag>&, std::vector<Table*>&,
-                      Set*, Set*, Variant);
+                      std::vector<int>&,
+                      Set*, Set*, Variant, int);
 
 Table* initialize_leaf_table(Graph*, Set*, Set*, Variant);
 Table* update_introduce_table(Graph*, Table*, Set*, Set*, int, Variant);

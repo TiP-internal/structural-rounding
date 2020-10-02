@@ -101,19 +101,45 @@ Set* construct_domset(Graph* graph, TreeDecomp* decomp,
      *
      * Must calculate for each component in the decomp.
      * Calculates annotated or regular version of the dom set.
+     * 
+     * NOTE (oct. 2): this version has not been tested for the new decomps (that use empty bags) 
     */
     std::vector<po_bag> postorder = decomp->get_post_order();
 
     Set* dom_set = new Set();
-    std::vector<Table*> tables;
-
-    Set* anchors = treedecomp_reduction(graph, decomp->components_bags, postorder);
-
-    calculate_tables(graph, decomp->components_bags,
-                     postorder, tables, optional_verts,
-                     anchors, variant);
-
-    get_solution(tables, dom_set);
+    std::vector<Table*> tables; 
+    //NOTE this will need some major changes if we decide to use this version
+    Set* anchors = treedecomp_reduction(graph, decomp->components_bags, postorder); 
+    std::vector<int> table_bag_indices;
+    
+    for(int i=0; i<postorder.size(); i++) { // O(n)
+        int bag_index = postorder[i].bag_index;
+        
+        if(decomp->components_bags[bag_index]->size() == 0) { //-----------------------empty root bag
+            //calculate solution up until this point, and discard current tables
+            
+            if(tables.size()>2) printf("error---should not be more than two component tables\n");
+                
+            for(int i=0; i<tables.size(); i++) {
+                //solutionsize += get_solution(tables[i]);
+                get_solution(tables, dom_set); 
+            }
+            
+            //remove+delete tables
+            for(int i=tables.size(); i>0; i--) {
+                Table* removing = tables.back();
+                tables.pop_back();
+                table_bag_indices.pop_back();  //reset this too
+                delete removing;
+            }  
+        } else {
+            calculate_tables(graph, decomp->components_bags,
+                             postorder, tables, 
+                             table_bag_indices, optional_verts,
+                             anchors, variant, i);
+        }
+    }
+    
 
     delete anchors;
     return dom_set;
@@ -127,15 +153,39 @@ int calc_min_domset(Graph* graph, TreeDecomp* decomp,
      */
 
     std::vector<po_bag> postorder = decomp->get_post_order();
-    Set* empty=new Set();
-    std::vector<Table*> tables;
-
-    calculate_tables(graph, decomp->components_bags,
-                     postorder, tables, optional_verts,
-                     empty, variant);
+    Set* empty=new Set();  //no need for anchor tables here
+    std::vector<Table*> tables; 
+    std::vector<int> table_bag_indices;
+    int solutionsize=0;
+    
+    for(int i=0; i<postorder.size(); i++) { // O(n)
+        int bag_index = postorder[i].bag_index;
+        
+        if(decomp->components_bags[bag_index]->size() == 0) { //-----------------------empty root bag
+            //calculate solution up until this point, and discard current tables
+            if(tables.size()>2) printf("error---should not be more than two component tables\n");
+                
+            for(int i=0; i<tables.size(); i++) {
+                solutionsize += get_solution(tables[i]);
+            }
+            
+            //remove+delete tables
+            for(int i=tables.size(); i>0; i--) {
+                Table* removing = tables.back();
+                tables.pop_back();
+                table_bag_indices.pop_back();  //reset this too
+                delete removing;
+            }  
+        } else {
+            calculate_tables(graph, decomp->components_bags,
+                             postorder, tables, 
+                             table_bag_indices, optional_verts,
+                             empty, variant, i);
+        }
+    }
+    
     delete empty;
-
-    return get_solution(tables[tables.size()-1]);
+    return solutionsize;
 }
 
 
@@ -211,8 +261,11 @@ Set* treedecomp_reduction(Graph* graph, std::vector<Set*> &bags,
 
 
 void calculate_tables(Graph* graph, std::vector<Set*> &bags,
-                      std::vector<po_bag> &postorder, std::vector<Table*> &tables,
-                      Set* optional_verts, Set* anchor_tables, Variant variant) {
+                      std::vector<po_bag> &postorder, 
+                      std::vector<Table*> &tables,
+                      std::vector<int> &table_bag_indices,
+                      Set* optional_verts, Set* anchor_tables, 
+                      Variant variant, int po_index) {
     /*
      * Dynamic programming algorithm, for dominating set on graphs
      * w/ bounded treewidth.
@@ -220,123 +273,125 @@ void calculate_tables(Graph* graph, std::vector<Set*> &bags,
      * Constructive version and does not reuse (all) tables. To save memory, it
      * will eventually only store anchor tables.
      *
-     * For NICE tree decompositions. For both annotated and regular dominating set.
+     * For NICE tree decompositions. 
+     * For both annotated and regular dominating set, 
+     * and annotated/regular versions of independent dominating set 
+     * and perfect dominating set. 
      */
+    
+    int bag_index = postorder[po_index].bag_index;
+    int num_children = postorder[po_index].num_children;
+    int parent_bag_index = postorder[po_index].parent_bag_index;
+        
+    if(num_children==2) {          //-----------------------JOIN bag
+        int ind_childr = tables.size()-1;  //right child will always be the most recently added
+        int ind_childl = -99;
 
-    std::vector<int> table_bag_indices;  //the bag indices of the current bags in the table.
-    for(int i=0; i<postorder.size(); i++) { // O(n)
-        int bag_index = postorder[i].bag_index;
-        int num_children = postorder[i].num_children;
-        int parent_bag_index = postorder[i].parent_bag_index;
+        //NOTE needs testing
+        for(int j=table_bag_indices.size()-2; j>=0; j--) {
+            int ind=table_bag_indices[j];
+            if(!anchor_tables->contains(ind) && ind_childl==-99) {
+                ind_childl=j;
+            }
+        }
 
-        if(num_children==2) {          //-----------------------JOIN bag
-            int ind_childr = tables.size()-1;  //right child will always be the most recently added
-            int ind_childl = -99;
+        int bag_ind_childl = table_bag_indices[ind_childl];
+        int bag_ind_childr = table_bag_indices[ind_childr];
 
+        Table* left_child_table = tables[ind_childl];
+        Table* right_child_table = tables[ind_childr];
+        
+        if(left_child_table->get_table_size() != right_child_table->get_table_size()) {
+            printf("ERROR in calculate_tables: join children have different dimension\n");
+        }
+
+        //update table here
+        if(anchor_tables->contains(bag_ind_childr) && anchor_tables->contains(bag_ind_childl)) {
             //NOTE needs testing
-            for(int j=table_bag_indices.size()-2; j>=0; j--) {
-                int ind=table_bag_indices[j];
-                if(!anchor_tables->contains(ind) && ind_childl==-99) {
-                    ind_childl=j;
-                }
+            //if both children are anchor tables, create new table and add to tables
+            Table* table = update_join_table(left_child_table, right_child_table, optional_verts, variant);
+            tables.push_back(table);
+        } else if(anchor_tables->contains(bag_ind_childr)){
+            //NOTE needs testing
+            //if right child is an anchor, merge left child into parent join table, dont delete
+            merge_join_table(left_child_table, right_child_table,
+                            optional_verts, variant);           // reuses the right child table
+            table_bag_indices.pop_back();
+        } else if(anchor_tables->contains(bag_ind_childl)) {
+            //NOTE needs testing
+            //if left child is an anchor, merge right child into parent join, dont delete
+            merge_join_table(right_child_table, left_child_table,
+                            optional_verts, variant);           // reuses the right child table
+            table_bag_indices.erase(table_bag_indices.begin()+ind_childl);
+        } else {
+            //if neither are anchors, merge right child into parent table, delete left
+            merge_join_table(right_child_table, left_child_table,
+                            optional_verts, variant);           // reuses the right child table
+
+            tables.erase(tables.begin()+ind_childl);            // deletes the left child table.
+
+            table_bag_indices.erase(table_bag_indices.begin()+ind_childl);  //left
+            table_bag_indices.pop_back(); //right
+        }
+        table_bag_indices.push_back(bag_index);
+
+    } else if(num_children==1) {     //-------------------either INTRODUCE or FORGET bag
+        int child_bag_index = postorder[po_index-1].bag_index;
+        int child_bag_table_index = tables.size()-1;
+
+        Set* parent_bag = bags[bag_index];
+        Set* child_bag = bags[child_bag_index];
+
+        string type;
+        int v;
+
+        if(parent_bag->size() > child_bag->size()) {        // introduce node
+            for(auto it=parent_bag->begin(); it!=parent_bag->end(); it++) {
+                int u = *it;
+                if(!child_bag->contains(u)) v = u;
             }
 
-            int bag_ind_childl = table_bag_indices[ind_childl];
-            int bag_ind_childr = table_bag_indices[ind_childr];
-
-            Table* left_child_table = tables[ind_childl];
-            Table* right_child_table = tables[ind_childr];
-
-            //update table here
-            if(anchor_tables->contains(bag_ind_childr) && anchor_tables->contains(bag_ind_childl)) {
-                //NOTE needs testing
-                //if both children are anchor tables, create new table and add to tables
-                Table* table = update_join_table(left_child_table, right_child_table, optional_verts, variant);
+            if(anchor_tables->contains(child_bag_index)) {
+                //create a new table if the child is an anchor
+                Table* table = update_introduce_table(graph, tables[child_bag_table_index],
+                                    child_bag, optional_verts, v, variant);
                 tables.push_back(table);
-            } else if(anchor_tables->contains(bag_ind_childr)){
-                //NOTE needs testing
-                //if right child is an anchor, merge left child into parent join table, dont delete
-                merge_join_table(left_child_table, right_child_table,
-                                 optional_verts, variant);           // reuses the right child table
-                table_bag_indices.pop_back();
-            } else if(anchor_tables->contains(bag_ind_childl)) {
-                //NOTE needs testing
-                //if left child is an anchor, merge right child into parent join, dont delete
-                merge_join_table(right_child_table, left_child_table,
-                                 optional_verts, variant);           // reuses the right child table
-                table_bag_indices.erase(table_bag_indices.begin()+ind_childl);
             } else {
-                //if neither are anchors, merge right child into parent table, delete left
-                merge_join_table(right_child_table, left_child_table,
-                                 optional_verts, variant);           // reuses the right child table
-
-                tables.erase(tables.begin()+ind_childl);            // deletes the left child table.
-
-                table_bag_indices.erase(table_bag_indices.begin()+ind_childl);  //left
-                table_bag_indices.pop_back(); //right
+                Table* child_table = tables[child_bag_table_index];
+                merge_introduce_table(graph, child_table, child_bag, optional_verts, v, variant);
+                table_bag_indices.pop_back();
             }
             table_bag_indices.push_back(bag_index);
 
-        } else if(num_children==1) {     //-------------------either INTRODUCE or FORGET bag
-            int child_bag_index = postorder[i-1].bag_index;
-            int child_bag_table_index = tables.size()-1;
-
-            Set* parent_bag = bags[bag_index];
-            Set* child_bag = bags[child_bag_index];
-
-            string type;
-            int v;
-
-            if(parent_bag->size() > child_bag->size()) {        // introduce node
-                for(auto it=parent_bag->begin(); it!=parent_bag->end(); it++) {
-                    int u = *it;
-                    if(!child_bag->contains(u)) v = u;
-                }
-
-                if(anchor_tables->contains(child_bag_index)) {
-                    //create a new table if the child is an anchor
-                    Table* table = update_introduce_table(graph, tables[child_bag_table_index],
-                                        child_bag, optional_verts, v, variant);
-                    tables.push_back(table);
-                } else {
-                    Table* child_table = tables[child_bag_table_index];
-                    merge_introduce_table(graph, child_table, child_bag, optional_verts, v, variant);
-                    table_bag_indices.pop_back();
-                }
-                table_bag_indices.push_back(bag_index);
-
-            } else if(parent_bag->size() < child_bag->size()) { // forget node
-                for(auto it=child_bag->begin(); it!=child_bag->end(); it++) {
-                    int u = *it;
-                    if(!parent_bag->contains(u)) v = u;
-                }
-
-                if(anchor_tables->contains(child_bag_index)) {
-                    //create a new table if the child is an anchor
-                    Table* table = update_forget_table(tables[child_bag_table_index],
-                                                        optional_verts, v, variant);
-                    tables.push_back(table);
-                } else {
-                    Table* child_table = tables[child_bag_table_index];
-                    merge_forget_table(child_table, optional_verts, v, variant);
-                    table_bag_indices.pop_back();
-                }
-                table_bag_indices.push_back(bag_index);
-            } else {
-                printf("ERROR in calculate_tables: parent and child should not have same size.\n");
+        } else if(parent_bag->size() < child_bag->size()) { // forget node
+            for(auto it=child_bag->begin(); it!=child_bag->end(); it++) {
+                int u = *it;
+                if(!parent_bag->contains(u)) v = u;
             }
-        } else if(num_children==0){    //----------------------------LEAF bag
-            //leaf bag, need to initialize table.
-            //create new leaf for both anchors and non-anchors
-            Table* table = initialize_leaf_table(graph, bags[bag_index], optional_verts, variant);
-            tables.push_back(table);
+
+            if(anchor_tables->contains(child_bag_index)) {
+                //create a new table if the child is an anchor
+                Table* table = update_forget_table(tables[child_bag_table_index],
+                                                    optional_verts, v, variant);
+                tables.push_back(table);
+            } else {
+                Table* child_table = tables[child_bag_table_index];
+                merge_forget_table(child_table, optional_verts, v, variant);
+                table_bag_indices.pop_back();
+            }
             table_bag_indices.push_back(bag_index);
         } else {
-                printf("ERROR in calculate_tables: wrong number of children in nice decomp.\n");
+            printf("ERROR in calculate_tables: parent and child should not have same size.\n");
         }
+    } else if(num_children==0){    //----------------------------LEAF bag
+        //leaf bag, need to initialize table.
+        //create new leaf for both anchors and non-anchors
+        Table* table = initialize_leaf_table(graph, bags[bag_index], optional_verts, variant);
+        tables.push_back(table);
+        table_bag_indices.push_back(bag_index);
+    } else {
+            printf("ERROR in calculate_tables: wrong number of children in nice decomp.\n");
     }
-
-    //print_tables(tables);
 }
 
 
@@ -1060,7 +1115,7 @@ int* minAi_c(Table* childk, Table* childj, Set* optional_verts, Row* row_k, Row*
         int cprime_size = c_prime.size();
         int cprimeprime_size = c_primeprime.size();
 
-        if(cprime_size != cprimeprime_size) printf("ERROR: in divide().\n");
+        if(cprime_size != cprimeprime_size) printf("ERROR: in func minAi_c() -- divide.\n");
 
         //is_xoptional will only be true is we want the annotated version.
         if(c_t==IN_DOMSET || c_t==NOT_DOMINATED || is_xtoptional) {
