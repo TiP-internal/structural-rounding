@@ -136,8 +136,6 @@ void calculated_treedecomposition(Graph* graph, TreeDecomp* decomp) {
 
         tree_decomp(graph, V, W, decomp, 0, 0, true);
     }
-
-    decomp->set_nice();
 }
 
 
