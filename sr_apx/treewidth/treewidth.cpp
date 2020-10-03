@@ -347,7 +347,6 @@ Set* treewidth_nodeedit(Graph* graph, Set* optional_verts, int w, bool annotated
     int beta = floor(3*graph->size()/4);
     int c1 = 1;                         // NOTE constant value
 
-    Set* W = new Set();
     Set* V = graph->get_vertices();
 
     TreeDecomp decomp(graph);
@@ -356,42 +355,45 @@ Set* treewidth_nodeedit(Graph* graph, Set* optional_verts, int w, bool annotated
 
     if ( t <= c1*w*sqrt(log2(w)) ) {  //NOTE double check which log base
         Set* empty = new Set();
+        delete V;
         return empty;
     }
-    else {
-        Set* S = balanced_separators(graph, beta);
 
-        // for connected components of G[V\S]
-        Set* V_min_S = V->set_minus(S);
-        Graph* sub_g = graph->subgraph_wsingles(V_min_S);
+    Set* S = balanced_separators(graph, beta);
 
-        std::vector<Set*> components = connected_components(sub_g);
-        delete V_min_S;
-        delete sub_g;
+    // for connected components of G[V\S]
+    Set* V_min_S = V->set_minus(S);
+    delete V;
+    Graph* sub_g = graph->subgraph_wsingles(V_min_S);
 
-        for (auto ic=components.begin(); ic!=components.end(); ic++) {
-            Set* component_set = *ic;
-            Graph* component = graph->subgraph_wsingles(component_set);
+    std::vector<Set*> components = connected_components(sub_g);
+    delete V_min_S;
+    delete sub_g;
 
-            Set* edited_vertices = treewidth_nodeedit(component, optional_verts, w, annotated_version);
-            S->add_all(edited_vertices); //set union but modifies S
+    for (auto ic=components.begin(); ic!=components.end(); ic++) {
+        Set* component_set = *ic;
+        Graph* component = graph->subgraph_wsingles(component_set);
 
-            if(annotated_version) {
-                //Add the neighbors of the edit set to the optinally dominated set.
-                for(auto iev=edited_vertices->begin(); iev!=edited_vertices->end(); iev++) {
-                    int e=*iev;
-                    for(auto ien=component->neighbors(e)->begin();
-                        ien!=component->neighbors(e)->end(); ien++) {
-                        optional_verts->insert(*iev);
-                    }
+        Set* edited_vertices = treewidth_nodeedit(component, optional_verts, w, annotated_version);
+        S->add_all(edited_vertices); //set union but modifies S
+
+        if(annotated_version) {
+            //Add the neighbors of the edit set to the optinally dominated set.
+            for(auto iev=edited_vertices->begin(); iev!=edited_vertices->end(); iev++) {
+                int e=*iev;
+                for(auto ien=component->neighbors(e)->begin();
+                    ien!=component->neighbors(e)->end(); ien++) {
+                    optional_verts->insert(*iev);
                 }
             }
-
-            delete component_set;
-            delete component;
         }
-        return S;
+
+        delete edited_vertices;
+        delete component_set;
+        delete component;
     }
+
+    return S;
 }
 
 int min_deg_vert(Graph* graph) {
