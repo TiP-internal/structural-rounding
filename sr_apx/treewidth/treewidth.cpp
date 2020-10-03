@@ -135,6 +135,7 @@ int TreeDecomp::add_bag(int parent, bool last_child, Set* bag) {
     }
 
     tw = tw < bag->size() ? bag->size() : tw;
+    delete use_bag;
 
     // return index of final bag
     return components_bags.size() - 1;
@@ -145,7 +146,7 @@ void TreeDecomp::build_decomposition(Graph* graph) {
 
     std::vector<Set*> components = connected_components(graph);
     int n_components = components.size();
-    // decomp->add_components(n_components);
+
 
     if(n_components > 1) {
         for (int i = 0; i + 1 < n_components; ++i) {
@@ -156,6 +157,10 @@ void TreeDecomp::build_decomposition(Graph* graph) {
             Set* V = component->get_vertices();
 
             tree_decomp(component, V, W, 0, false);
+            delete component_set;
+            delete component;
+            delete V;
+            delete W;
         }
 
         Set* component_set = components[n_components - 1];
@@ -165,6 +170,10 @@ void TreeDecomp::build_decomposition(Graph* graph) {
         Set* V = component->get_vertices();
 
         tree_decomp(component, V, W, 0, true);
+        delete component_set;
+        delete component;
+        delete W;
+        delete V;
 
     }
     else {
@@ -172,6 +181,9 @@ void TreeDecomp::build_decomposition(Graph* graph) {
         Set* V = graph->get_vertices();
 
         tree_decomp(graph, V, W, 0, true);
+        delete components[0];
+        delete V;
+        delete W;
     }
 }
 
@@ -206,13 +218,13 @@ void TreeDecomp::tree_decomp(Graph* graph, Set* Z, Set* W, int parent, bool last
 
     std::vector<Set*> components;
 
-    Set* S_un_T = new Set();
     Set* Z_un_W = Z->set_union(W);
 
     int betaS, betaT;
 
     if(8*Z->size() <= W->size()) {
         int leaf = add_bag(parent, last_child, Z_un_W);
+        delete Z_un_W;
         return;
     }
 
@@ -233,7 +245,7 @@ void TreeDecomp::tree_decomp(Graph* graph, Set* Z, Set* W, int parent, bool last
     Set* T = balanced_separators(graph_Z_un_W, betaT);
 
     // let G[V1], · · · , G[Vl] be the connected components of G[(W ∪ Z) \ (S ∪ T)]
-    S_un_T = S->set_union(T);
+    Set* S_un_T = S->set_union(T);
 
     Set* Z_un_W_minus_S_un_T = Z_un_W->set_minus(S_un_T);
 
@@ -241,10 +253,15 @@ void TreeDecomp::tree_decomp(Graph* graph, Set* Z, Set* W, int parent, bool last
 
     components = connected_components(sub_g);
 
-    delete S, T, sub_g, Z_un_W_minus_S_un_T, graph_Z_un_W;
+    delete S;
+    delete T;
+    delete sub_g;
+    delete Z_un_W_minus_S_un_T;
+    delete graph_Z_un_W;
 
     Set* W_un_S_un_T = W->set_union(S_un_T);
     int x = add_bag(parent, last_child, W_un_S_un_T);
+    delete W_un_S_un_T;
 
     for (int i = 0; i + 1 < components.size(); i++) {
         Set* Vi = components[i];
@@ -253,9 +270,11 @@ void TreeDecomp::tree_decomp(Graph* graph, Set* Z, Set* W, int parent, bool last
         Set* Wi = W->set_intersection(Vi);
         Set* Wi_un_S_un_T = Wi->set_union(S_un_T);
 
-        delete Vi, Wi;
+        delete Vi;
+        delete Wi;
         tree_decomp(graph, Zi, Wi_un_S_un_T, x, false);
-        delete Zi, Wi_un_S_un_T;
+        delete Zi;
+        delete Wi_un_S_un_T;
     }
 
     if (components.size() > 0) {
@@ -266,16 +285,18 @@ void TreeDecomp::tree_decomp(Graph* graph, Set* Z, Set* W, int parent, bool last
         Set* Wi = W->set_intersection(Vi);
         Set* Wi_un_S_un_T = Wi->set_union(S_un_T);
 
-        delete Vi, Wi;
-
+        delete Vi;
+        delete Wi;
         tree_decomp(graph, Zi, Wi_un_S_un_T, x, true);
-        delete Zi, Wi_un_S_un_T;
+        delete Zi;
+        delete Wi_un_S_un_T;
     }
 
-    delete S_un_T, W, Z, Z_un_W;
+    delete S_un_T;
+    delete Z_un_W;
 }
 
-
+// end of treedecomp object //////////////////////////
 
 std::vector<Set*> connected_components(Graph* graph) {
     /*
@@ -309,7 +330,7 @@ void dfs(Graph* graph, Set* comp, Set* visited, int v) {
     comp->insert(v);  // components in G[V]
 
     Set* nbrs = graph->neighbors(v);
-    nbrs->remove(v);
+    // nbrs->remove(v);
     for (auto it = nbrs->begin(); it != nbrs->end(); it++) {
         if(!visited->contains(*it)) {    //if not visited yet
             dfs(graph, comp, visited, *it);
@@ -345,7 +366,8 @@ Set* treewidth_nodeedit(Graph* graph, Set* optional_verts, int w, bool annotated
         Graph* sub_g = graph->subgraph_wsingles(V_min_S);
 
         std::vector<Set*> components = connected_components(sub_g);
-        delete V_min_S, sub_g;
+        delete V_min_S;
+        delete sub_g;
 
         for (auto ic=components.begin(); ic!=components.end(); ic++) {
             Set* component_set = *ic;
@@ -365,7 +387,8 @@ Set* treewidth_nodeedit(Graph* graph, Set* optional_verts, int w, bool annotated
                 }
             }
 
-            delete component_set, component;
+            delete component_set;
+            delete component;
         }
         return S;
     }
@@ -496,11 +519,17 @@ Set* balanced_separators(Graph* graph, Set* W, int beta) {
         // Single vertex must be the separator. Otherwise decomp doesnt work.
         Set* separator = new Set();
         separator->insert(*graph->begin());
+        delete A;
+        delete B;
+        delete C;
         return separator;
     }
 
     if(beta == 0 && W->size()==0) {  //no separator necessary
         Set* empty = new Set();
+        delete A;
+        delete B;
+        delete C;
         return empty;
     }
 
