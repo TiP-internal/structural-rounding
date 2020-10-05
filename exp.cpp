@@ -94,11 +94,12 @@ int main(int argc, char* argv[]) {
 		}
 	}
 
-	printf("graph name,n,m,read time,tw,log size,log time,");
-	printf("edit2 size,edit2 time,edit2 actualtw,partial2 size,partial2 time,total2 size,total2 time,");
-	printf("edit3 size,edit3 time,edit3 actualtw,partial3 size,partial3 time,total3 size,total3 time,");
-	printf("edit4 size,edit4 time,edit4 actualtw,partial4 size,partial4 time,total4 size,total4 time,");
-	printf("edit5 size,edit5 time,edit5 actualtw,partial5 size,partial5 time,total5 size,total5 time\n");
+	printf("graph name,n,m,read time,tw,log size,log time");
+	printf(",edit2 size,edit2 time,edit2 actualtw,partial2 size,partial2 time,total2 size,total2 time");
+	printf(",edit3 size,edit3 time,edit3 actualtw,partial3 size,partial3 time,total3 size,total3 time");
+	printf(",edit4 size,edit4 time,edit4 actualtw,partial4 size,partial4 time,total4 size,total4 time");
+	printf(",edit5 size,edit5 time,edit5 actualtw,partial5 size,partial5 time,total5 size,total5 time");
+	printf("\n");
 
     for (std::vector<std::string>::iterator graph_files_it = graph_files.begin();
 		graph_files_it != graph_files.end(); graph_files_it++) {
@@ -106,27 +107,27 @@ int main(int argc, char* argv[]) {
 		if (filename.find(".s6") == std::string::npos)
 			continue;
 
-		printf("%s,", (filename.substr(0, filename.length()-3)).c_str());
+		printf("%s", (filename.substr(0, filename.length()-3)).c_str());
 
 		clock_t start = clock();
 		Graph* graph = read_sparse6((filepath + filename).c_str());
 		clock_t end = clock();
-		printf("%d,", graph->size());
+		printf(",%d", graph->size());
 		int deg = 0;
 		for (int u : *graph) {
 			deg += graph->degree(u);
 		}
-		printf("%d,", deg >> 1);
-		printf("%.4f,", (double)(end-start)/1000000);
+		printf(",%d", deg >> 1);
+		printf(",%.4f", (double)(end-start)/1000000);
 
 		TreeDecomp init(graph);
-		printf("%d,", init.treewidth());
+		printf(",%d", init.treewidth());
 
 		start = clock();
 		Set* domset = logn_apx(graph);
 		end = clock();
-		printf("%d,", domset->size());
-		printf("%.4f", (double)(end-start)/1000000);
+		printf(",%d", domset->size());
+		printf(",%.4f", (double)(end-start)/1000000);
 		delete domset;
 
 		for (int i = 2; i <= 5; i++) {
@@ -138,7 +139,7 @@ int main(int argc, char* argv[]) {
 			Graph* sub_g = graph->subgraph_wsingles(rest);
 			end = clock();
 			double time1 = (double)(end-start)/1000000;
-			printf(",%d,%.4f,", edit->size(), time1);
+			printf(",%d,%.4f", edit->size(), time1);
 			delete verts;
 			delete rest;
 
@@ -147,7 +148,7 @@ int main(int argc, char* argv[]) {
 			int domset_size = calc_min_domset(sub_g, decomp, opt, Variant::Dom_Set);
 			end = clock();
 			double time2 = (double)(end-start)/1000000;
-			printf("%d,%d,%.4f,%d,%.4f", decomp->treewidth(), domset_size, time2, domset_size + edit->size(), time1 + time2);
+			printf(",%d,%d,%.4f,%d,%.4f", decomp->treewidth(), domset_size, time2, domset_size + edit->size(), time1 + time2);
 			delete opt;
 			delete edit;
 			delete sub_g;
