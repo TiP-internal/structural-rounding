@@ -5,6 +5,32 @@
 
 #include "domset_apx.hpp"
 
+void mark_dominated(Graph* graph, Map<int>& deg, Map<Set>& revdeg, int u) {
+    for (int nbr : *(graph->neighbors(u))) {
+        int degree = deg[nbr];
+		revdeg[degree].erase(nbr);
+
+		if (degree == 1) {
+			deg.erase(nbr);
+		}
+		else {
+			deg[nbr] = degree - 1;
+			revdeg[degree - 1].insert(nbr);
+		}
+    }
+
+    int degree = deg[u];
+    revdeg[degree].erase(u);
+
+    if (degree == 1) {
+        deg.erase(u);
+    }
+    else {
+        deg[u] = degree - 1;
+        revdeg[degree - 1].insert(u);
+    }
+}
+
 
 Set* logn_apx(Graph* graph) {
     /*
@@ -13,18 +39,40 @@ Set* logn_apx(Graph* graph) {
      * Repeats while some vertices have not been visited yet.
      */
     Set* domset = new Set();
-    Set* visited = new Set();
 
-    while(visited->size() < graph->size()) {
-        int max_deg_v = max_deg_vertex(graph, visited);
+    Set dominated;
+    Map<int> deg;
+    Map<Set> revdeg;
+    int maxdeg = 0;
 
-        domset->insert(max_deg_v);
-        visited->insert(max_deg_v);
-        for(auto it=graph->neighbors(max_deg_v)->begin(); it!=graph->neighbors(max_deg_v)->end(); it++) {
-            visited->insert(*it);
+    for (int u : *graph) {
+        int degree = graph->degree(u) + 1;
+        deg[u] = degree;
+        revdeg[degree].insert(u);
+        maxdeg = degree > maxdeg ? degree : maxdeg;
+    }
+
+    while (dominated.size() < graph->size()) {
+        while (revdeg[maxdeg].empty()) {
+            --maxdeg;
+        }
+
+        int u = *(revdeg[maxdeg].begin());
+        domset->insert(u);
+
+        for (int nbr : *(graph->neighbors(u))) {
+            if (!dominated.contains(nbr)) {
+                mark_dominated(graph, deg, revdeg, nbr);
+                dominated.insert(nbr);
+            }
+        }
+
+        if (!dominated.contains(u)) {
+            mark_dominated(graph, deg, revdeg, u);
+            dominated.insert(u);
         }
     }
-    delete visited;
+
     return domset;
 }
 
@@ -767,35 +815,6 @@ bool included_sets(Domset &domset_inst) {
         }
     }
     return applied;
-}
-
-
-int vertex_degree(Graph* graph, Set* removedC, int vert) {
-    int degree= removedC->contains(vert) ? 0 : 1;
-    for(auto it=graph->neighbors(vert)->begin(); it!=graph->neighbors(vert)->end(); it++) {
-        if(!removedC->contains(*it)) degree++;
-    }
-    return degree;
-}
-
-
-int max_deg_vertex(Graph* graph, Set* visited) {
-    //finds the maximum degree not in the visited set
-    int max_deg_value = 0;
-    int max_deg_vert=0;
-
-    for (auto iu = graph->begin(); iu!=graph->end(); iu++) {
-        int u = *iu;
-        if(!visited->contains(u)) {
-            int u_deg = vertex_degree(graph, visited, u);
-
-            if ( u_deg > max_deg_value) {
-                max_deg_value = u_deg;
-                max_deg_vert = u;
-            }
-        }
-    }
-    return max_deg_vert;
 }
 
 

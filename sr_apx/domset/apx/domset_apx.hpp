@@ -11,12 +11,12 @@
 
 struct Domset{
     Set* base = new Set();  //universe
-    
-    //map of subset of the univers. key=vert , 
+
+    //map of subset of the univers. key=vert ,
     //Set* are neighbors of vert + vert
-    Map<Set*>* collection = new Map<Set*>();   
-    
-    Set* domset = new Set(); 
+    Map<Set*>* collection = new Map<Set*>();
+
+    Set* domset = new Set();
 };
 
 
@@ -33,10 +33,10 @@ int logn_apx(Domset&);
 
 // [Bourgeois et al. 2009]
 Set* mod_exponential_domset(Domset&, int);
-int mod_exp_c_apx(Domset, int); 
+int mod_exp_c_apx(Domset, int);
 
 // [Duh & Furer 1997]
-int Hk_minus_half_apx(Domset&, int);       
+int Hk_minus_half_apx(Domset&, int);
 
 
 //----misc
@@ -50,7 +50,7 @@ int setsize(Map<Set*>*, Set*);
 int how_many(Domset&, std::vector<int>&);
 
 //--hk helpers
-int maximal_jsets(Domset&, int, int);  
+int maximal_jsets(Domset&, int, int);
 int maximal_set(Domset&, int);
 
 int restricted_phase(Domset&, int, int);
@@ -81,11 +81,6 @@ int single_subsets(Domset&);
 bool included_sets(Domset&);
 int largest_logn(int);
 int largest_harmonic_num(int);
-
-
-//--logn apx helpers
-int vertex_degree(Graph*, Set*, int);
-int max_deg_vertex(Graph*, Set*);
 
 
 //for TESTING
