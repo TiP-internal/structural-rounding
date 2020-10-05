@@ -42,7 +42,6 @@ Set* balanced_separators(Graph*, int);        //greedy alg. from (Althoby et al.
 Set* balanced_separators(Graph*, Set*, int);  //bal. seps for set W.
 
 std::vector<Set*> connected_components(Graph*);
-void dfs(Graph*, Set*, Set*, int);
 
 int min_deg_vert(Graph*);
 

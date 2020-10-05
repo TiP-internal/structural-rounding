@@ -305,37 +305,51 @@ std::vector<Set*> connected_components(Graph* graph) {
      * n+m time
      */
 
-    int n = graph->size();
     std::vector<Set*> components;
-    if(n==0) return components;
 
-    Set* visited = new Set();
-    auto vitr = graph->begin();
+    std::vector<int> stack;
+    Set visited;
+    Map<Set>::Iterator vitr = graph->begin();
 
-    while(vitr!=graph->end()) {
-        if(!visited->contains(*vitr)) {  //if not visited yet
-            Set* comp = new Set();
-            dfs(graph, comp, visited, *vitr);
-            components.push_back(comp);
+    Set* component = NULL;
+
+    while (!stack.empty() || visited.size() < graph->size()) {
+        int current;
+        if (stack.empty()) {
+            if (component != NULL) {
+                components.push_back(component);
+            }
+
+            component = new Set();
+
+            while (visited.contains(*vitr)) {
+                ++vitr;
+            }
+
+            current = *vitr;
+            component->insert(current);
+            visited.insert(current);
         }
-        ++vitr;
+        else {
+            current = stack.back();
+            stack.pop_back();
+        }
+
+        for (int nbr : *(graph->neighbors(current))) {
+            if (!component->contains(nbr)) {
+                stack.push_back(nbr);
+                component->insert(nbr);
+                visited.insert(nbr);
+            }
+        }
     }
-    delete visited;
+
+    if (component != NULL) {
+        components.push_back(component);
+    }
+
     return components;
-}
 
-
-void dfs(Graph* graph, Set* comp, Set* visited, int v) {
-    visited->insert(v);
-    comp->insert(v);  // components in G[V]
-
-    Set* nbrs = graph->neighbors(v);
-    // nbrs->remove(v);
-    for (auto it = nbrs->begin(); it != nbrs->end(); it++) {
-        if(!visited->contains(*it)) {    //if not visited yet
-            dfs(graph, comp, visited, *it);
-        }
-    }
 }
 
 
