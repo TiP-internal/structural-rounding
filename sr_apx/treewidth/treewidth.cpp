@@ -52,12 +52,7 @@ int TreeDecomp::add_bag(int parent, bool last_child, Set* bag) {
     // ensures that root bag exists
     if (components_bags.empty()) {
         components_bags.push_back(new Set());
-        po_bag p;
-        p.bag_index = 0;
-        p.num_children = 0;
-        p.parent_bag_index = -1;
-        p.current_join_child = 0;
-        pre_order.push_back(p);
+        pre_order.push_back(po_bag(0, -1));
     }
 
     int true_parent = pre_order[parent].current_join_child;
@@ -66,12 +61,7 @@ int TreeDecomp::add_bag(int parent, bool last_child, Set* bag) {
         // create a new join bag to hold the child
         int index = components_bags.size();
         components_bags.push_back(copyset(components_bags[true_parent]));
-        po_bag p;
-        p.bag_index = index;
-        p.num_children = 0;
-        p.parent_bag_index = true_parent;
-        p.current_join_child = index;
-        pre_order.push_back(p);
+        pre_order.push_back(po_bag(index, true_parent));
         pre_order[true_parent].num_children++;
         pre_order[parent].current_join_child = index;
         true_parent = index;
@@ -80,12 +70,7 @@ int TreeDecomp::add_bag(int parent, bool last_child, Set* bag) {
     if (pre_order[true_parent].num_children > 0 || !last_child) {
         int index = components_bags.size();
         components_bags.push_back(copyset(components_bags[true_parent]));
-        po_bag p;
-        p.bag_index = index;
-        p.num_children = 0;
-        p.parent_bag_index = true_parent;
-        p.current_join_child = index;
-        pre_order.push_back(p);
+        pre_order.push_back(po_bag(index, true_parent));
         pre_order[true_parent].num_children++;
         true_parent = index;
     }
@@ -104,12 +89,7 @@ int TreeDecomp::add_bag(int parent, bool last_child, Set* bag) {
         use_bag->erase(x);
         int index = components_bags.size();
         components_bags.push_back(copyset(use_bag));
-        po_bag p;
-        p.bag_index = index;
-        p.num_children = 0;
-        p.parent_bag_index = use_parent;
-        p.current_join_child = index;
-        pre_order.push_back(p);
+        pre_order.push_back(po_bag(index, use_parent));
         pre_order[use_parent].num_children++;
         use_parent = index;
     }
@@ -124,12 +104,7 @@ int TreeDecomp::add_bag(int parent, bool last_child, Set* bag) {
         use_bag->insert(x);
         int index = components_bags.size();
         components_bags.push_back(copyset(use_bag));
-        po_bag p;
-        p.bag_index = index;
-        p.num_children = 0;
-        p.parent_bag_index = use_parent;
-        p.current_join_child = index;
-        pre_order.push_back(p);
+        pre_order.push_back(po_bag(index, use_parent));
         pre_order[use_parent].num_children++;
         use_parent = index;
     }

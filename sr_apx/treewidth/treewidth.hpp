@@ -9,9 +9,11 @@
 
 struct po_bag {  //for postorder bag.
     int bag_index;
-    int num_children;  //leaf if num_children==0
+    int num_children = 0;  //leaf if num_children==0
     int parent_bag_index;
     int current_join_child;
+
+    po_bag(int index, int parent): bag_index(index), parent_bag_index(parent), current_join_child(index) {}
 };
 
 class TreeDecomp {
