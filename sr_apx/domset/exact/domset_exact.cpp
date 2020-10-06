@@ -2,10 +2,11 @@
 #include "domset_exact.hpp"
 
 #include <cstdio>
+#include <cassert>
 
 
 //--- Calculating Solution
-int get_soln_row_index(Table* table){
+int get_soln_row_index(Table* table, Set* optional_verts){
     //Returns the index of the row in the last table w/ smallest dominating set size.
     int soln_index=-1;
     int min_Ai = INF;
@@ -13,12 +14,22 @@ int get_soln_row_index(Table* table){
     //finds the row w. smallest solution size.
     for(int i=0; i<table->get_table_size(); i++) {
         Row* row = table->get_row(i);
+        
         if(row->get_Ac() < min_Ai) {
-            min_Ai=row->get_Ac();
-            soln_index=i;
+            int num_notdom=0;
+            for(int j=0; j<table->vertices.size(); j++) {
+                int c = row->coloring[j];
+                int xt = table->vertices[j];
+                //a final coloring cant have any vertices colored as not dominated
+                if(c==NOT_DOMINATED && !optional_verts->contains(xt)) num_notdom++;
+            }
+            
+            if(num_notdom==0) {
+                min_Ai=row->get_Ac();
+                soln_index=i;
+            }
         }
     }
-
     return soln_index;
 }
 
@@ -28,163 +39,157 @@ void add_to_solution(Set* dom_set, Row* row, std::vector<int> &vertices) {
     for(int i=0; i<vertices.size(); i++) {
         int xt = vertices[i];
         int c = row->coloring[i];
-
-        if(c==IN_DOMSET) dom_set->insert(xt);
+        
+        if(c==IN_DOMSET) {
+            dom_set->insert(xt);
+        } 
     }
 }
 
 
-int get_solution(Table* table) {
+int get_solution(std::vector<Table*> &tables, Set* optional_verts) {
     /*
      * Finds the size of the final solution for the optimization version of DOMSet
      */
-    int soln_index = get_soln_row_index(table);
+    int soln_size=0;
+    int tabsize = tables.size();  //shouldnt be more than 2
+    Table* tab;
+    
+    for(int i=0; i<tabsize; i++) {
+        tab = tables.back();
+        tables.pop_back();
+                
+        int soln_index = get_soln_row_index(tab, optional_verts);  //prints the tabel lookups
+        if(soln_index==-1) printf("ERROR: soln row not found.\n");
+        
+        Row* final_row = tab->get_row(soln_index);
+        soln_size += final_row->get_Ac();
 
-    if(soln_index==-1) printf("ERROR: soln row not found.\n");
-
-    return table->get_row(soln_index)->get_Ac();
+        delete tab;
+    }
+    return soln_size;
 }
 
 
-void get_solution(std::vector<Table*> &tables, Set* dom_set) {
+int get_solution(std::vector<Table*> &tables, Set* dom_set, Set* optional_verts) {  
     /*
      * This is the second pass of the alg which constructs the soln set.
      * It iterates over tables from top to bottom.
+     * 
+     * returns number of domset vertices added for this one compoenent
      */
-    Table* final_table = tables.back();
+    Table* parent_table = tables.back();
     tables.pop_back();
+    
+    po_bag parent_pobag = parent_table->get_pobag();
+    int soln_index = get_soln_row_index(parent_table, optional_verts);
+    
+    if(soln_index==-1) printf("ERROR: soln row not found.\n");
+    Row* soln_row = parent_table->get_row(soln_index);
 
-    int soln_index = get_soln_row_index(final_table);
-    Row* soln_row = final_table->get_row(soln_index);
     int soln_size = soln_row->get_Ac();
+    if(soln_size>=INF) printf("ERROR: in get_solution for constructive version.\n");
+    
+    add_to_solution(dom_set, soln_row, parent_table->vertices);
 
-    add_to_solution(dom_set, soln_row, final_table->vertices);
+    int childl_row_ind = soln_row->get_childl_table_ind();
+    int childr_row_ind = soln_row->get_childr_table_ind();
 
-    int childl_ind = soln_row->get_childl_table_ind();
-    int childr_ind = soln_row->get_childr_table_ind();
-
-    delete final_table;
-
-    std::vector<int> rightinds;
-
-    for(int i=tables.size()-1; i>=0; i--) {
-        Row* curr_row;
-        Table* curr_table = tables.back();
-        tables.pop_back();
-
-        if(childl_ind!=-1 && childr_ind!=-1) {          //join table
-            rightinds.push_back(childr_ind);
-            curr_row = curr_table->get_row(childl_ind);
-        } else if(childl_ind==-1 && childr_ind==-1) {   //leaf table
-            childr_ind = rightinds.back();
-            rightinds.pop_back();
-            curr_row = curr_table->get_row(childr_ind);
-        } else if(childl_ind!=-1 && childr_ind==-1) {   //intro or forget
-            curr_row = curr_table->get_row(childl_ind);
+    std::deque<po_bag> unfinished_joins;
+    std::deque<int> left_inds;
+    int tabsize = tables.size();  //shouldnt be more than 2
+    
+    for(int i=0; i<tabsize; i++) {
+        // goal is to find the correct current row from the child table during each iteration.
+        Row* curr_row;  
+                
+        if(parent_pobag.num_children==2) {        //root table is a join table
+            unfinished_joins.push_front(parent_pobag);
+            left_inds.push_front(childl_row_ind);
         }
-
-        if(dom_set->size() < soln_size) add_to_solution(dom_set, curr_row, curr_table->vertices);
-
-        childl_ind = curr_row->get_childl_table_ind();
-        childr_ind = curr_row->get_childr_table_ind();
-
-        delete curr_table;
+        
+        Table* child_table = tables.back();
+        tables.pop_back();
+        po_bag child_pobag = child_table->get_pobag();  //par_bag_index, bag_index, num_children
+       
+        if(parent_pobag.bag_index != child_pobag.parent_bag_index) {
+            // if the child table's parent is not the current parent
+            // then it must must be the left child of an unfinished join table
+            if(unfinished_joins[0].bag_index == child_pobag.parent_bag_index) {
+                parent_pobag = unfinished_joins[0];  //get most recently added
+                unfinished_joins.pop_front();
+                
+                childl_row_ind = left_inds[0];
+                left_inds.pop_front();
+                
+                curr_row = child_table->get_row(childl_row_ind);
+            } else {
+                printf("ERROR in getting solution\n");
+            }
+        } else {
+            // now that the current parent has been evaluated, 
+            // reassign child table as the parent
+            curr_row = child_table->get_row(childr_row_ind); //there will be a left ind if its not a leaf
+        }
+        //print_row(curr_row);
+        add_to_solution(dom_set, curr_row, child_table->vertices);
+        
+        delete parent_table;
+        parent_table = child_table; 
+        parent_pobag = child_pobag;
+            
+        childl_row_ind = curr_row->get_childl_table_ind();
+        childr_row_ind = curr_row->get_childr_table_ind();
     }
+    
+    if(soln_index==-1) printf("ERROR: soln row not found.\n");
+    return soln_size;
 }
 
 
-Set* construct_domset(Graph* graph, TreeDecomp* decomp,
-                      Set* optional_verts, Variant variant) {
-    /*
-     * Calculates the minimum dominating set given a tree decomp.
-     * This version constructs the solution set.
+int calculate(Graph* graph, TreeDecomp* decomp, Set* dom_set,
+              Set* optional_verts, Variant variant, bool construct_soln) {
+    /* Calculates the minimum dominating set given a tree decomp.
+     * 
+     * if construct_soln is true, the solution set is constructed, 
+     * else its not
      *
      * Must calculate for each component in the decomp.
      * Calculates annotated or regular version of the dom set.
-     * 
-     * NOTE (oct. 2): this version has not been tested for the new decomps (that use empty bags) 
-    */
-    std::vector<po_bag> postorder = decomp->get_post_order();
-
-    Set* dom_set = new Set();
+     */
     std::vector<Table*> tables; 
-    //NOTE this will need some major changes if we decide to use this version
-    Set* anchors = treedecomp_reduction(graph, decomp->components_bags, postorder); 
-    std::vector<int> table_bag_indices;
+    std::vector<po_bag> postorder = decomp->get_post_order();
     
-    for(int i=0; i<postorder.size(); i++) { // O(n)
+    // Set* anchors = treedecomp_reduction(graph, decomp->components_bags, postorder); 
+    Set* anchors = new Set();
+    if(construct_soln) for(int i=0; i<decomp->components_bags.size(); i++) anchors->insert(i);
+    
+    int solutionsize=0;
+    for(int i=0; i<postorder.size(); i++) { 
         int bag_index = postorder[i].bag_index;
+        int par_bag_index = postorder[i].parent_bag_index;
         
-        if(decomp->components_bags[bag_index]->size() == 0) { //-----------------------empty root bag
-            //calculate solution up until this point, and discard current tables
-            
-            if(tables.size()>2) printf("error---should not be more than two component tables\n");
-                
-            for(int i=0; i<tables.size(); i++) {
-                //solutionsize += get_solution(tables[i]);
-                get_solution(tables, dom_set); 
-            }
-            
-            //remove+delete tables
-            for(int i=tables.size(); i>0; i--) {
-                Table* removing = tables.back();
-                tables.pop_back();
-                table_bag_indices.pop_back();  //reset this too
-                delete removing;
-            }  
-        } else {
+        if(decomp->components_bags[bag_index]->size() != 0) {
             calculate_tables(graph, decomp->components_bags,
                              postorder, tables, 
-                             table_bag_indices, optional_verts,
+                             optional_verts,
                              anchors, variant, i);
         }
-    }
-    
-
-    delete anchors;
-    return dom_set;
-}
-
-
-int calc_min_domset(Graph* graph, TreeDecomp* decomp,
-                    Set* optional_verts, Variant variant) {
-    /*
-     * Used for the optimization version. Finds the size of the smallest dom set.
-     */
-
-    std::vector<po_bag> postorder = decomp->get_post_order();
-    Set* empty=new Set();  //no need for anchor tables here
-    std::vector<Table*> tables; 
-    std::vector<int> table_bag_indices;
-    int solutionsize=0;
-    
-    for(int i=0; i<postorder.size(); i++) { // O(n)
-        int bag_index = postorder[i].bag_index;
         
-        if(decomp->components_bags[bag_index]->size() == 0) { //-----------------------empty root bag
-            //calculate solution up until this point, and discard current tables
-            if(tables.size()>2) printf("error---should not be more than two component tables\n");
-                
-            for(int i=0; i<tables.size(); i++) {
-                solutionsize += get_solution(tables[i]);
+        if(par_bag_index==-1 || decomp->components_bags[par_bag_index]->size() == 0) {  
+            //-----------------------empty root bag or the actual root has been reached
+            //calculate solution up until this point, and discard current tables       
+            if(tables.size()>0) {
+                if(construct_soln) {
+                    solutionsize += get_solution(tables, dom_set, optional_verts); 
+                }
+                else {
+                    solutionsize += get_solution(tables, optional_verts);
+                }
             }
-            
-            //remove+delete tables
-            for(int i=tables.size(); i>0; i--) {
-                Table* removing = tables.back();
-                tables.pop_back();
-                table_bag_indices.pop_back();  //reset this too
-                delete removing;
-            }  
-        } else {
-            calculate_tables(graph, decomp->components_bags,
-                             postorder, tables, 
-                             table_bag_indices, optional_verts,
-                             empty, variant, i);
-        }
+        } 
     }
-    
-    delete empty;
+    delete anchors;
     return solutionsize;
 }
 
@@ -260,10 +265,23 @@ Set* treedecomp_reduction(Graph* graph, std::vector<Set*> &bags,
 }
 
 
+int get_left_join_child_tabind(Set* anchor_tables, 
+                               std::vector<Table*> &tables,
+                               int current_index) {
+    for(int j=tables.size()-2; j>=0; j--) {  //-2 since tables.size()-1 is the right child
+        //if(!anchor_tables->contains(ind) && tab_ind_childr==-99) {
+        po_bag check = tables[j]->get_pobag();
+        if(check.parent_bag_index==current_index) {
+            return j;  //left child table index
+        }
+    }
+    return -1;
+}
+
+
 void calculate_tables(Graph* graph, std::vector<Set*> &bags,
                       std::vector<po_bag> &postorder, 
                       std::vector<Table*> &tables,
-                      std::vector<int> &table_bag_indices,
                       Set* optional_verts, Set* anchor_tables, 
                       Variant variant, int po_index) {
     /*
@@ -278,124 +296,133 @@ void calculate_tables(Graph* graph, std::vector<Set*> &bags,
      * and annotated/regular versions of independent dominating set 
      * and perfect dominating set. 
      */
+    po_bag pob_current = postorder[po_index];
     
-    int bag_index = postorder[po_index].bag_index;
-    int num_children = postorder[po_index].num_children;
-    int parent_bag_index = postorder[po_index].parent_bag_index;
-        
-    if(num_children==2) {          //-----------------------JOIN bag
-        int ind_childr = tables.size()-1;  //right child will always be the most recently added
-        int ind_childl = -99;
-
-        //NOTE needs testing
-        for(int j=table_bag_indices.size()-2; j>=0; j--) {
-            int ind=table_bag_indices[j];
-            if(!anchor_tables->contains(ind) && ind_childl==-99) {
-                ind_childl=j;
-            }
+    Table* table = nullptr;
+    if(pob_current.num_children==2) {          //-----------------------JOIN bag
+        //---------------Get right child table index in tables[]
+        // right child will always be the most recently added
+        int tab_ind_childr = tables.size()-1;  
+        Table* right_child_table = tables[tab_ind_childr];
+        po_bag pob_rightchild = right_child_table->get_pobag();
+        if(pob_rightchild.parent_bag_index != pob_current.bag_index) {
+            printf("ERROR: parent (right) child dont align.\n");
         }
-
-        int bag_ind_childl = table_bag_indices[ind_childl];
-        int bag_ind_childr = table_bag_indices[ind_childr];
-
-        Table* left_child_table = tables[ind_childl];
-        Table* right_child_table = tables[ind_childr];
+        int bag_ind_childr = pob_rightchild.bag_index;
+        //----------------
         
+        //---------------Get left child table index in tables[]
+        int tab_ind_childl = get_left_join_child_tabind(anchor_tables, tables, pob_current.bag_index);
+        if(tab_ind_childl==-1) {
+            printf("ERROR: parent (left) child not in tables vector.\n");
+        }
+        Table* left_child_table = tables[tab_ind_childl];
+        po_bag pob_leftchild = left_child_table->get_pobag();
+        if(pob_leftchild.parent_bag_index != pob_current.bag_index) {
+            printf("ERROR: parent (left) child dont align.\n");
+        }
+        int bag_ind_childl = pob_leftchild.bag_index;
+        //----------------
+        
+        //printf("bag_ind_childl=%d, bag_ind_childr=%d\n", bag_ind_childl, bag_ind_childr);
         if(left_child_table->get_table_size() != right_child_table->get_table_size()) {
             printf("ERROR in calculate_tables: join children have different dimension\n");
         }
 
         //update table here
+        //join_table(tab1, tab2, ...) -- tab2 is merged into tab1 to become the parent of tab1 & tab2
         if(anchor_tables->contains(bag_ind_childr) && anchor_tables->contains(bag_ind_childl)) {
-            //NOTE needs testing
-            //if both children are anchor tables, create new table and add to tables
-            Table* table = update_join_table(left_child_table, right_child_table, optional_verts, variant);
-            tables.push_back(table);
-        } else if(anchor_tables->contains(bag_ind_childr)){
-            //NOTE needs testing
-            //if right child is an anchor, merge left child into parent join table, dont delete
-            merge_join_table(left_child_table, right_child_table,
-                            optional_verts, variant);           // reuses the right child table
-            table_bag_indices.pop_back();
-        } else if(anchor_tables->contains(bag_ind_childl)) {
-            //NOTE needs testing
-            //if left child is an anchor, merge right child into parent join, dont delete
-            merge_join_table(right_child_table, left_child_table,
-                            optional_verts, variant);           // reuses the right child table
-            table_bag_indices.erase(table_bag_indices.begin()+ind_childl);
-        } else {
+            //if both children are anchor tables, create new table and add to tables  NOTE HERE
+            bool merge = false;
+            table = join_table(right_child_table, left_child_table, optional_verts, pob_current, merge);
+        } 
+        //else if(anchor_tables->contains(bag_ind_childr)){
+        //    //if right child is an anchor, merge left child into parent join table, dont delete
+        //    bool merge = true;
+        ///    table = join_table(left_child_table, right_child_table, optional_verts, pob_current, merge);
+        //    tables.pop_back();
+        //}
+        else {
             //if neither are anchors, merge right child into parent table, delete left
-            merge_join_table(right_child_table, left_child_table,
-                            optional_verts, variant);           // reuses the right child table
-
-            tables.erase(tables.begin()+ind_childl);            // deletes the left child table.
-
-            table_bag_indices.erase(table_bag_indices.begin()+ind_childl);  //left
-            table_bag_indices.pop_back(); //right
+            bool merge = true;
+            table = join_table(right_child_table, left_child_table, optional_verts, pob_current, merge);
+            
+            delete left_child_table;
+            Table* left_child_table=nullptr;
+            tables.pop_back();
+            tables.erase(tables.begin()+tab_ind_childl);             // deletes the left child table.
         }
-        table_bag_indices.push_back(bag_index);
+    } else if(pob_current.num_children==1) {     //-------------------either INTRODUCE or FORGET bag
+        po_bag pob_child = postorder[po_index-1];
+        int child_bag_index = pob_child.bag_index;
+        int child_bag_table_index = tables.size()-1;  //child is the most recently added to end of tables vec
 
-    } else if(num_children==1) {     //-------------------either INTRODUCE or FORGET bag
-        int child_bag_index = postorder[po_index-1].bag_index;
-        int child_bag_table_index = tables.size()-1;
-
-        Set* parent_bag = bags[bag_index];
+        Set* parent_bag = bags[pob_current.bag_index];
         Set* child_bag = bags[child_bag_index];
 
-        string type;
+        Table* child_table = tables[child_bag_table_index];
+        
         int v;
-
         if(parent_bag->size() > child_bag->size()) {        // introduce node
+            // gets the introduced vertex
             for(auto it=parent_bag->begin(); it!=parent_bag->end(); it++) {
                 int u = *it;
                 if(!child_bag->contains(u)) v = u;
             }
-
+            
+            bool merge;
             if(anchor_tables->contains(child_bag_index)) {
                 //create a new table if the child is an anchor
-                Table* table = update_introduce_table(graph, tables[child_bag_table_index],
-                                    child_bag, optional_verts, v, variant);
-                tables.push_back(table);
+                merge = false;
             } else {
-                Table* child_table = tables[child_bag_table_index];
-                merge_introduce_table(graph, child_table, child_bag, optional_verts, v, variant);
-                table_bag_indices.pop_back();
+                //child table is now converted into the current par table
+                merge = true;
+                tables.pop_back();
             }
-            table_bag_indices.push_back(bag_index);
-
+            table = intro_table(graph, child_table, child_bag, optional_verts, pob_current, variant, v, merge); 
+            
         } else if(parent_bag->size() < child_bag->size()) { // forget node
+            // gets the forgotten vertex
             for(auto it=child_bag->begin(); it!=child_bag->end(); it++) {
                 int u = *it;
                 if(!parent_bag->contains(u)) v = u;
             }
 
+            bool merge;
             if(anchor_tables->contains(child_bag_index)) {
                 //create a new table if the child is an anchor
-                Table* table = update_forget_table(tables[child_bag_table_index],
-                                                    optional_verts, v, variant);
-                tables.push_back(table);
+                merge=false;
             } else {
-                Table* child_table = tables[child_bag_table_index];
-                merge_forget_table(child_table, optional_verts, v, variant);
-                table_bag_indices.pop_back();
+                merge=true;
+                tables.pop_back();
             }
-            table_bag_indices.push_back(bag_index);
+            table = forget_table(child_table, optional_verts, pob_current, variant, v, merge);
         } else {
             printf("ERROR in calculate_tables: parent and child should not have same size.\n");
         }
-    } else if(num_children==0){    //----------------------------LEAF bag
-        //leaf bag, need to initialize table.
-        //create new leaf for both anchors and non-anchors
-        Table* table = initialize_leaf_table(graph, bags[bag_index], optional_verts, variant);
-        tables.push_back(table);
-        table_bag_indices.push_back(bag_index);
+    } else if(pob_current.num_children==0){    //----------------------------LEAF bag
+        table = initialize_leaf_table(graph, bags[pob_current.bag_index], optional_verts, pob_current, variant);
     } else {
             printf("ERROR in calculate_tables: wrong number of children in nice decomp.\n");
     }
+    
+    //------ now Add/and or update the pointer in the tables vector.
+    tables.push_back(table); 
 }
 
 
-Table* initialize_leaf_table(Graph* graph, Set* bag, Set* optional_verts, Variant variant) {
+Table* init_parent_table(Table* child1_table, bool merge) {
+    Table* par_table = nullptr;
+    if(!merge) { //creating new table  (constructive version)
+        par_table = new Table();
+        par_table->vertices = child1_table->vertices; // k time
+    }else if(merge) { //merging    (decision / or child1 (and/or child2) is not an anchor table)
+        par_table = child1_table;  //assign the pointer par_table to have the same value as child1_table
+    }
+    return par_table;
+}
+
+Table* initialize_leaf_table(Graph* graph, Set* bag, Set* optional_verts, po_bag pob_current, Variant variant) {
     /*
      * k*3^k
      *
@@ -458,146 +485,74 @@ Table* initialize_leaf_table(Graph* graph, Set* bag, Set* optional_verts, Varian
         printf("ERROR: in creating all colorings. table_size=%d \
         3^vertices.size()=%d", table->get_table_size(), pow(3, table->vertices.size()));
     }
+    
+    table->set_pobag(pob_current);
     return table;
 }
 
-
-Table* update_introduce_table(Graph* graph, Table* child_table,
-                                             Set* child_bag, Set* optional_verts,
-                                             int v, Variant variant) {
+Table* join_table(Table* child1_table, Table* child2_table, Set* optional_verts, po_bag pob_current, bool merge) {
     /*
-     * Initializes the parent_table. Constructive version
+     * If merge is true, the par_table is set to the child_table and is not a nullptr 
+     *      --then par_table has already been set to the child1_table. 
+     * 
+     * if merge if false, set par_table = new Table();, and parent_table->vertices = child1_table->vertices; 
      */
-    Table* parent_table = new Table();
-
-    parent_table->vertices = child_table->vertices; //k
-    parent_table->vertices.push_back(v);
-
-    Set* neighbors_v = child_bag->set_intersection(graph->neighbors(v));
-    int table_size = child_table->get_table_size();
-
-    for(int i=0; i<table_size; i++) {           //3^ni
-        Row* r_update = new Row(child_table->get_row(i));
-        parent_table->insert_row(r_update);
-        r_update->set_childl_table_ind(i);
-
-        Row* r2 = parent_table->create_row(r_update, DOMINATED);
-        Row* r3 = parent_table->create_row(r_update, NOT_DOMINATED);
-
-        //r_update: x is IN_DOMSET=1
-        parent_table->update_row_add(r_update, IN_DOMSET);
-        intro_vert_indomset_update(graph, child_table, neighbors_v, r_update, v, variant);
-
-        //r2: x is DOMINATED=0
-        intro_vert_dominated_update(graph, child_table, neighbors_v, optional_verts,
-                                    r2, r_update, v, variant);
-
-        //r3: x is NOT_DOMINATED=3  -- do nothing
-    }
-    delete neighbors_v;
-
-    return parent_table;
-}
-
-
-Table* update_forget_table(Table* child_table, Set* optional_verts, int v, Variant variant) {
-    /*
-     * Initializes parent table.
-     */
-    Table* parent_table = new Table();
-
-    int v_index = child_table->get_vertex_col_index(v); //k
-    int table_size = child_table->get_table_size();
-    bool is_xoptional = optional_verts->contains(v); // in optional set or not?
-
-    parent_table->vertices = child_table->vertices; //k  NOTE could be updated
-    //delete v from verts vec. k
-    parent_table->vertices.erase(parent_table->vertices.begin()+v_index);
-
-    for(int j=0; j<table_size; j++) {                //3^ni
-        Row* rj = new Row(child_table->get_row(j));  //k
-
-        int color_v = rj->coloring[v_index];
-        int Aj = rj->get_Ac();
-        int rj_tabind = child_table->lookup_table_index(rj->get_key());
-
-        rj->remove_from_coloring(v_index);           //k
-
-        if(parent_table->lookup_table_index(rj->get_key()) == -1) { //not inserted yet
-            parent_table->insert_row(rj);
+    Table* par_table = init_parent_table(child1_table, merge);
+    
+    if(child2_table == nullptr) printf("ERROR: child2_table should NOT be a nullptr\n");
+    if(child1_table == nullptr) printf("ERROR: child1_table should NOT be a nullptr\n");
+        
+    int tab_size = child2_table->get_table_size();
+    for(int i=0; i<tab_size; i++) {  //4^ni        
+        Row* row_k = nullptr;
+        if(!merge) {  //creating new table  (constructive version)
+            if(child1_table == nullptr) printf("ERROR: child1_table should NOT be a nullptr at this point\n");
+            row_k = par_table->create_row(child1_table->get_row(i), -1); //declares new
+        } else {      //merging
+            row_k = par_table->get_row(i);  //row_k differs between two versions
         }
-
-        Row* ri = parent_table->lookup_row(rj->get_key());
-        int Ai = parent_table->lookup_Ac(ri->get_key());
-
-        //NOTE may need to add extra constraint here (for monotonicity?)
-        //it's either not the annotated version or x is not optional
-        if(!is_xoptional) {
-            if(color_v!=NOT_DOMINATED && Aj <= Ai) {
-                ri->update_Ac(Aj);
-                ri->set_childl_table_ind(rj_tabind);
-            }
-        } else { //annotated version and x IS an optional vertex.
-            if(Aj <= Ai) {
-                ri->update_Ac(Aj);
-                ri->set_childl_table_ind(rj_tabind);
-            }
-        }
-    }
-
-    return parent_table;
-}
-
-
-Table* update_join_table(Table* rightchildk, Table* leftchildj,
-                            Set* optional_verts, Variant variant) {
-    /*
-     * j is left
-     * k is right
-     *
-     * Initializes parent table.
-     *
-     * NOTE can combine w/ other join fun
-     */
-    Table* parent_table = new Table();
-    parent_table->vertices = rightchildk->vertices; //NOTE could probably do in the loop
-
-    int tab_size = rightchildk->get_table_size();
-    for(int i=0; i<tab_size; i++) {  //4^ni
-        Row* row_j = leftchildj->get_row(i);
-        Row* row_k = parent_table->create_row(rightchildk->get_row(i), -1);
-
-        int* min_vals = minAi_c(rightchildk, leftchildj, optional_verts, row_k, row_j);
+        
+        int* min_vals = minAi_c(child1_table, child2_table, optional_verts, row_k);
         row_k->update_Ac(min_vals[0]);
         row_k->set_childl_table_ind(min_vals[1]);
-        row_k->set_childr_table_ind(min_vals[2]);
+        row_k->set_childr_table_ind(min_vals[2]);  //merge into row_k in par_table
 
         delete[] min_vals;
     }
-    return parent_table;
+    
+    if(merge) child1_table=nullptr;
+    par_table->set_pobag(pob_current);
+    return par_table;
 }
 
-
-//------ Merge Table Versions (reuse a child table, and convert it into the parent)
-void merge_introduce_table(Graph* graph, Table* child_table, Set* child_bag, Set* optional_verts,
-                            int v, Variant variant) {
-    /*
-     * Updates the child table to be the parent.
+Table* intro_table(Graph* graph, Table* child_table, Set* child_bag, Set* optional_verts,
+                   po_bag pob_current, Variant variant, int v, bool merge) {
+    /* parent and child same when merging
+     * Combined function for both merging and initializing
      */
-    child_table->vertices.push_back(v);
+    Table* par_table = init_parent_table(child_table, merge);
+    
+    par_table->vertices.push_back(v);
     Set* neighbors_v = child_bag->set_intersection(graph->neighbors(v));
     int table_size = child_table->get_table_size();
-
-    for(int i=0; i<table_size; i++) {           //3^ni
-        Row* r_update = child_table->get_row(i);
-        //r_update->set_childl_table_ind(i);
-
-        Row* r2 = child_table->create_row(r_update, DOMINATED);
-        Row* r3 = child_table->create_row(r_update, NOT_DOMINATED);
-
+    
+    for(int i=0; i<table_size; i++) {
+        Row* r_update;  //rows in the child_table that we are duplicating and copying
+        if(!merge) {
+            r_update = new Row(child_table->get_row(i));  //creates copy of row
+            par_table->insert_row(r_update);
+        } else {
+            r_update = par_table->get_row(i);
+        }
+        r_update->set_childl_table_ind(-1); 
+        r_update->set_childr_table_ind(i);
+        
+        Row* r2 = par_table->create_row(r_update, DOMINATED);
+        Row* r3 = par_table->create_row(r_update, NOT_DOMINATED);
+        
         //r_update: x is IN_DOMSET=1
         intro_vert_indomset_update(graph, child_table, neighbors_v, r_update, v, variant);
-        child_table->update_row_add(r_update, IN_DOMSET); //must add after intro vert function call
+        par_table->update_row_add(r_update, IN_DOMSET); //must add after intro vert function call
 
         //r2: x is DOMINATED=0
         intro_vert_dominated_update(graph, child_table, neighbors_v, optional_verts,
@@ -605,91 +560,90 @@ void merge_introduce_table(Graph* graph, Table* child_table, Set* child_bag, Set
 
         //r3: x is NOT_DOMINATED=3  -- do nothing
     }
+    
+    if(merge) child_table=nullptr;
+    par_table->set_pobag(pob_current);
     delete neighbors_v;
+    return par_table;
 }
 
-
-void merge_forget_table(Table* child_table, Set* optional_verts, int v, Variant variant) {
+Table* forget_table(Table* child_table, Set* optional_verts, po_bag pob_current, Variant variant, int v, bool merge) {
     /*
-     * Updates the child_table to be the parent.
-     */
-    int v_index = child_table->get_vertex_col_index(v);      //k
+     * if merge is false: Initializes parent table. 
+     * if merge is true: Updates the child_table to be the parent.
+     */    
+    Table* par_table = init_parent_table(child_table, merge);
+    int v_index = par_table->get_vertex_col_index(v);  //k
+    
     int table_size = child_table->get_table_size();
-    bool is_xoptional = optional_verts->contains(v);  // in optional set or not?
-
-    //delete v from verts vec. k
-    child_table->vertices.erase(child_table->vertices.begin()+v_index);
-
+    bool is_xoptional = optional_verts->contains(v);  // v in optional set or not?
+    
+    par_table->vertices.erase(par_table->vertices.begin()+v_index); //delete v from verts vec. k
+    
     int curr_index = 0;
-    for(int j=0; j<table_size; j++) {                       //3^ni
-        Row* row_child = child_table->get_row(curr_index);
-
-        int color_v = row_child->coloring[v_index];
-        int Aj = row_child->get_Ac();
-        int rj_tabind = child_table->lookup_table_index(row_child->get_key());
-
-        child_table->table_lookups_remove(row_child->get_key());
-        row_child->remove_from_coloring(v_index);           //k
-
-        int par_row_ind;
-        Row* row_par;
-        if(child_table->table_lookups_contains(row_child->get_key())) {
-            child_table->delete_row(curr_index);
-            curr_index--;
-
-            // gets the actual parent row which has been added previously
-            row_par = child_table->lookup_row(row_child->get_key());
-        } else {  //row needs readding to table lookups
-            par_row_ind = curr_index;
-            row_par = child_table->get_row(par_row_ind);
-
-            //add to table lookups.
-            child_table->table_lookups_insert(row_par->get_key(), par_row_ind);
+    for(int j=0; j<table_size; j++) {                       //3^ni        
+        Row* rowj=nullptr; 
+        if(!merge) {
+            rowj = new Row(child_table->get_row(j));  //copy construct k
+        } else {
+            rowj = child_table->get_row(curr_index);
         }
+        
+        if(rowj==nullptr) printf("null ptr\n");
 
-        int Ai = child_table->lookup_Ac(row_par->get_key());
+        int color_v = rowj->coloring[v_index];
+        int Aj = rowj->get_Ac();
+        int rj_tabind = child_table->lookup_table_index(rowj->get_key());
+        
+        if(merge) par_table->table_lookups_remove(rowj->get_key());
+        rowj->remove_from_coloring(v_index);  //k
+        
+        Row* rowi;
+        if(!merge) {
+            //if(par_table->lookup_table_index(rowj->get_key()) == -1) { //not inserted yet
+            if(!par_table->table_lookups_contains(rowj->get_key())) {
+                par_table->insert_row(rowj);
+            }
+            rowi = par_table->lookup_row(rowj->get_key());
+        } else {   
+            int par_row_ind;
+            if(par_table->table_lookups_contains(rowj->get_key())) {  //already inserted in the child
+                par_table->delete_row(curr_index);
+                curr_index--;
 
+                // gets the actual parent row which has been added previously
+                rowi = par_table->lookup_row(rowj->get_key());
+            } else {  //row needs readding to table lookups
+                par_row_ind = curr_index;
+                rowi = par_table->get_row(par_row_ind);
+
+                //add to table lookups.
+                par_table->table_lookups_insert(rowi->get_key(), par_row_ind);
+            }
+        }
+        int Ai = par_table->lookup_Ac(rowi->get_key());
+        
         //NOTE may need to add extra constraint here (for monotonicity?)
         //it's either not the annotated version or x is not optional
         if(!is_xoptional) {
             if(color_v!=NOT_DOMINATED && Aj <= Ai) {
-                row_par->update_Ac(Aj);
-                //row_par->set_childl_table_ind(rj_tabind);
+                rowi->update_Ac(Aj);
+                rowi->set_childr_table_ind(rj_tabind);
+                rowi->set_childl_table_ind(-1);
             }
         } else { //annotated version and x IS an optional vertex.
             if(Aj <= Ai) {
-                row_par->update_Ac(Aj);
-                //row_par->set_childl_table_ind(rj_tabind);
+                rowi->update_Ac(Aj);
+                rowi->set_childr_table_ind(rj_tabind);
+                rowi->set_childl_table_ind(-1);
             }
         }
-
         curr_index++;
     }
-}
-
-
-void merge_join_table(Table* rightchildk, Table* leftchildj,
-                       Set* optional_verts, Variant variant) {
-    /*
-     * j is left
-     * k is right  -- calling table
-     *
-     * i is parent table
-     *
-     * Updates the rightchild table to be the parent.
-     */
-    int tab_size = rightchildk->get_table_size();
-    for(int i=0; i<tab_size; i++) {  //4^ni
-        Row* row_j = leftchildj->get_row(i);
-        Row* row_k = rightchildk->get_row(i);
-
-        int* minAi = minAi_c(rightchildk, leftchildj, optional_verts, row_k, row_j);
-        row_k->update_Ac(minAi[0]);
-        row_k->set_childl_table_ind(minAi[1]);
-        row_k->set_childr_table_ind(minAi[2]);
-
-        delete[] minAi;
-    }
+    
+    if(merge) child_table=nullptr;
+    par_table->set_pobag(pob_current);
+    return par_table;
 }
 
 
@@ -734,7 +688,6 @@ bool is_exclusive_to_singlebag(std::vector<Set*>& bags, Set* reduced_bags,
     return rule1;
 }
 
-
 bool is_child_subset(std::vector<Set*>& bags, std::vector<po_bag>& postorder,
                      Set* removed_elems, Set* removed_nodes) {
     /* Rule 2: If there is an edge e = {i, j} ∈ F such that
@@ -768,7 +721,6 @@ bool is_child_subset(std::vector<Set*>& bags, std::vector<po_bag>& postorder,
 
     return rule2;
 }
-
 
 bool is_a_implies_b(Graph* graph, std::vector<Set*> &bags, Set* reduced_bags,
                  Set* removed_elems, Set* removed_nodes) {
@@ -810,7 +762,6 @@ bool is_a_implies_b(Graph* graph, std::vector<Set*> &bags, Set* reduced_bags,
     return rule3;
 }
 
-
 bool is_empty_bag_intersect(std::vector<Set*> &bags, std::vector<po_bag> &postorder,
                          Set* removed_elems) {
     /* Rule 4: If there is an edge e = {i, j} ∈ F such that Xi ∩ Xj = ∅,
@@ -845,7 +796,6 @@ bool is_empty_bag_intersect(std::vector<Set*> &bags, std::vector<po_bag> &postor
     if(!removed_edge) rule4=false;  //no edges removed
     return rule4;
 }
-
 
 bool is_treelike_subcollection(std::vector<Set*> &bags, std::vector<po_bag> &postorder,
                             Set* removed_elems, Set* removed_nodes) {
@@ -911,7 +861,6 @@ bool is_treelike_subcollection(std::vector<Set*> &bags, std::vector<po_bag> &pos
     return rule5;
 }
 
-
 void remove_node_from_postack(std::vector<po_bag> &postorder, po_bag &xj) {
     /* child is xj, par is xi --removing xj's parent (xi)
      *
@@ -949,7 +898,6 @@ void remove_node_from_postack(std::vector<po_bag> &postorder, po_bag &xj) {
 
 }
 
-
 void remove_edge_from_postack(std::vector<po_bag> &postorder, po_bag &child_po) {
     //removes edge between curr po and parent
 
@@ -964,7 +912,6 @@ void remove_edge_from_postack(std::vector<po_bag> &postorder, po_bag &child_po) 
     //sets child par index to -2 (no parent but not root)
     child_po.parent_bag_index=-2;
 }
-
 
 bool is_special_subset(Set* A, Set* B, Set* excluded) {
     //Is set A\excluded a subset of set B\excluded?
@@ -981,8 +928,8 @@ bool is_special_subset(Set* A, Set* B, Set* excluded) {
 }
 
 
-//----- Helper functions
 
+//----- Helper functions
 int locally_valid_coloring(Graph* graph, Set* optional_verts, Row* row,
                            std::vector<int> &vertices, Variant variant) {
     /*
@@ -1092,17 +1039,23 @@ int phi(Row* row, Set* neighbors, std::vector<int> &vertices, int introduced_v) 
 }
 
 
-int* minAi_c(Table* childk, Table* childj, Set* optional_verts, Row* row_k, Row* row_j) {
+int* minAi_c(Table* childk, Table* childj, Set* optional_verts, Row* row_k) {
     /*
-     * NOTE: this is where storing the vertices vector is important. Look into not storing
+     * This is where storing the vertices vector is important. Look into not storing
      * it in table.
      *
      */
-
     //First, find all possible c' and c'' which divide c.
-    std::vector<int> c_prime;
-    std::vector<int> c_primeprime;
-
+    std::vector<std::vector<int>> c_prime;
+    std::vector<int> c_primeprime;  //colorings for child k table
+    
+    bool flip=false;
+    for(int i=0; i<childj->vertices.size(); i++) {
+        int xt = childj->vertices[i];
+        int other = childk->vertices[i];
+        if(xt != other) flip=true;
+    }
+    
     int num_ones = 0;   //number of 1's (IN_DOMSET's) in the coloring.
     for(int i=0; i<row_k->coloring.size(); i++) { //k
         int c_t = row_k->coloring[i];
@@ -1120,7 +1073,9 @@ int* minAi_c(Table* childk, Table* childj, Set* optional_verts, Row* row_k, Row*
         //is_xoptional will only be true is we want the annotated version.
         if(c_t==IN_DOMSET || c_t==NOT_DOMINATED || is_xtoptional) {
             if(cprime_size==0 && cprimeprime_size==0) {
-                int cprime0 = c_t;
+                //int cprime0 = c_t;
+                std::vector<int> cprime0;
+                cprime0.push_back(c_t);
                 c_prime.push_back(cprime0);    //c_t' == c_t
 
                 int cprimeprime0 = c_t;
@@ -1128,7 +1083,7 @@ int* minAi_c(Table* childk, Table* childj, Set* optional_verts, Row* row_k, Row*
             } else {
                 for(int t=0; t<cprime_size; t++) {
                     //c_t' == c_t
-                    c_prime[t] = c_prime[t]*10+c_t; //append c_t to end of int 'string'
+                    c_prime[t].push_back(c_t);
 
                     //c_t'' == c_t
                     c_primeprime[t] = c_primeprime[t]*10+c_t;
@@ -1137,7 +1092,8 @@ int* minAi_c(Table* childk, Table* childj, Set* optional_verts, Row* row_k, Row*
         } else if (c_t == DOMINATED ) {
             if(cprime_size==0 && cprimeprime_size==0) {
                 //---- c'_t = 0
-                int cprime0 = DOMINATED;
+                std::vector<int> cprime0;
+                cprime0.push_back(DOMINATED);
                 c_prime.push_back(cprime0);
 
                 //c''_t = 0hat
@@ -1145,23 +1101,23 @@ int* minAi_c(Table* childk, Table* childj, Set* optional_verts, Row* row_k, Row*
                 c_primeprime.push_back(cprimeprime0);
 
                 //---- c'_t = 0hat
-                int cprime1 = NOT_DOMINATED;
+                std::vector<int> cprime1;
+                cprime1.push_back(NOT_DOMINATED);
                 c_prime.push_back(cprime1);
 
                 //c''_t = 0
                 int cprimeprime1 = DOMINATED;
                 c_primeprime.push_back(cprimeprime1);
             } else {
-                //NOTE combine these for loops
                 for(int t=0; t<cprime_size; t++) {
                     //1. make copy
-                    int cprime_t = c_prime[t];
+                    std::vector<int> cprime_t = c_prime[t];
 
                     //2. update current
-                    c_prime[t] = cprime_t*10+DOMINATED;
+                    c_prime[t].push_back(DOMINATED);
 
                     //3. add to second pair
-                    cprime_t = cprime_t*10+NOT_DOMINATED;
+                    cprime_t.push_back(NOT_DOMINATED);
 
                     //4. add second pair to end of vector
                     c_prime.push_back(cprime_t);
@@ -1182,18 +1138,33 @@ int* minAi_c(Table* childk, Table* childj, Set* optional_verts, Row* row_k, Row*
             }
         }
     }
-
     //Now, find Ai(c) ← min{Aj(c')+ Ak(c'') − #1(c) | c' and c'' divide c }
     int min_Ai = INF;
     int A_jcprime_ind_final = -1;
     int A_kprimeprime_ind_final = -1;
 
     for(int i=0; i<c_prime.size(); i++) {
-        int cprime_key = c_prime[i];
+        //int cprime_key = c_prime[i];
+        std::vector<int> cprime_key = c_prime[i];
         int cprimeprime_key = c_primeprime[i];
 
-        int A_jcprime_ind = childj->lookup_table_index(cprime_key);
-        int A_jcprime = childj->lookup_Ac(cprime_key);
+        int cprime_key_val=0;
+        //the keys now need to be flipped so they align with js coloring order
+        if(flip) {
+            int flipped_cprime_key = flip_coloring(childj, childk->vertices, cprime_key);
+            cprime_key_val = flipped_cprime_key;
+        } else {
+            int key=-1;
+            for(int i=0; i<childj->vertices.size(); i++) {
+                int xt = childj->vertices[i];
+                if(i==0) key=cprime_key[i];
+                else key = key*10+cprime_key[i];
+            }
+            cprime_key_val=key;
+        }
+
+        int A_jcprime_ind = childj->lookup_table_index(cprime_key_val);
+        int A_jcprime = childj->lookup_Ac(cprime_key_val);
 
         int A_kprimeprime_ind = childk->lookup_table_index(cprimeprime_key);
         int A_kprimeprime = childk->lookup_Ac(cprimeprime_key);
@@ -1201,7 +1172,7 @@ int* minAi_c(Table* childk, Table* childj, Set* optional_verts, Row* row_k, Row*
         int val;
         if(A_jcprime==INF || A_kprimeprime==INF) val = INF;
         else val = A_jcprime + A_kprimeprime - num_ones;
-
+        
         if(val <= min_Ai) {
             min_Ai = val;
             A_jcprime_ind_final = A_jcprime_ind;
@@ -1217,6 +1188,22 @@ int* minAi_c(Table* childk, Table* childj, Set* optional_verts, Row* row_k, Row*
     min_vals[2] = A_kprimeprime_ind_final;
 
     return min_vals;
+}
+
+
+int flip_coloring(Table* childj, std::vector<int> &current_vertorder, std::vector<int> &cprime_key) {
+    int flipped_key=-1;
+    
+    for(int i=0; i<childj->vertices.size(); i++) {  //left
+        for(int k=0; k<current_vertorder.size(); k++) { //right
+            int xt = childj->vertices[i];
+            int other = current_vertorder[k];
+            if(xt == other && i==0) flipped_key=cprime_key[k];
+            else if(xt==other) flipped_key = flipped_key*10+cprime_key[k];
+        }
+    }
+    
+    return flipped_key;
 }
 
 
@@ -1256,8 +1243,12 @@ void intro_vert_indomset_update(Graph* graph, Table* child_table,
         }
     } else {
         A_phi = child_table->lookup_Ac(new_col_key);  //Dom Set variant
-        if(A_phi!=INF) A_phi++;
+        if(A_phi!=INF) A_phi++;  // increase by one
     }
+    
+    int index = child_table->lookup_table_index(new_col_key);
+    row->set_childl_table_ind(-1); 
+    row->set_childr_table_ind(index);
     row->update_Ac(A_phi);
 }
 
@@ -1267,6 +1258,8 @@ void intro_vert_dominated_update(Graph* graph, Table* child_table,
                                  Row* r2, Row* r_update, int v, Variant variant) {
     /* Update to the introduce table when the introduced vertex coloring
      * is set to DOMINATED.
+     * 
+     * NOTE get rid of r_update in this function
      */
     bool is_xoptional = optional_verts->contains(v);  // in optional set or not?
     int num_dominators_r2 = 0;
@@ -1319,7 +1312,7 @@ void intro_vert_dominated_update(Graph* graph, Table* child_table,
     if(variant==Variant::Perf_Dom_Set) {
         //More than one dominator for the perfect ds variant not allowed.
         if(num_dominators_r2>1) r2->update_Ac(INF);
-        if(!ru_isperfect) r_update->update_Ac(INF);
+        if(!ru_isperfect) r2->update_Ac(INF);  //NOTE r2 or r_update?
     }
 }
 
@@ -1391,7 +1384,12 @@ void print_row(Row* row) {
 void print_table(Table* tab, std::string table_type) {
     printf("\n=====================================================================\n");
     printf("IN_DOMSET=1=1,   DOMINATED=2=0,   NOT_DOMINATED=3=0hat\n");
-    printf("            Type: %s  \n", table_type.c_str());
+    
+    po_bag po = tab->get_pobag();
+    printf("pobag: bag_index=%d\n", po.bag_index);
+    printf("pobag: par_bag_index=%d\n", po.parent_bag_index);
+    printf("pobag: num_children=%d\n", po.num_children);
+    
     printf("  vertices \t\t |  A_ci \t |  childl ind  |  childr_ind\n");
     printf("|");
     for(int j=0; j<tab->vertices.size(); j++) {
@@ -1417,12 +1415,15 @@ void print_tables(std::vector<Table*> &tables) {
     }
 }
 
-void print_postorder(std::vector<po_bag> postorder) {
+void print_postorder(std::vector<po_bag> postorder, std::vector<Set*> &bags) {
     printf("\n------POSTorder\n");
 
     for(int j=0; j<postorder.size(); j++) {
         //printf("postorder: ind=%d, num_childs=%d\n", po[j].bag_index, po[j].num_children);
         print_pobag(postorder[j]);
+        if(postorder[j].parent_bag_index!=-1) printf("parent size=%d", bags[postorder[j].parent_bag_index]->size());
+        printf("curr size=%d", bags[postorder[j].bag_index]->size());
+        printf("\n\n");
     }
     printf("---------\n\n");
 }
@@ -1431,5 +1432,6 @@ void print_pobag(po_bag po) {
     printf("bag index=%d\n", po.bag_index);
     printf("num children=%d\n", po.num_children);
     printf("parent bag index=%d\n", po.parent_bag_index);
-    printf("\n");
+    //printf("\n");
 }
+

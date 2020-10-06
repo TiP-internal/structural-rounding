@@ -13,35 +13,32 @@
 
 enum class Variant {Dom_Set, Indep_Dom_Set, Perf_Dom_Set};  
 
+//NOTE driver function, const and opt versions
+int calculate(Graph*, TreeDecomp*, Set*, Set*, Variant, bool);  
+
+void calculate_tables(Graph*, std::vector<Set*>&, 
+                      std::vector<po_bag>&, 
+                      std::vector<Table*>&,
+                      Set*, Set*, Variant, int);
+
+
 //---- Calculating Solution 
-int get_soln_row_index(Table*);
-void add_to_solution(Set*, Row*, std::vector<int>&);
-int get_solution(Table* table);                             //optimization version
-Set* get_solution(std::vector<Table*>&, Set*, Row*);        //constructive version
+int get_soln_row_index(Table*, Set*);
+void add_to_solution(Set*, Row*, std::vector<int>&, Set*);
+int get_solution(std::vector<Table*>&, Set*);              
+//optimization version
+int get_solution(std::vector<Table*>&, Set*);        
+//constructive version
 
-Set* construct_domset(Graph*, TreeDecomp*, Set*, Variant);  //constructive version
-int calc_min_domset(Graph*, TreeDecomp*, Set*, Variant);    //optimization version
 
+//COMBINED -- constructive and optimization versions
+Table* initialize_leaf_table(Graph*, Set*, Set*, po_bag, Variant);
+Table* join_table(Table*, Table*, Set*, po_bag, bool);
+Table* intro_table(Graph*, Table*, Set*, Set*, po_bag, Variant, int, bool);
+Table* forget_table(Table*, Set*, po_bag, Variant, int, bool);
 
 //--- Constructive Version
 Set* treedecomp_reduction(Graph*, std::vector<Set*>&, std::vector<po_bag>);
-
-void calculate_tables(Graph*, std::vector<Set*>&, 
-                      std::vector<po_bag>&, std::vector<Table*>&,
-                      std::vector<int>&,
-                      Set*, Set*, Variant, int);
-
-Table* initialize_leaf_table(Graph*, Set*, Set*, Variant);
-Table* update_introduce_table(Graph*, Table*, Set*, Set*, int, Variant);
-Table* update_forget_table(Table*, Set*, int, Variant);
-Table* update_join_table(Table*, Table*, Set*, Variant);
-
-
-//----- Updates the child table to be par table.
-void merge_introduce_table(Graph*, Table*, Set*, Set*, int, Variant);
-void merge_forget_table(Table*, Set*, int, Variant);
-void merge_join_table(Table*, Table*, Set*, Variant);
-
 
 //-----Table reduction helpers
 bool is_exclusive_to_singlebag(std::vector<Set*>&, Set*, Set*, Set*);
@@ -50,18 +47,21 @@ bool is_a_implies_b(Graph*, std::vector<Set*>&, Set*, Set*, Set*);
 bool is_empty_bag_intersect(std::vector<Set*>&, std::vector<po_bag>&, Set*);
 bool is_treelike_subcollection(std::vector<Set*>&, std::vector<po_bag>&, 
                                Set*, Set*);
-
 void remove_node_from_postack(std::vector<po_bag> &, po_bag &); 
 void remove_edge_from_postack(std::vector<po_bag> &, po_bag &);
 bool is_special_subset(Set*, Set*, Set*);
 
 
 //-----Helpers
+Table* init_parent_table(Table*, bool);
+int get_left_join_child_tabind(Set*, std::vector<Table*>&, int);
+
 //Dominating Set 
 int locally_valid_coloring(Graph*, Set*, Row*, std::vector<int>&, Variant);
 int phi(Row*, Set*, std::vector<int>&, int);
-int* minAi_c(Table*, Table*, Set*, Row*, Row*);
+int* minAi_c(Table*, Table*, Set*, Row*);
 void intro_vert_indomset_update(Graph*, Table*, Set*, Row*, int, Variant);
+int flip_coloring(Table*, std::vector<int>&, std::vector<int>&);
 void intro_vert_dominated_update(Graph*, Table*, Set*, Set*, Row*, Row*, int, Variant);
 
 //Independent dominating set + Perfect dominating set
@@ -74,7 +74,7 @@ bool check_independent(Graph*, Set*);
 void print_row(Row*);
 void print_table(Table*, std::string);
 void print_tables(std::vector<Table*>&);
-void print_postorder(std::vector<po_bag>);
+void print_postorder(std::vector<po_bag>, std::vector<Set*>&);
 void print_pobag(po_bag);
 
 #endif

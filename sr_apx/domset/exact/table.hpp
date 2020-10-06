@@ -89,14 +89,21 @@ private:
     std::vector<Row*> table;  
     Map<int> table_lookups;    
     
+    //the po_bag associated with the current table. used for correct postorder traversal.
+    po_bag  tables_pobag; 
+    
 public:
     std::vector<int> vertices; 
     
     //Public Functions
     Table();
-    Table(int); 
+    //Table(int);
+    //Table(const Table*);
     
     ~Table();
+    
+    void set_pobag(po_bag);
+    po_bag get_pobag();
     
     void update_row_add(Row*, int);
     void insert_row(Row*);
