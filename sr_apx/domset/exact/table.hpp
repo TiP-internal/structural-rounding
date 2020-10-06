@@ -97,9 +97,6 @@ public:
     
     //Public Functions
     Table();
-    //Table(int);
-    //Table(const Table*);
-    
     ~Table();
     
     void set_pobag(po_bag);
@@ -124,7 +121,6 @@ public:
     
     int get_table_size();
     int get_vertex_col_index(int);
-    void print_tablelookups();
 };
 
 

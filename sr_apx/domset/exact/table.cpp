@@ -138,7 +138,7 @@ Row* Table::lookup_row(int key) {
 Row* Table::get_row(int index) {
     //Returns the row from the table at the given index.
     if(index >= table.size() || index < 0) {
-        printf("ERROR: out of bounds table index=%d, table size=%ld\n", index, table.size());
+        throw("ERROR: out of bounds table index=%d, table size=%ld\n", index, table.size());
     }
     return table[index];
 }
@@ -186,7 +186,7 @@ void Table::delete_row(int index) {
 }
 
 void Table::table_lookups_insert(int key, int table_index) {
-    //if(key>333 || key <0) printf("////// WRONG large key, key=%d\n", key);
+    if(key <0) throw("Incorrect key: table_lookups_insert\n");
     
     //Adds an entry to table_lookups_insert Map
     table_lookups.insert(key, table_index);
@@ -223,15 +223,4 @@ int Table::get_table_size() {
     return table_lookups.size();
 }
 
-
-//NOTE for testing
-void Table::print_tablelookups() {
-    printf("\n===============Table Lookups==================\n");
-    for(auto it=table_lookups.begin(); it!=table_lookups.end(); it++) {
-        int key = *it;
-        printf("coloring=%d, \t table_index=%d\n", key, table_lookups[key]);
-    }
-    
-    printf("\n===========================================\n\n\n");
-}
 

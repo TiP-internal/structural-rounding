@@ -30,6 +30,8 @@ int get_soln_row_index(Table* table, Set* optional_verts){
             }
         }
     }
+    
+    if(soln_index==-1) throw ("ERROR: soln row not found.\n");
     return soln_index;
 }
 
@@ -60,7 +62,6 @@ int get_solution(std::vector<Table*> &tables, Set* optional_verts) {
         tables.pop_back();
                 
         int soln_index = get_soln_row_index(tab, optional_verts);  //prints the tabel lookups
-        if(soln_index==-1) printf("ERROR: soln row not found.\n");
         
         Row* final_row = tab->get_row(soln_index);
         soln_size += final_row->get_Ac();
@@ -83,12 +84,8 @@ int get_solution(std::vector<Table*> &tables, Set* dom_set, Set* optional_verts)
     
     po_bag parent_pobag = parent_table->get_pobag();
     int soln_index = get_soln_row_index(parent_table, optional_verts);
-    
-    if(soln_index==-1) printf("ERROR: soln row not found.\n");
     Row* soln_row = parent_table->get_row(soln_index);
-
     int soln_size = soln_row->get_Ac();
-    if(soln_size>=INF) printf("ERROR: in get_solution for constructive version.\n");
     
     add_to_solution(dom_set, soln_row, parent_table->vertices);
 
@@ -124,12 +121,13 @@ int get_solution(std::vector<Table*> &tables, Set* dom_set, Set* optional_verts)
                 
                 curr_row = child_table->get_row(childl_row_ind);
             } else {
-                printf("ERROR in getting solution\n");
+                throw("ERROR in getting solution\n");
             }
         } else {
             // now that the current parent has been evaluated, 
             // reassign child table as the parent
-            curr_row = child_table->get_row(childr_row_ind); //there will be a left ind if its not a leaf
+            // there will be a right ind if its not a leaf
+            curr_row = child_table->get_row(childr_row_ind); 
         }
         add_to_solution(dom_set, curr_row, child_table->vertices);
         
@@ -140,8 +138,6 @@ int get_solution(std::vector<Table*> &tables, Set* dom_set, Set* optional_verts)
         childl_row_ind = curr_row->get_childl_table_ind();
         childr_row_ind = curr_row->get_childr_table_ind();
     }
-    
-    if(soln_index==-1) printf("ERROR: soln row not found.\n");
     return soln_size;
 }
 
@@ -197,7 +193,6 @@ int get_left_join_child_tabind(Set* anchor_tables,
                                std::vector<Table*> &tables,
                                int current_index) {
     for(int j=tables.size()-2; j>=0; j--) {  //-2 since tables.size()-1 is the right child
-        //if(!anchor_tables->contains(ind) && tab_ind_childr==-99) {
         po_bag check = tables[j]->get_pobag();
         if(check.parent_bag_index==current_index) {
             return j;  //left child table index
@@ -234,49 +229,55 @@ void calculate_tables(Graph* graph, std::vector<Set*> &bags,
         Table* right_child_table = tables[tab_ind_childr];
         po_bag pob_rightchild = right_child_table->get_pobag();
         if(pob_rightchild.parent_bag_index != pob_current.bag_index) {
-            printf("ERROR: parent (right) child dont align.\n");
+            throw("ERROR: parent (right) child dont align.\n");
         }
         int bag_ind_childr = pob_rightchild.bag_index;
         //----------------
         
         //---------------Get left child table index in tables[]
-        int tab_ind_childl = get_left_join_child_tabind(anchor_tables, tables, pob_current.bag_index);
+        int tab_ind_childl = get_left_join_child_tabind(anchor_tables, 
+                                                        tables, pob_current.bag_index);
         if(tab_ind_childl==-1) {
-            printf("ERROR: parent (left) child not in tables vector.\n");
+            throw("ERROR: parent (left) child not in tables vector.\n");
         }
         Table* left_child_table = tables[tab_ind_childl];
         po_bag pob_leftchild = left_child_table->get_pobag();
         if(pob_leftchild.parent_bag_index != pob_current.bag_index) {
-            printf("ERROR: parent (left) child dont align.\n");
+            throw("ERROR: parent (left) child dont align.\n");
         }
         int bag_ind_childl = pob_leftchild.bag_index;
         //----------------
         
-        //printf("bag_ind_childl=%d, bag_ind_childr=%d\n", bag_ind_childl, bag_ind_childr);
         if(left_child_table->get_table_size() != right_child_table->get_table_size()) {
-            printf("ERROR in calculate_tables: join children have different dimension\n");
+            throw("ERROR in calculate_tables: join children have different dimension\n");
         }
 
         //update table here
-        //join_table(tab1, tab2, ...) -- tab2 is merged into tab1 to become the parent of tab1 & tab2
-        if(anchor_tables->contains(bag_ind_childr) && anchor_tables->contains(bag_ind_childl)) {
-            //if both children are anchor tables, create new table and add to tables  NOTE HERE
+        //join_table(tab1, tab2, ...) -- tab2 is merged into tab1 to 
+        //become the parent of tab1 & tab2
+        if(anchor_tables->contains(bag_ind_childr) 
+            && anchor_tables->contains(bag_ind_childl)) {
+            
             bool merge = false;
-            table = join_table(right_child_table, left_child_table, optional_verts, pob_current, merge);
+            table = join_table(right_child_table, left_child_table, 
+                               optional_verts, pob_current, merge);
         } else {
             //if neither are anchors, merge right child into parent table, delete left
             bool merge = true;
-            table = join_table(right_child_table, left_child_table, optional_verts, pob_current, merge);
+            table = join_table(right_child_table, left_child_table, 
+                               optional_verts, pob_current, merge);
             
+            // deletes the left child table.
             delete left_child_table;
             Table* left_child_table=nullptr;
             tables.pop_back();
-            tables.erase(tables.begin()+tab_ind_childl); // deletes the left child table.
+            tables.erase(tables.begin()+tab_ind_childl); 
         }
     } else if(pob_current.num_children==1) {     //-------------------either INTRODUCE or FORGET bag
         po_bag pob_child = postorder[po_index-1];
         int child_bag_index = pob_child.bag_index;
-        int child_bag_table_index = tables.size()-1;  //child is the most recently added to end of tables vec
+        //child is the most recently added to end of tables vec
+        int child_bag_table_index = tables.size()-1;  
 
         Set* parent_bag = bags[pob_current.bag_index];
         Set* child_bag = bags[child_bag_index];
@@ -300,7 +301,8 @@ void calculate_tables(Graph* graph, std::vector<Set*> &bags,
                 merge = true;
                 tables.pop_back();
             }
-            table = intro_table(graph, child_table, child_bag, optional_verts, pob_current, variant, v, merge); 
+            table = intro_table(graph, child_table, child_bag, 
+                                optional_verts, pob_current, variant, v, merge); 
             
         } else if(parent_bag->size() < child_bag->size()) { // forget node
             // gets the forgotten vertex
@@ -319,12 +321,13 @@ void calculate_tables(Graph* graph, std::vector<Set*> &bags,
             }
             table = forget_table(child_table, optional_verts, pob_current, variant, v, merge);
         } else {
-            printf("ERROR in calculate_tables: parent and child should not have same size.\n");
+            throw("ERROR in calculate_tables: parent and child should not have same size.\n");
         }
     } else if(pob_current.num_children==0){    //----------------------------LEAF bag
-        table = initialize_leaf_table(graph, bags[pob_current.bag_index], optional_verts, pob_current, variant);
+        table = initialize_leaf_table(graph, bags[pob_current.bag_index], 
+                                      optional_verts, pob_current, variant);
     } else {
-            printf("ERROR in calculate_tables: wrong number of children in nice decomp.\n");
+            throw("ERROR in calculate_tables: wrong number of children in nice decomp.\n");
     }
     
     //------ now Add/and or update the pointer in the tables vector.
@@ -337,8 +340,9 @@ Table* init_parent_table(Table* child1_table, bool merge) {
     if(!merge) { //creating new table  (constructive version)
         par_table = new Table();
         par_table->vertices = child1_table->vertices; // k time
-    }else if(merge) { //merging    (decision / or child1 (and/or child2) is not an anchor table)
-        par_table = child1_table;  //assign the pointer par_table to have the same value as child1_table
+    }else if(merge) { //merging   
+        //assign the pointer par_table to have the same value as child1_table
+        par_table = child1_table;  
     }
     return par_table;
 }
@@ -403,7 +407,7 @@ Table* initialize_leaf_table(Graph* graph, Set* bag, Set* optional_verts, po_bag
     }
 
     if(table->get_table_size()!=pow(3, table->vertices.size())) {
-        printf("ERROR: in creating all colorings. table_size=%d \
+        throw("ERROR: in creating all colorings. table_size=%d \
         3^vertices.size()=%d", table->get_table_size(), pow(3, table->vertices.size()));
     }
     
@@ -411,23 +415,24 @@ Table* initialize_leaf_table(Graph* graph, Set* bag, Set* optional_verts, po_bag
     return table;
 }
 
-Table* join_table(Table* child1_table, Table* child2_table, Set* optional_verts, po_bag pob_current, bool merge) {
+Table* join_table(Table* child1_table, Table* child2_table, 
+                  Set* optional_verts, po_bag pob_current, bool merge) {
     /*
      * If merge is true, the par_table is set to the child_table and is not a nullptr 
      *      --then par_table has already been set to the child1_table. 
      * 
-     * if merge if false, set par_table = new Table();, and parent_table->vertices = child1_table->vertices; 
+     * if merge if false, set par_table = new Table();, 
+     * and parent_table->vertices = child1_table->vertices; 
      */
     Table* par_table = init_parent_table(child1_table, merge);
     
-    if(child2_table == nullptr) printf("ERROR: child2_table should NOT be a nullptr\n");
-    if(child1_table == nullptr) printf("ERROR: child1_table should NOT be a nullptr\n");
+    if(child2_table == nullptr) throw("ERROR: child2_table should NOT be a nullptr\n");
+    if(child1_table == nullptr) throw("ERROR: child1_table should NOT be a nullptr\n");
         
     int tab_size = child2_table->get_table_size();
     for(int i=0; i<tab_size; i++) {  //4^ni        
         Row* row_k = nullptr;
         if(!merge) {  //creating new table  (constructive version)
-            if(child1_table == nullptr) printf("ERROR: child1_table should NOT be a nullptr at this point\n");
             row_k = par_table->create_row(child1_table->get_row(i), -1); //declares new
         } else {      //merging
             row_k = par_table->get_row(i);  //row_k differs between two versions
@@ -510,9 +515,6 @@ Table* forget_table(Table* child_table, Set* optional_verts, po_bag pob_current,
         } else {
             rowj = child_table->get_row(curr_index);
         }
-        
-        if(rowj==nullptr) printf("null ptr\n");
-
         int color_v = rowj->coloring[v_index];
         int Aj = rowj->get_Ac();
         int rj_tabind = child_table->lookup_table_index(rowj->get_key());
@@ -522,8 +524,7 @@ Table* forget_table(Table* child_table, Set* optional_verts, po_bag pob_current,
         
         Row* rowi;
         if(!merge) {
-            //if(par_table->lookup_table_index(rowj->get_key()) == -1) { //not inserted yet
-            if(!par_table->table_lookups_contains(rowj->get_key())) {
+            if(!par_table->table_lookups_contains(rowj->get_key())) { //not inserted yet
                 par_table->insert_row(rowj);
             }
             rowi = par_table->lookup_row(rowj->get_key());
@@ -708,7 +709,7 @@ int* minAi_c(Table* childk, Table* childj, Set* optional_verts, Row* row_k) {
         int cprime_size = c_prime.size();
         int cprimeprime_size = c_primeprime.size();
 
-        if(cprime_size != cprimeprime_size) printf("ERROR: in func minAi_c() -- divide.\n");
+        if(cprime_size != cprimeprime_size) throw("ERROR: in func minAi_c() -- divide.\n");
 
         //is_xoptional will only be true is we want the annotated version.
         if(c_t==IN_DOMSET || c_t==NOT_DOMINATED || is_xtoptional) {
