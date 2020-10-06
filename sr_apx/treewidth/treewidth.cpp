@@ -98,7 +98,11 @@ Set* treewidth_nodeedit(Graph* graph, Set* optional_verts, int w, bool annotated
                     int e=*iev;
                     for(auto ien=component->neighbors(e)->begin();
                         ien!=component->neighbors(e)->end(); ien++) {
-                        optional_verts->insert(*iev);
+                        int optional = *ien;
+                        if(!S->contains(optional)) {
+                            optional_verts->insert(*ien);
+                        }
+                        optional_verts->remove(e);
                     }
                 }
             }
