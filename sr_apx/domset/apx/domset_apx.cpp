@@ -73,6 +73,7 @@ Set* logn_apx(Graph* graph) {
         }
     }
 
+    revdeg.clear();
     return domset;
 }
 
