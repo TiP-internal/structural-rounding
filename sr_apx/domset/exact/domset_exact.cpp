@@ -2,7 +2,7 @@
 #include "domset_exact.hpp"
 
 #include <cstdio>
-#include <cassert>
+#include <deque>
 
 
 //--- Calculating Solution

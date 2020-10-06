@@ -2,16 +2,15 @@
 #ifndef DOMSET_EXACT_H
 #define DOMSET_EXACT_H
 
-#include <vector> 
-#include <deque> 
+#include <vector>
 
 #include "graph.hpp"
 #include "setmap.hpp"
 #include "table.hpp"
-#include "treedecomp.hpp"
+#include "treewidth.hpp"
 
 
-enum class Variant {Dom_Set, Indep_Dom_Set, Perf_Dom_Set};  
+enum class Variant {Dom_Set, Indep_Dom_Set, Perf_Dom_Set};
 
 //NOTE driver function, const and opt versions
 int calculate(Graph*, TreeDecomp*, Set*, Set*, Variant, bool);  
@@ -20,7 +19,6 @@ void calculate_tables(Graph*, std::vector<Set*>&,
                       std::vector<po_bag>&, 
                       std::vector<Table*>&,
                       Set*, Set*, Variant, int);
-
 
 //---- Calculating Solution 
 int get_soln_row_index(Table*, Set*);
