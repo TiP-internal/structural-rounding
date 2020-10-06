@@ -145,7 +145,7 @@ int main(int argc, char* argv[]) {
 
 			start = clock();
 			TreeDecomp* decomp = new TreeDecomp(sub_g);
-			int domset_size = calc_min_domset(sub_g, decomp, opt, Variant::Dom_Set);
+			int domset_size = calculate(sub_g, decomp, NULL, opt, Variant::Dom_Set, false);
 			end = clock();
 			double time2 = (double)(end-start)/1000000;
 			printf(",%d,%d,%.4f,%d,%.4f", decomp->treewidth(), domset_size, time2, domset_size + edit->size(), time1 + time2);
