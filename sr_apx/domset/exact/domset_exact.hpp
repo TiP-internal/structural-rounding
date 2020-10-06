@@ -25,31 +25,18 @@ void calculate_tables(Graph*, std::vector<Set*>&,
 //---- Calculating Solution 
 int get_soln_row_index(Table*, Set*);
 void add_to_solution(Set*, Row*, std::vector<int>&, Set*);
-int get_solution(std::vector<Table*>&, Set*);              
+
 //optimization version
-int get_solution(std::vector<Table*>&, Set*);        
+int get_solution(std::vector<Table*>&, Set*);    
+
 //constructive version
+int get_solution(std::vector<Table*>&, Set*);        
 
-
-//COMBINED -- constructive and optimization versions
+//constructive and optimization versions
 Table* initialize_leaf_table(Graph*, Set*, Set*, po_bag, Variant);
 Table* join_table(Table*, Table*, Set*, po_bag, bool);
 Table* intro_table(Graph*, Table*, Set*, Set*, po_bag, Variant, int, bool);
 Table* forget_table(Table*, Set*, po_bag, Variant, int, bool);
-
-//--- Constructive Version
-Set* treedecomp_reduction(Graph*, std::vector<Set*>&, std::vector<po_bag>);
-
-//-----Table reduction helpers
-bool is_exclusive_to_singlebag(std::vector<Set*>&, Set*, Set*, Set*);
-bool is_child_subset(std::vector<Set*>&, std::vector<po_bag>&, Set*, Set*);
-bool is_a_implies_b(Graph*, std::vector<Set*>&, Set*, Set*, Set*);
-bool is_empty_bag_intersect(std::vector<Set*>&, std::vector<po_bag>&, Set*);
-bool is_treelike_subcollection(std::vector<Set*>&, std::vector<po_bag>&, 
-                               Set*, Set*);
-void remove_node_from_postack(std::vector<po_bag> &, po_bag &); 
-void remove_edge_from_postack(std::vector<po_bag> &, po_bag &);
-bool is_special_subset(Set*, Set*, Set*);
 
 
 //-----Helpers
@@ -69,12 +56,5 @@ int get_num_dominators(Graph*, Row*, std::vector<int>&, int);
 bool intro_indep_check(Graph*, std::vector<int>&, std::vector<int>&, int);
 bool check_independent(Graph*, Set*);
 
-
-//-----For testing
-void print_row(Row*);
-void print_table(Table*, std::string);
-void print_tables(std::vector<Table*>&);
-void print_postorder(std::vector<po_bag>, std::vector<Set*>&);
-void print_pobag(po_bag);
 
 #endif

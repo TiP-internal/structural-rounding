@@ -131,7 +131,6 @@ int get_solution(std::vector<Table*> &tables, Set* dom_set, Set* optional_verts)
             // reassign child table as the parent
             curr_row = child_table->get_row(childr_row_ind); //there will be a left ind if its not a leaf
         }
-        //print_row(curr_row);
         add_to_solution(dom_set, curr_row, child_table->vertices);
         
         delete parent_table;
@@ -191,77 +190,6 @@ int calculate(Graph* graph, TreeDecomp* decomp, Set* dom_set,
     }
     delete anchors;
     return solutionsize;
-}
-
-
-//---- Constructive Version
-Set* treedecomp_reduction(Graph* graph, std::vector<Set*> &bags,
-                          std::vector<po_bag> postorder) {
-    /*
-     * Tree Decomposition reduction rules to reduce the number of stored tables.
-     *
-     * Returns a set of integers, corresponding to bag indices which are the 'anchor' bags,
-     * meaning the tables created for these bags must be stored. All other tables can be merged
-     * (ie. not stored separately).
-     *
-     * Method from [Betzler, Neidermeier, & Uhlmann, '04].
-     *
-     * Not passing postorder as reference because we need to modify it here.
-     */
-    Set* reduced_bags = new Set();
-
-    Set* removed_elems = new Set();
-    Set* removed_nodes = new Set();
-
-    bool cont = true;
-    while(cont) {
-        bool rule1=true, rule2=true, rule3=true, rule4=true, rule5=true;
-
-        /* Rule 1: if bag Xi contains at least one element that is not in any other bag,
-         * and the element is not contained in the removed elemens set,
-         * put Xi in solution and add its elements to the removed elemens set.
-         */
-        rule1 = is_exclusive_to_singlebag(bags, reduced_bags, removed_elems, removed_nodes);
-
-
-        /* Rule 2: If there is an edge e = {i, j} ∈ F such that
-         *          (1) Xi ⊆ Xj and
-         *          (2) w(Xi) ≥ w(Xj)
-         * then connect each neighboring node of i (except for j) with j
-         * and delete i together with its incident edges from T.
-         */
-        rule2 = is_child_subset(bags, postorder, removed_elems, removed_nodes);
-
-
-        /* Rule 3: If for any bag Xi the fact a ∈ Xi implies b ∈ Xi, then
-         * remove b from the bags of the tree decomposition.
-         */
-        rule3 = is_a_implies_b(graph, bags, reduced_bags, removed_elems, removed_nodes);
-
-
-        /* Rule 4: If there is an edge e = {i, j} ∈ F such that Xi ∩ Xj = ∅,
-         * then remove this edge from F.
-         */
-        rule4 = is_empty_bag_intersect(bags, postorder, removed_elems);
-
-
-        /* Rule 5: If for a bag Xi there is a set of nodes
-         * j1, j2, . . . , jl ∈ I, such that
-         *      (1) Xi ⊆ UNION k=1 to l of X_jk,
-         *      (2) w(Xi) ≥  SUM k=1 to l of w(X_jk),
-         *      (3) the neighbors N(i) of i form a tree-like subset collection,
-         *
-         * then remove i from I and connect its neighbors such
-         * that the tree-likeness is not violated
-         */
-        rule5 = is_treelike_subcollection(bags, postorder, removed_elems, removed_nodes);
-
-        //if no rules reduced, quit.
-        if(!rule1 && !rule2 && !rule3 && !rule4 && !rule5) cont=false;
-    }
-
-    delete removed_elems, removed_nodes;
-    return reduced_bags;
 }
 
 
@@ -335,14 +263,7 @@ void calculate_tables(Graph* graph, std::vector<Set*> &bags,
             //if both children are anchor tables, create new table and add to tables  NOTE HERE
             bool merge = false;
             table = join_table(right_child_table, left_child_table, optional_verts, pob_current, merge);
-        } 
-        //else if(anchor_tables->contains(bag_ind_childr)){
-        //    //if right child is an anchor, merge left child into parent join table, dont delete
-        //    bool merge = true;
-        ///    table = join_table(left_child_table, right_child_table, optional_verts, pob_current, merge);
-        //    tables.pop_back();
-        //}
-        else {
+        } else {
             //if neither are anchors, merge right child into parent table, delete left
             bool merge = true;
             table = join_table(right_child_table, left_child_table, optional_verts, pob_current, merge);
@@ -350,7 +271,7 @@ void calculate_tables(Graph* graph, std::vector<Set*> &bags,
             delete left_child_table;
             Table* left_child_table=nullptr;
             tables.pop_back();
-            tables.erase(tables.begin()+tab_ind_childl);             // deletes the left child table.
+            tables.erase(tables.begin()+tab_ind_childl); // deletes the left child table.
         }
     } else if(pob_current.num_children==1) {     //-------------------either INTRODUCE or FORGET bag
         po_bag pob_child = postorder[po_index-1];
@@ -567,7 +488,8 @@ Table* intro_table(Graph* graph, Table* child_table, Set* child_bag, Set* option
     return par_table;
 }
 
-Table* forget_table(Table* child_table, Set* optional_verts, po_bag pob_current, Variant variant, int v, bool merge) {
+Table* forget_table(Table* child_table, Set* optional_verts, po_bag pob_current, 
+                    Variant variant, int v, bool merge) {
     /*
      * if merge is false: Initializes parent table. 
      * if merge is true: Updates the child_table to be the parent.
@@ -645,288 +567,6 @@ Table* forget_table(Table* child_table, Set* optional_verts, po_bag pob_current,
     par_table->set_pobag(pob_current);
     return par_table;
 }
-
-
-
-//--- Table reduction helpers
-bool is_exclusive_to_singlebag(std::vector<Set*>& bags, Set* reduced_bags,
-                            Set* removed_elems, Set* removed_nodes) {
-    /* Rule 1: if bag Xi contains at least one element that is not in any other bag,
-     * and the element is not contained in the removed elemens set,
-     * put Xi in solution and add its elements to the removed elemens set.
-     *
-     * returns true if something about the solution has been changed by rule.
-     * false if input remains exactly the same.
-     */
-    bool rule1=false;
-    for(int i=0; i<bags.size(); i++) {
-        bool add_bag=false;
-        Set* curr_bag = bags[i];
-
-        //not in soln and hasnt been removed from tree
-        if(!reduced_bags->contains(i) && !removed_nodes->contains(i)) {
-            for(auto it=curr_bag->begin(); it!=curr_bag->end(); it++) {
-                bool unique_v=true;
-                int v=*it;
-
-                if(!removed_elems->contains(v)) {
-                    for(int j=0; j<bags.size(); j++) {
-                        Set* b = bags[j];
-                        if(i!=j && !removed_nodes->contains(j) && b->contains(v)) unique_v=false;
-                    }
-
-                    if(unique_v) add_bag=true;
-                }
-            }
-        }
-        if(add_bag) {
-            reduced_bags->insert(i);
-            removed_elems->add_all(curr_bag);
-            rule1=true;  //added at least on bag
-        }
-    }
-    return rule1;
-}
-
-bool is_child_subset(std::vector<Set*>& bags, std::vector<po_bag>& postorder,
-                     Set* removed_elems, Set* removed_nodes) {
-    /* Rule 2: If there is an edge e = {i, j} ∈ F such that
-     *          (1) Xi ⊆ Xj and
-     *          (2) w(Xi) ≥ w(Xj)
-     * then connect each neighboring node of i (except for j) with j
-     * and delete i together with its incident edges from T.
-     */
-    bool rule2=true;
-    bool removed_elem=false;
-    for(int i=0; i<postorder.size(); i++) {
-        po_bag po = postorder[i];
-
-        int xi_index = po.parent_bag_index;
-        int xj_index = po.bag_index;  //current
-
-        //child is xj, par is xi
-        //curr po's parent is not the root, and there exists and edge between par and child.
-        if(xi_index!=-1 && xi_index!=-2 && !removed_elem) {
-            bool subset = is_special_subset(bags[xi_index], bags[xj_index], removed_elems);
-
-            if(subset && pow(3, bags[xi_index]->size()) >= pow(3, bags[xj_index]->size())) {
-                //then connect each nbr node of i (except j) w/ j and delete i from T.
-                removed_nodes->insert(po.parent_bag_index);
-                remove_node_from_postack(postorder, postorder[i]); //remove the parent of i
-                removed_elem=true;  //only delete one bag per iteration of while loop
-            }
-        }
-    }
-    if(!removed_elem) rule2=false; //did not remove an element
-
-    return rule2;
-}
-
-bool is_a_implies_b(Graph* graph, std::vector<Set*> &bags, Set* reduced_bags,
-                 Set* removed_elems, Set* removed_nodes) {
-    /* Rule 3: If for any bag Xi the fact a ∈ Xi implies b ∈ Xi, then
-     * remove b from the bags of the tree decomposition.
-     *
-     * a vertex b_ is only in a bag when a vertex a_ is in the same bag.
-     */
-    bool rule3=true;
-    bool found_v=false;
-    Set* verts = graph->get_vertices();  //n time.
-
-    //n^3 time! NOTE look for better way.
-    for(auto it=verts->begin(); it!=verts->end(); it++) {
-        int a=*it;
-        if(!removed_elems->contains(a)) {
-            for(auto itt=verts->begin(); itt!=verts->end(); itt++) {
-                int b=*itt;
-                if(!removed_elems->contains(b)) {
-                    if(a!=b){
-                        bool implies=true; //presense of a in bag implies presense of b
-                        for(int i=0; i<bags.size(); i++) {
-                            Set* curr_bag=bags[i];
-                            if(!reduced_bags->contains(i) && !removed_nodes->contains(i)) {
-                                if(!curr_bag->contains(a) && curr_bag->contains(b)) implies=false;
-                            }
-                        }
-                        if(implies) {
-                            removed_elems->insert(b); //remove b from all bags.
-                            found_v=true;
-                        }
-                    }
-                }
-            }
-        }
-    } if(!found_v) rule3=false;
-    delete verts;
-
-    return rule3;
-}
-
-bool is_empty_bag_intersect(std::vector<Set*> &bags, std::vector<po_bag> &postorder,
-                         Set* removed_elems) {
-    /* Rule 4: If there is an edge e = {i, j} ∈ F such that Xi ∩ Xj = ∅,
-     * then remove this edge from F.
-     */
-    bool rule4=true;
-    bool removed_edge=false;
-    for(int i=0; i<postorder.size(); i++) {
-        po_bag po = postorder[i];
-
-        int xi_index = po.parent_bag_index;
-        int xj_index = po.bag_index;  //current
-
-        //child is xj, par is xi
-        //curr po not the root, and there is an edge
-        if(xi_index!=-1 && xi_index!=-2) {
-            Set* intersect = bags[xj_index]->set_intersection(bags[xi_index]);
-            bool empty=true;
-            for(auto it=intersect->begin(); it!=intersect->end(); it++) {
-                int v=*it;
-                if(!removed_elems->contains(v)) empty=false;
-            }
-            delete intersect;
-
-            if(empty) {
-                //removes edge between curr po and parent
-                remove_edge_from_postack(postorder, postorder[i]);
-                removed_edge=true;
-            }
-        }
-    }
-    if(!removed_edge) rule4=false;  //no edges removed
-    return rule4;
-}
-
-bool is_treelike_subcollection(std::vector<Set*> &bags, std::vector<po_bag> &postorder,
-                            Set* removed_elems, Set* removed_nodes) {
-    /* Rule 5: If for a bag Xi there is a set of nodes
-     * j1, j2, . . . , jl ∈ I, such that
-     *      (1) Xi ⊆ UNION k=1 to l of X_jk,
-     *      (2) w(Xi) ≥  SUM k=1 to l of w(X_jk),
-     *      (3) the neighbors N(i) of i form a tree-like subset collection,
-     *
-     * then remove i from I and connect its neighbors such
-     * that the tree-likeness is not violated
-     *
-     * xi is parent, xj's are children
-     */
-    bool rule5=true;
-    bool removed_elem2=false;
-    for(int i=0; i<postorder.size(); i++) {
-        po_bag po = postorder[i];
-
-        //here xi is the parent and current po
-        int xi_index = po.bag_index;
-
-        if(po.num_children>1) { //not applicable to nodes w/ only one child
-            po_bag child1, child2;
-            int po_xj1=-3;  //child 1 po index
-            int po_xj2=-3;  //child 2 po index
-
-            //get indices of po_bags of the children in postorder vec
-            //if the edge was already deleted, the equality wouldnt pass, so it works
-            for(int j=0; j<postorder.size(); j++) {
-                if(postorder[j].parent_bag_index==xi_index) {
-                    if(po_xj1==-3) {
-                        po_xj1=j;
-                        child1=postorder[j];
-                    } else if(po_xj1!=-3 && po_xj2==-3) {
-                        po_xj2=j;
-                        child2=postorder[j];
-                    }
-                }
-            }
-
-            int bag_index_xj1 = child1.bag_index;
-            int bag_index_xj2 = child2.bag_index;
-
-            Set* un = bags[bag_index_xj1]->set_union(bags[bag_index_xj2]);
-            //if only one of the children was subset of parent, it would
-            //have been caught by second rule (should have at least).
-            bool subset = is_special_subset(un, bags[xi_index], removed_elems);
-
-            int w_xi = pow(3, bags[xi_index]->size());
-            int w_xj = pow(3, bags[bag_index_xj1]->size()) + pow(3, bags[bag_index_xj2]->size());
-            if(subset && w_xi>=w_xj) {
-                removed_nodes->insert(po.bag_index);
-                remove_node_from_postack(postorder, postorder[po_xj1]); //remove the parent
-                removed_elem2=true;  //only delete one bag per iteration of while loop
-            }
-
-            delete un;
-        }
-    }
-    if(!removed_elem2) rule5=false; //did not remove an element
-
-    return rule5;
-}
-
-void remove_node_from_postack(std::vector<po_bag> &postorder, po_bag &xj) {
-    /* child is xj, par is xi --removing xj's parent (xi)
-     *
-     * must get xi's parent index
-     * set xj/child_po's parent index from xi to xi's parent.
-     * if xi has more than one child, set the other childs parent to xi's parent
-     *
-     * delete xi from T
-     */
-    int po_xi_ind = -1;  //index in po stack
-    int xi_par_ind=-1;   // parent of child's parent (child's grandparent)
-    int num_xi_child=-1;
-
-    //get the parents to be removed info
-    for(int j=0; j<postorder.size(); j++) {
-        if(postorder[j].bag_index==xj.parent_bag_index) po_xi_ind=j;
-    }
-    xi_par_ind = postorder[po_xi_ind].parent_bag_index;
-    num_xi_child = postorder[po_xi_ind].num_children;
-
-    postorder.erase(postorder.begin()+po_xi_ind);
-
-    if(num_xi_child>1) {
-        xj.num_children++;
-        for(int j=0; j<postorder.size(); j++) {
-            if(postorder[j].parent_bag_index==xj.parent_bag_index
-                && postorder[j].bag_index!=xj.bag_index) {
-                postorder[j].parent_bag_index = xj.bag_index;
-            }
-        }
-    }
-
-    //reset parent of xj (curr po) and if xi had more children, their parent too.
-    xj.parent_bag_index = xi_par_ind;
-
-}
-
-void remove_edge_from_postack(std::vector<po_bag> &postorder, po_bag &child_po) {
-    //removes edge between curr po and parent
-
-    //sets parent of childs num children--
-    int po_xi_ind = -1;  //index in po stack
-    //get the parent's po index
-    for(int j=0; j<postorder.size(); j++) {
-        if(postorder[j].bag_index==child_po.parent_bag_index) po_xi_ind=j;
-    }
-    postorder[po_xi_ind].num_children--;
-
-    //sets child par index to -2 (no parent but not root)
-    child_po.parent_bag_index=-2;
-}
-
-bool is_special_subset(Set* A, Set* B, Set* excluded) {
-    //Is set A\excluded a subset of set B\excluded?
-    bool is_sub = false;
-    for(auto it=A->begin(); it!=A->end(); it++) {
-        int x = *it;
-
-        if(!excluded->contains(x)) {
-            if (!B->contains(x)) is_sub = false;
-            else is_sub=true;
-        }
-    }
-    return is_sub;
-}
-
 
 
 //----- Helper functions
@@ -1366,72 +1006,5 @@ bool check_independent(Graph* graph, Set* independent_check) {
         }
     }
     return true;
-}
-
-
-//---- For testing
-void print_row(Row* row) {
-    printf("|");
-    for(int k=0; k<row->coloring.size(); k++) {
-        printf("  %d  |", row->coloring[k]);
-    }
-    printf("%15d \t | ", row->get_Ac());
-    printf("%15d \t", row->get_childl_table_ind());
-    printf("%5d \t", row->get_childr_table_ind());
-    printf("\n");
-}
-
-void print_table(Table* tab, std::string table_type) {
-    printf("\n=====================================================================\n");
-    printf("IN_DOMSET=1=1,   DOMINATED=2=0,   NOT_DOMINATED=3=0hat\n");
-    
-    po_bag po = tab->get_pobag();
-    printf("pobag: bag_index=%d\n", po.bag_index);
-    printf("pobag: par_bag_index=%d\n", po.parent_bag_index);
-    printf("pobag: num_children=%d\n", po.num_children);
-    
-    printf("  vertices \t\t |  A_ci \t |  childl ind  |  childr_ind\n");
-    printf("|");
-    for(int j=0; j<tab->vertices.size(); j++) {
-        printf("  %d  |", tab->vertices[j]);
-    }
-    printf("\n____________________________________________________________________\n");
-    printf("\n");
-
-    for(int j=0; j<tab->get_table_size(); j++) {
-        Row* r = tab->get_row(j);
-        print_row(r);
-    }
-
-    printf("\n=====================================================================\n\n\n");
-}
-
-void print_tables(std::vector<Table*> &tables) {
-    for(int i=0; i<tables.size(); i++) {
-        Table* tab = tables[i];
-
-        std::string type = "All";
-        print_table(tab, type);
-    }
-}
-
-void print_postorder(std::vector<po_bag> postorder, std::vector<Set*> &bags) {
-    printf("\n------POSTorder\n");
-
-    for(int j=0; j<postorder.size(); j++) {
-        //printf("postorder: ind=%d, num_childs=%d\n", po[j].bag_index, po[j].num_children);
-        print_pobag(postorder[j]);
-        if(postorder[j].parent_bag_index!=-1) printf("parent size=%d", bags[postorder[j].parent_bag_index]->size());
-        printf("curr size=%d", bags[postorder[j].bag_index]->size());
-        printf("\n\n");
-    }
-    printf("---------\n\n");
-}
-
-void print_pobag(po_bag po) {
-    printf("bag index=%d\n", po.bag_index);
-    printf("num children=%d\n", po.num_children);
-    printf("parent bag index=%d\n", po.parent_bag_index);
-    //printf("\n");
 }
 
