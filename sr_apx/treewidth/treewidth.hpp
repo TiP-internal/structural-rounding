@@ -13,6 +13,7 @@ struct po_bag {  //for postorder bag.
     int parent_bag_index;
     int current_join_child;
 
+    po_bag() = default;
     po_bag(int index, int parent): bag_index(index), parent_bag_index(parent), current_join_child(index) {}
 };
 
