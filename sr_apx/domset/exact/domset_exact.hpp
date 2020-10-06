@@ -28,7 +28,7 @@ void add_to_solution(Set*, Row*, std::vector<int>&, Set*);
 int get_solution(std::vector<Table*>&, Set*);    
 
 //constructive version
-int get_solution(std::vector<Table*>&, Set*);        
+int get_solution(std::vector<Table*>&, Set*, Set*);        
 
 //constructive and optimization versions
 Table* initialize_leaf_table(Graph*, Set*, Set*, po_bag, Variant);
