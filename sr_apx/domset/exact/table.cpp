@@ -70,6 +70,11 @@ void Row::remove_from_coloring(int v_index) {
     key = stoi(key_str);
 }
 
+
+/* The below functions are what track how the solutions are created.
+ * ie are used during the second pass of the algorithm to construct the
+ * solution set.
+ */
 int Row::get_childl_table_ind() {
     return childl_ind;
 }
@@ -87,10 +92,22 @@ void Row::set_childr_table_ind(int childr_ind) {
 }
 
 
+
 Table::Table() {}
 
 Table::~Table() {
-    for(int i=0; i<table.size(); i++) delete table[i];
+    for(int i=0; i<table.size(); i++) {
+        delete table[i];
+    }
+}
+
+
+void Table::set_pobag(po_bag po) {
+    tables_pobag=po;
+}
+
+po_bag Table::get_pobag() {
+    return tables_pobag;
 }
 
 int Table::get_vertex_col_index(int v) {
@@ -120,6 +137,9 @@ Row* Table::lookup_row(int key) {
 
 Row* Table::get_row(int index) {
     //Returns the row from the table at the given index.
+    if(index >= table.size() || index < 0) {
+        throw("ERROR: out of bounds table index=%d, table size=%ld\n", index, table.size());
+    }
     return table[index];
 }
 
@@ -156,7 +176,8 @@ void Table::insert_row(Row* r) {
         table.push_back(r);         //adds row to the table vector.
             
         //key is the concatenated coloring, value is the index in table.
-        table_lookups.insert(r->get_key(), index);
+        //table_lookups.insert(r->get_key(), index);
+        table_lookups_insert(r->get_key(), index);
     }
 }
 
@@ -165,6 +186,8 @@ void Table::delete_row(int index) {
 }
 
 void Table::table_lookups_insert(int key, int table_index) {
+    if(key <0) throw("Incorrect key: table_lookups_insert\n");
+    
     //Adds an entry to table_lookups_insert Map
     table_lookups.insert(key, table_index);
 }
@@ -186,29 +209,18 @@ void Table::update_row_add(Row* r, int value) {
      * 
      * used for updating a coloring which is already in the table lookups. 
      */
-    
     //1. erase
     int index = lookup_table_index(r->get_key());
     table_lookups_remove(r->get_key());
     
     //2. re-insert into table_lookups
     r->append_coloring(value);
-    table_lookups.insert(r->get_key(), index);  //same index, updated key
+    //table_lookups.insert(r->get_key(), index);  //same index, updated key
+    table_lookups_insert(r->get_key(), index);
 }
 
 int Table::get_table_size() {
     return table_lookups.size();
 }
 
-
-//NOTE for testing
-void Table::print_tablelookups() {
-    printf("\n===============Table Lookups==================\n");
-    for(auto it=table_lookups.begin(); it!=table_lookups.end(); it++) {
-        int key = *it;
-        printf("coloring=%d, \t table_index=%d\n", key, table_lookups[key]);
-    }
-    
-    printf("\n===========================================\n\n\n");
-}
 

@@ -10,6 +10,7 @@
 
 #include "graph.hpp"
 #include "setmap.hpp"
+#include "treewidth.hpp"
 
 using namespace std;
 
@@ -85,17 +86,21 @@ class Table {
      *
      */
 private:
-    std::vector<Row*> table;
-    Map<int> table_lookups;
+    std::vector<Row*> table;  
+    Map<int> table_lookups;    
+    
+    //the po_bag associated with the current table. used for correct postorder traversal.
+    po_bag  tables_pobag; 
 
 public:
     std::vector<int> vertices;
 
     //Public Functions
     Table();
-    Table(int);
-
     ~Table();
+    
+    void set_pobag(po_bag);
+    po_bag get_pobag();
 
     void update_row_add(Row*, int);
     void insert_row(Row*);
@@ -116,7 +121,6 @@ public:
 
     int get_table_size();
     int get_vertex_col_index(int);
-    void print_tablelookups();
 };
 
 

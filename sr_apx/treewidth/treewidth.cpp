@@ -171,24 +171,6 @@ void TreeDecomp::tree_decomp(Graph* graph, Set* Z, Set* W, int parent, bool last
     *
     * Bags stored in PRE-order traversal order.
     *
-    * ----------------------- NOTE: this is the bug fix! (though it's not very efficient yet)
-    *
-    * The bug occurred when graph_Z_un_W formed a clique consisting of vertices which
-    * did not satisfy 8*Z->size() <= W->size().
-    *
-    * The way the balanced separator were then calculated was by selecting one of the
-    * vertices as one of the 'shores,' while the rest were added the separator set,
-    * and the other 'shore' was empty.
-    *
-    * So |(S ∪ T)| == |graph_Z_un_W| - 1 and,
-    * this led to there being one connected component of G[(W ∪ Z) \ (S ∪ T)] (sub_g) consisting of one single
-    * vertex, which was the 'shore' found from the balanced separator (we'll call this vertex V).
-    *
-    * these sets were then input into the recursive call of tree_decomp, and the same
-    * separators and components were found, which led to an infinite number of recursive calls.
-    *
-    * NOTE this is fixed by essentially adding all vertices in the clique to the separator set, which
-    * is done in the balanced separators function at the very end.
     */
 
     std::vector<Set*> components;
@@ -365,14 +347,18 @@ Set* treewidth_nodeedit(Graph* graph, Set* optional_verts, int w, bool annotated
 
         Set* edited_vertices = treewidth_nodeedit(component, optional_verts, w, annotated_version);
         S->add_all(edited_vertices); //set union but modifies S
-
+ 
         if(annotated_version) {
             //Add the neighbors of the edit set to the optinally dominated set.
             for(auto iev=edited_vertices->begin(); iev!=edited_vertices->end(); iev++) {
                 int e=*iev;
                 for(auto ien=component->neighbors(e)->begin();
                     ien!=component->neighbors(e)->end(); ien++) {
-                    optional_verts->insert(*iev);
+                    int optional = *ien;
+                    if(!S->contains(optional)) {
+                        optional_verts->insert(*ien);
+                    }
+                    optional_verts->remove(e);
                 }
             }
         }
@@ -406,9 +392,6 @@ int min_deg_vert(Graph* graph) {
 
 Set* balanced_separators(Graph* graph, int beta) {
     /*
-     * NOTE: could probably get rid of this function, and replace call
-     * on line 31 w/ other balanced_separators(graph, V, beta);
-     *
      * Balanced separator greedy algorithm from from (Althoby et al. 2020)
      *
      * Beta = floor(2n/3), or floor(3n/4)
@@ -473,10 +456,6 @@ Set* balanced_separators(Graph* graph, int beta) {
             }
         }
     }
-
-    //NOTE to double check the separators separate correctly.
-    //bool test = test_separators(graph, A, B, beta);
-    //printf("is valid sep? %d\n", test);
 
     delete A;
     delete B;
@@ -647,9 +626,12 @@ Set* balanced_separators(Graph* graph, Set* W, int beta) {
 
 
     if(B->size() == 0) {
-        //NOTE figure out the size of graph for which to test this. As to minimize the number of times this is called
-        bool is_graph_clique = is_clique(graph);   //NOTE: not the most efficient function either.
-        if(is_graph_clique) {    //NOTE: in case of future issues, potentially get rid of this case.
+        //NOTE figure out the size of graph for which to test this. 
+        //As to minimize the number of times this is called
+        //NOTE: not the most efficient function either.
+        bool is_graph_clique = is_clique(graph);   
+        if(is_graph_clique) {    
+            //NOTE: in case of future issues, potentially get rid of this case.
             for (auto ia = A->begin(); ia!=A->end(); ia++) {
                 int a = *ia;
                 C->insert(a);
@@ -660,63 +642,10 @@ Set* balanced_separators(Graph* graph, Set* W, int beta) {
         }
     }
 
-    //NOTE For testing. Tests whether the vertex separators are valid separators.
-    //bool test = test_separators(graph, A, B, A_count, B_count, beta);
-    //if (!test) {
-
-    //    printf("W: ");
-    //    for(auto it=W->begin(); it!=W->end(); it++) printf(" %d,", *it);
-    //    printf("\n\n");
-
-    //    printf("beta=%d\n", beta);
-    //    printf("A_count=%d, B_count=%d, C_count=%d \n", A_count, B_count, C_count);
-    //    printf("ERROR: is valid sep? %d\n", test);
-
-    //}
-
     delete A;
     delete B;
 
     return C; //Set of separator vertices
-}
-
-
-
-/*      Testing Functions --now necessary for balanced seps      */
-
-bool test_separators(Graph* graph, Set* A, Set* B, int A_count, int B_count, int beta) {
-    /*
-     * Tests that there are not edges between the two sets.
-     */
-    //printf("is |A|=%d <=? beta=%d\n", A->size(), beta);
-    //printf("is |B|=%d <=? beta=%d\n", B->size(), beta);
-
-    //if(A->size() > beta) return false;
-    //if(B->size() > beta) return false;
-
-    if(A_count > beta) {
-        printf("A: ");
-        for(auto it=A->begin(); it!=A->end(); it++) printf(" %d,", *it);
-        printf("\n\n");
-
-        return false;
-    }
-    if(B_count > beta) {
-        return false;
-    }
-
-    for (Set::Iterator iu = A->begin(); iu != A->end(); ++iu) {
-        int u = *iu;
-
-        for (Set::Iterator iv = B->begin(); iv != B->end(); ++iv) {
-            int v = *iv;
-            if (graph->adjacent(u,v)) {
-                printf("EDGE\n");
-                return false; //there is an edge between the sets
-            }
-        }
-    }
-    return true;
 }
 
 
