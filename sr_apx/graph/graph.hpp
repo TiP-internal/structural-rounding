@@ -4,6 +4,8 @@
 
 #include "sr_apx/setmap/setmap.hpp"
 
+#include <vector>
+
 namespace sr_apx {
 
 class Graph {
@@ -30,6 +32,8 @@ public:
 	const Set& neighbors(int) const;
 
 	Graph subgraph(const Set&) const;
+
+	std::vector<Set> connected_components() const;
 };
 
 Graph read_sparse6(const char*);

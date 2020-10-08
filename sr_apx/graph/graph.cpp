@@ -97,6 +97,52 @@ void Graph::remove_vertex(int vertex) {
 	adjlist.erase(vertex);
 }
 
+std::vector<Set> Graph::connected_components() const {
+	std::vector<Set> components;
+
+	Set comp;
+	std::vector<int> stack;
+	Set visited;
+
+	Map<Set>::const_iterator vitr = adjlist.begin();
+
+	while (!stack.empty() || visited.size() < adjlist.size()) {
+		int current;
+		if (stack.empty()) {
+			if (!comp.empty()) {
+				components.push_back(std::move(comp));
+				comp = Set();
+			}
+
+			while (visited.contains(vitr->first)) {
+				++vitr;
+			}
+
+			current = vitr->first;
+			visited.insert(current);
+			comp.insert(current);
+		}
+		else {
+			current = stack.back();
+			stack.pop_back();
+		}
+
+		for (int nbr : adjlist.at(current)) {
+			if (!comp.contains(nbr)) {
+				stack.push_back(nbr);
+				comp.insert(nbr);
+				visited.insert(nbr);
+			}
+		}
+	}
+
+	if (!comp.empty()) {
+		components.push_back(std::move(comp));
+	}
+
+	return components;
+}
+
 Graph read_sparse6(const char* filename) {
 	std::ifstream f;
 	f.open(filename, std::ios::in | std::ios::binary);
