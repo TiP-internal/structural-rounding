@@ -10,37 +10,40 @@ int get_soln_row_index(Table* table, Set* optional_verts){
     //Returns the index of the row in the last table w/ smallest dominating set size.
     int soln_index=-1;
     int min_Ai = INF;
-
+    std::vector<int> coloring;
+    
     //finds the row w. smallest solution size.
     for(int i=0; i<table->get_table_size(); i++) {
-        Row* row = table->get_row(i);
+        int curr_row_Ac = table->get_Ac(i); //Ac value of row i
         
-        if(row->get_Ac() < min_Ai) {
+        if(curr_row_Ac < min_Ai) {
             int num_notdom=0;
+            coloring = table->get_rowcol(i); 
+            
             for(int j=0; j<table->vertices.size(); j++) {
-                int c = row->coloring[j];
+                int c = coloring[j];
                 int xt = table->vertices[j];
                 //a final coloring cant have any vertices colored as not dominated
                 if(c==NOT_DOMINATED && !optional_verts->contains(xt)) num_notdom++;
             }
             
             if(num_notdom==0) {
-                min_Ai=row->get_Ac();
+                min_Ai=curr_row_Ac;
                 soln_index=i;
             }
         }
     }
     
-    if(soln_index==-1) throw ("ERROR: soln row not found.\n");
+    if(soln_index==-1) printf ("ERROR: soln row not found.\n");
     return soln_index;
 }
 
 
-void add_to_solution(Set* dom_set, Row* row, std::vector<int> &vertices) {
+void add_to_solution(Set* dom_set, std::vector<int> &coloring, std::vector<int> &vertices) {
     //Adds the vertices which have their coloring set to IN_DOMSET in the given row.
     for(int i=0; i<vertices.size(); i++) {
         int xt = vertices[i];
-        int c = row->coloring[i];
+        int c = coloring[i];
         
         if(c==IN_DOMSET) {
             dom_set->insert(xt);
@@ -60,11 +63,8 @@ int get_solution(std::vector<Table*> &tables, Set* optional_verts) {
     for(int i=0; i<tabsize; i++) {
         tab = tables.back();
         tables.pop_back();
-                
         int soln_index = get_soln_row_index(tab, optional_verts);  //prints the tabel lookups
-        
-        Row* final_row = tab->get_row(soln_index);
-        soln_size += final_row->get_Ac();
+        soln_size += tab->get_Ac(soln_index);
 
         delete tab;
     }
@@ -84,13 +84,13 @@ int get_solution(std::vector<Table*> &tables, Set* dom_set, Set* optional_verts)
     
     po_bag parent_pobag = parent_table->get_pobag();
     int soln_index = get_soln_row_index(parent_table, optional_verts);
-    Row* soln_row = parent_table->get_row(soln_index);
-    int soln_size = soln_row->get_Ac();
+    int soln_size = parent_table->get_Ac(soln_index);
     
-    add_to_solution(dom_set, soln_row, parent_table->vertices);
+    std::vector<int> soln_coloring = parent_table->get_rowcol(soln_index);
+    add_to_solution(dom_set, soln_coloring, parent_table->vertices);
 
-    int childl_row_ind = soln_row->get_childl_table_ind();
-    int childr_row_ind = soln_row->get_childr_table_ind();
+    int childl_row_ind = parent_table->get_rows_childl_table_ind(soln_index);
+    int childr_row_ind = parent_table->get_rows_childr_table_ind(soln_index);
 
     std::deque<po_bag> unfinished_joins;
     std::deque<int> left_inds;
@@ -98,8 +98,7 @@ int get_solution(std::vector<Table*> &tables, Set* dom_set, Set* optional_verts)
     
     for(int i=0; i<tabsize; i++) {
         // goal is to find the correct current row from the child table during each iteration.
-        Row* curr_row;  
-                
+        int curr_row_index;
         if(parent_pobag.num_children==2) {        //root table is a join table
             unfinished_joins.push_front(parent_pobag);
             left_inds.push_front(childl_row_ind);
@@ -118,26 +117,26 @@ int get_solution(std::vector<Table*> &tables, Set* dom_set, Set* optional_verts)
                 
                 childl_row_ind = left_inds[0];
                 left_inds.pop_front();
-                
-                curr_row = child_table->get_row(childl_row_ind);
+                curr_row_index = childl_row_ind;
             } else {
                 throw("ERROR in getting solution\n");
             }
         } else {
-            // now that the current parent has been evaluated, 
-            // reassign child table as the parent
             // there will be a right ind if its not a leaf
-            curr_row = child_table->get_row(childr_row_ind); 
+            curr_row_index = childr_row_ind;
         }
-        add_to_solution(dom_set, curr_row, child_table->vertices);
+        std::vector<int> coloring = child_table->get_rowcol(curr_row_index);
+        add_to_solution(dom_set, coloring, child_table->vertices);
+        
+        childl_row_ind = child_table->get_rows_childl_table_ind(curr_row_index);
+        childr_row_ind = child_table->get_rows_childr_table_ind(curr_row_index);
         
         delete parent_table;
         parent_table = child_table; 
         parent_pobag = child_pobag;
-            
-        childl_row_ind = curr_row->get_childl_table_ind();
-        childr_row_ind = curr_row->get_childr_table_ind();
     }
+    
+    delete parent_table;
     return soln_size;
 }
 
@@ -154,7 +153,7 @@ int calculate(Graph* graph, TreeDecomp* decomp, Set* dom_set,
      */
     std::vector<Table*> tables; 
     std::vector<po_bag> postorder = decomp->get_post_order();
-    
+
     // Set* anchors = treedecomp_reduction(graph, decomp->components_bags, postorder); 
     Set* anchors = new Set();
     if(construct_soln) for(int i=0; i<decomp->components_bags.size(); i++) anchors->insert(i);
@@ -220,7 +219,6 @@ void calculate_tables(Graph* graph, std::vector<Set*> &bags,
      * and perfect dominating set. 
      */
     po_bag pob_current = postorder[po_index];
-    
     Table* table = nullptr;
     if(pob_current.num_children==2) {          //-----------------------JOIN bag
         //---------------Get right child table index in tables[]
@@ -229,7 +227,7 @@ void calculate_tables(Graph* graph, std::vector<Set*> &bags,
         Table* right_child_table = tables[tab_ind_childr];
         po_bag pob_rightchild = right_child_table->get_pobag();
         if(pob_rightchild.parent_bag_index != pob_current.bag_index) {
-            throw("ERROR: parent (right) child dont align.\n");
+            printf("ERROR: parent (right) child dont align.\n");
         }
         int bag_ind_childr = pob_rightchild.bag_index;
         //----------------
@@ -238,18 +236,18 @@ void calculate_tables(Graph* graph, std::vector<Set*> &bags,
         int tab_ind_childl = get_left_join_child_tabind(anchor_tables, 
                                                         tables, pob_current.bag_index);
         if(tab_ind_childl==-1) {
-            throw("ERROR: parent (left) child not in tables vector.\n");
+            printf("ERROR: parent (left) child not in tables vector.\n");
         }
         Table* left_child_table = tables[tab_ind_childl];
         po_bag pob_leftchild = left_child_table->get_pobag();
         if(pob_leftchild.parent_bag_index != pob_current.bag_index) {
-            throw("ERROR: parent (left) child dont align.\n");
+            printf("ERROR: parent (left) child dont align.\n");
         }
         int bag_ind_childl = pob_leftchild.bag_index;
         //----------------
         
         if(left_child_table->get_table_size() != right_child_table->get_table_size()) {
-            throw("ERROR in calculate_tables: join children have different dimension\n");
+            printf("ERROR in calculate_tables: join children have different dimension\n");
         }
 
         //update table here
@@ -257,7 +255,6 @@ void calculate_tables(Graph* graph, std::vector<Set*> &bags,
         //become the parent of tab1 & tab2
         if(anchor_tables->contains(bag_ind_childr) 
             && anchor_tables->contains(bag_ind_childl)) {
-            
             bool merge = false;
             table = join_table(right_child_table, left_child_table, 
                                optional_verts, pob_current, merge);
@@ -321,13 +318,13 @@ void calculate_tables(Graph* graph, std::vector<Set*> &bags,
             }
             table = forget_table(child_table, optional_verts, pob_current, variant, v, merge);
         } else {
-            throw("ERROR in calculate_tables: parent and child should not have same size.\n");
+            printf("ERROR in calculate_tables: parent and child should not have same size.\n");
         }
     } else if(pob_current.num_children==0){    //----------------------------LEAF bag
         table = initialize_leaf_table(graph, bags[pob_current.bag_index], 
                                       optional_verts, pob_current, variant);
     } else {
-            throw("ERROR in calculate_tables: wrong number of children in nice decomp.\n");
+            printf("ERROR in calculate_tables: wrong number of children in nice decomp.\n");
     }
     
     //------ now Add/and or update the pointer in the tables vector.
@@ -354,52 +351,51 @@ Table* initialize_leaf_table(Graph* graph, Set* bag, Set* optional_verts, po_bag
      * Leaf tables can have more than 1 vertex.
      */
     Table* table = new Table();
-
-    Row* r1;
-    Row* r2;
-    Row* r3;
+    int row1_ind, row2_ind, row3_ind;
 
     //intitial rows for first vert.
     if(bag->size()>0) {
-        r1 = table->create_row(IN_DOMSET);
-        r2 = table->create_row(DOMINATED);
-        r3 = table->create_row(NOT_DOMINATED);
+        row1_ind = table->create_row(IN_DOMSET);
+        row2_ind = table->create_row(DOMINATED);
+        row3_ind = table->create_row(NOT_DOMINATED);
     }
 
     int i=0;
     for(auto it=bag->begin(); it!=bag->end(); it++) {  //3^k*k time
         int v = *it;
         table->vertices.push_back(v);
-
+        
         if(i==0 && bag->size()==1) {
             //only one vertex in bag, need to find if valid.
             int tab_size = table->get_table_size();
             for(int j=0; j<tab_size; j++) {  //at most 3^ni
-                Row* r_update = table->get_row(j);
-                r_update->update_Ac(locally_valid_coloring(graph, optional_verts,
-                                    r_update, table->vertices, variant));   //k^2
+                int new_Ac = locally_valid_coloring(graph, table, optional_verts, j, variant);
+                table->update_Ac(j, new_Ac);
             }
         } else if(i>0) { //first vert col already initialized in constructor
             int tab_size = table->get_table_size();
             for(int j=0; j<tab_size; j++) {        //3^k
-                Row* r_update = table->get_row(j);
-
-                Row* r2 = table->create_row(r_update, DOMINATED);
-                if(r2->coloring.size()==bag->size()) {
-                    r2->update_Ac(locally_valid_coloring(graph, optional_verts,
-                                  r2, table->vertices, variant));               //k^2
+                int r_update_index = j;
+                
+                row2_ind = table->create_row(r_update_index, DOMINATED);
+                int row2_len = table->get_row_col_len(row2_ind);
+                if(row2_len==bag->size())  {
+                    int new_Ac = locally_valid_coloring(graph, table, optional_verts, row2_ind, variant);
+                    table->update_Ac(row2_ind, new_Ac);
                 }
 
-                Row* r3 = table->create_row(r_update, NOT_DOMINATED);
-                if(r3->coloring.size()==bag->size()) {
-                    r3->update_Ac(locally_valid_coloring(graph, optional_verts,
-                                  r3, table->vertices, variant));               //k^2
+                row3_ind = table->create_row(r_update_index, NOT_DOMINATED);
+                int row3_len = table->get_row_col_len(row3_ind);
+                if(row3_len==bag->size()) {
+                    int new_Ac = locally_valid_coloring(graph, table, optional_verts, row3_ind, variant);
+                    table->update_Ac(row3_ind, new_Ac);
                 }
-
-                table->update_row_add(r_update, IN_DOMSET);
-                if(r_update->coloring.size()==bag->size()) {
-                    r_update->update_Ac(locally_valid_coloring(graph, optional_verts,
-                                        r_update, table->vertices, variant));   //k^2
+                
+                table->update_row_add(r_update_index, IN_DOMSET);                
+                int rowupdate_len = table->get_row_col_len(r_update_index);
+                if(rowupdate_len==bag->size()) {
+                    int new_Ac = locally_valid_coloring(graph, table, optional_verts, r_update_index, variant);
+                    table->update_Ac(r_update_index, new_Ac);
                 }
             }
         }
@@ -431,17 +427,18 @@ Table* join_table(Table* child1_table, Table* child2_table,
         
     int tab_size = child2_table->get_table_size();
     for(int i=0; i<tab_size; i++) {  //4^ni        
-        Row* row_k = nullptr;
+        int rowk_index;
         if(!merge) {  //creating new table  (constructive version)
-            row_k = par_table->create_row(child1_table->get_row(i), -1); //declares new
+            rowk_index = par_table->copyin_row(child1_table, i);
         } else {      //merging
-            row_k = par_table->get_row(i);  //row_k differs between two versions
+            rowk_index = i;
         }
         
-        int* min_vals = minAi_c(child1_table, child2_table, optional_verts, row_k);
-        row_k->update_Ac(min_vals[0]);
-        row_k->set_childl_table_ind(min_vals[1]);
-        row_k->set_childr_table_ind(min_vals[2]);  //merge into row_k in par_table
+        std::vector<int> rowk_coloring = par_table->get_rowcol(rowk_index);
+        int* min_vals = minAi_c(child1_table, child2_table, optional_verts, rowk_coloring);
+        par_table->update_Ac(rowk_index, min_vals[0]);
+        par_table->update_rows_childl_table_ind(rowk_index, min_vals[1]);
+        par_table->update_rows_childr_table_ind(rowk_index, min_vals[2]);
 
         delete[] min_vals;
     }
@@ -462,27 +459,27 @@ Table* intro_table(Graph* graph, Table* child_table, Set* child_bag, Set* option
     Set* neighbors_v = child_bag->set_intersection(graph->neighbors(v));
     int table_size = child_table->get_table_size();
     
-    for(int i=0; i<table_size; i++) {
-        Row* r_update;  //rows in the child_table that we are duplicating and copying
-        if(!merge) {
-            r_update = new Row(child_table->get_row(i));  //creates copy of row
-            par_table->insert_row(r_update);
+    for(int i=0; i<table_size; i++) {  //looping over child table
+        int r_update_index;
+        if(!merge) { //workign w. empty par table
+            r_update_index = par_table->get_table_size();
+            par_table->copyin_row(child_table, i);
         } else {
-            r_update = par_table->get_row(i);
+            r_update_index = i;
         }
-        r_update->set_childl_table_ind(-1); 
-        r_update->set_childr_table_ind(i);
-        
-        Row* r2 = par_table->create_row(r_update, DOMINATED);
-        Row* r3 = par_table->create_row(r_update, NOT_DOMINATED);
+        par_table->update_rows_childl_table_ind(r_update_index, -1);
+        par_table->update_rows_childr_table_ind(r_update_index, i);
+
+        int row2_index = par_table->create_row(r_update_index, DOMINATED);
+        int row3_index = par_table->create_row(r_update_index, NOT_DOMINATED);
         
         //r_update: x is IN_DOMSET=1
-        intro_vert_indomset_update(graph, child_table, neighbors_v, r_update, v, variant);
-        par_table->update_row_add(r_update, IN_DOMSET); //must add after intro vert function call
+        intro_vert_indomset_update(graph, par_table, child_table, neighbors_v, r_update_index, v, variant);
+        par_table->update_row_add(r_update_index, IN_DOMSET); //must add after intro vert function call
 
         //r2: x is DOMINATED=0
-        intro_vert_dominated_update(graph, child_table, neighbors_v, optional_verts,
-                                    r2, r_update, v, variant);
+        intro_vert_dominated_update(graph, par_table, child_table, neighbors_v, optional_verts,
+                                    row2_index, r_update_index, v, variant);
 
         //r3: x is NOT_DOMINATED=3  -- do nothing
     }
@@ -491,6 +488,18 @@ Table* intro_table(Graph* graph, Table* child_table, Set* child_bag, Set* option
     par_table->set_pobag(pob_current);
     delete neighbors_v;
     return par_table;
+}
+
+int potential_key(const std::vector<int> &coloring, int v_index) {
+    int key=-1;
+    for(int i=0; i<coloring.size(); i++) {
+        if(key==-1 && i!=v_index) key=coloring[i];
+        else if(i!=v_index){
+            key=key*10;
+            key=key+coloring[i];
+        }
+    }
+    return key;
 }
 
 Table* forget_table(Table* child_table, Set* optional_verts, po_bag pob_current, 
@@ -506,59 +515,72 @@ Table* forget_table(Table* child_table, Set* optional_verts, po_bag pob_current,
     bool is_xoptional = optional_verts->contains(v);  // v in optional set or not?
     
     par_table->vertices.erase(par_table->vertices.begin()+v_index); //delete v from verts vec. k
-    
     int curr_index = 0;
-    for(int j=0; j<table_size; j++) {                       //3^ni        
-        Row* rowj=nullptr; 
-        if(!merge) {
-            rowj = new Row(child_table->get_row(j));  //copy construct k
-        } else {
-            rowj = child_table->get_row(curr_index);
+    for(int j=0; j<table_size; j++) {   //loop over child table         //3^ni
+
+        //------- child row info
+        int rowj_index, rowj_key;  //Rows associated w. child table
+        if(!merge) { //par table is emtpy table
+            rowj_index = j;
+            rowj_key = child_table->get_rows_key(rowj_index);
+        } else { //par table = child table
+            rowj_index = curr_index;
+            rowj_key = par_table->get_rows_key(rowj_index);
         }
-        int color_v = rowj->coloring[v_index];
-        int Aj = rowj->get_Ac();
-        int rj_tabind = child_table->lookup_table_index(rowj->get_key());
+        std::vector<int> rowj_coloring = child_table->get_rowcol(rowj_index); 
+        int color_v = rowj_coloring[v_index];
+        int Aj = child_table->get_Ac(rowj_index);
+        //---------
         
-        if(merge) par_table->table_lookups_remove(rowj->get_key());
-        rowj->remove_from_coloring(v_index);  //k
-        
-        Row* rowi;
+        if(merge) {
+            par_table->table_lookups_remove(rowj_key);
+            par_table->remove_from_rows_coloring(rowj_index, v_index); 
+            rowj_key = par_table->get_rows_key(rowj_index);
+        } else {
+            rowj_key = potential_key(rowj_coloring, v_index);
+        }
+                
+        int rowi_index, rowi_key;  //Rows in Parent table
         if(!merge) {
-            if(!par_table->table_lookups_contains(rowj->get_key())) { //not inserted yet
-                par_table->insert_row(rowj);
+            if(!par_table->table_lookups_contains(rowj_key)) {
+                int new_rowind = par_table->copyin_forgetrow(child_table, rowj_index, v_index); 
             }
-            rowi = par_table->lookup_row(rowj->get_key());
-        } else {   
+            rowi_index = par_table->lookup_table_index(rowj_key);
+            rowi_key = par_table->get_rows_key(rowi_index);
+        } else {  
             int par_row_ind;
-            if(par_table->table_lookups_contains(rowj->get_key())) {  //already inserted in the child
+            if(par_table->table_lookups_contains(rowj_key)) {
                 par_table->delete_row(curr_index);
                 curr_index--;
 
                 // gets the actual parent row which has been added previously
-                rowi = par_table->lookup_row(rowj->get_key());
+                rowi_index = par_table->lookup_table_index(rowj_key);
+                rowi_key = par_table->get_rows_key(rowi_index);
             } else {  //row needs readding to table lookups
                 par_row_ind = curr_index;
-                rowi = par_table->get_row(par_row_ind);
-
+                rowi_index = par_row_ind;
+                rowi_key = par_table->get_rows_key(rowi_index);
+                
                 //add to table lookups.
-                par_table->table_lookups_insert(rowi->get_key(), par_row_ind);
+                par_table->table_lookups_insert(rowi_key, par_row_ind);
             }
         }
-        int Ai = par_table->lookup_Ac(rowi->get_key());
+        
+        int Ai = par_table->lookup_Ac(rowi_key);
         
         //NOTE may need to add extra constraint here (for monotonicity?)
         //it's either not the annotated version or x is not optional
         if(!is_xoptional) {
             if(color_v!=NOT_DOMINATED && Aj <= Ai) {
-                rowi->update_Ac(Aj);
-                rowi->set_childr_table_ind(rj_tabind);
-                rowi->set_childl_table_ind(-1);
+                par_table->update_rows_childl_table_ind(rowi_index, -1);
+                par_table->update_rows_childr_table_ind(rowi_index, rowj_index);
+                par_table->update_Ac(rowi_index, Aj);
             }
         } else { //annotated version and x IS an optional vertex.
             if(Aj <= Ai) {
-                rowi->update_Ac(Aj);
-                rowi->set_childr_table_ind(rj_tabind);
-                rowi->set_childl_table_ind(-1);
+                par_table->update_rows_childl_table_ind(rowi_index, -1);
+                par_table->update_rows_childr_table_ind(rowi_index, rowj_index);
+                par_table->update_Ac(rowi_index, Aj);
             }
         }
         curr_index++;
@@ -571,49 +593,30 @@ Table* forget_table(Table* child_table, Set* optional_verts, po_bag pob_current,
 
 
 //----- Helper functions
-int locally_valid_coloring(Graph* graph, Set* optional_verts, Row* row,
-                           std::vector<int> &vertices, Variant variant) {
-    /*
-     * NOTE Could replace vertices vector w/ bag Set
-     * A_c is the size of the dominating set of the specific coloring in the row.
-     * If its an invalid coloring, return -99;
-     *
-     * locally invalid coloring:
-
-        there's some vertex s in the specific coloring which is set to 0
-        (ie. already dominated),
-
-        AND there is NOT a vertex, which is a neighbor of the vertex s
-        (in the same bag), w/ assigned color 1 (that's IN the dom. set)
-
-        - so the coloring is NOT valid. As in its saying that theres a
-        vertex which is dominated, but none of its neighbors are in the
-        dom set, so it's not true.
-
-        k^2
-     */
-    //If finding independent dominating set, create new set.
+int locally_valid_coloring(Graph* graph, Table* table, Set* optional_verts, 
+                           int row_index, Variant variant) {
+    // If finding independent dominating set, create new set.
     Set* independent_check;
     if(variant == Variant::Indep_Dom_Set) independent_check = new Set();
 
     int A_c = 0;
-    for(int i=0; i<vertices.size(); i++) {  //at most k
-        int xt = vertices[i];
-        int coloring_i = row->coloring[i];
+    const vector<int> row_coloring  = table->get_rowcol(row_index);
+    
+    for(int i=0; i<table->vertices.size(); i++) {  //at most k
+        int xt = table->vertices[i];
+        int coloring_i = row_coloring[i];
 
         if(coloring_i == IN_DOMSET) {
             A_c++;
             if(variant == Variant::Indep_Dom_Set) independent_check->insert(xt);
-        }
-
-        if(coloring_i == DOMINATED) {  //if a vertex is set to DOMINATED
+        }else if(coloring_i == DOMINATED) {  //if a vertex is set to DOMINATED
             bool valid = false;
             bool is_xtoptional = optional_verts->contains(xt);  // in optional set or not?
             int num_dominators = 0;
 
             //xt is not optional, or it's the annotated version and it is optional
             if(!is_xtoptional) {
-                num_dominators = get_num_dominators(graph, row, vertices, xt);
+                num_dominators = get_num_dominators(graph, table->vertices, row_coloring, xt);
                 if(num_dominators>=1) valid=true;
             } else valid = true;
 
@@ -625,7 +628,7 @@ int locally_valid_coloring(Graph* graph, Set* optional_verts, Row* row,
                 // if x is optional, we still need to check if it
                 // has more than one dominator.
                 if(is_xtoptional) {
-                    num_dominators = get_num_dominators(graph, row, vertices, xt);
+                    num_dominators = get_num_dominators(graph, table->vertices, row_coloring, xt);
                 }
                 if(num_dominators>1) valid=false;
             }
@@ -647,8 +650,7 @@ int locally_valid_coloring(Graph* graph, Set* optional_verts, Row* row,
     return A_c;
 }
 
-
-int phi(Row* row, Set* neighbors, std::vector<int> &vertices, int introduced_v) {
+int phi(Set* neighbors, std::vector<int> &vertices, const std::vector<int> &coloring, int introduced_v) {
    /*
     *  φ : {0, ˆ0, 1}^nj → {0, ˆ0, 1}^nj
     * on the set of colorings of Xj.
@@ -664,7 +666,7 @@ int phi(Row* row, Set* neighbors, std::vector<int> &vertices, int introduced_v) 
     for(int i=0; i<vertices.size(); i++) {
         int curr_v = vertices[i];
         if(curr_v != introduced_v) {
-            int curr_v_c = row->coloring[i];
+            int curr_v_c = coloring[i];
 
             // the introduce vertex has a neighbor w. color set to DOMINATED.
             if(curr_v_c==DOMINATED && neighbors->contains(curr_v)) {
@@ -679,8 +681,7 @@ int phi(Row* row, Set* neighbors, std::vector<int> &vertices, int introduced_v) 
     return new_col;
 }
 
-
-int* minAi_c(Table* childk, Table* childj, Set* optional_verts, Row* row_k) {
+int* minAi_c(Table* childk, Table* childj, Set* optional_verts, std::vector<int> &rowk_coloring) {
     /*
      * This is where storing the vertices vector is important. Look into not storing
      * it in table.
@@ -698,9 +699,8 @@ int* minAi_c(Table* childk, Table* childj, Set* optional_verts, Row* row_k) {
     }
     
     int num_ones = 0;   //number of 1's (IN_DOMSET's) in the coloring.
-    for(int i=0; i<row_k->coloring.size(); i++) { //k
-        int c_t = row_k->coloring[i];
-
+    for(int i=0; i<rowk_coloring.size(); i++) { //k
+        int c_t = rowk_coloring[i];
         int xt = childk->vertices[i];
         bool is_xtoptional = optional_verts->contains(xt);  // xt in optional set or not?
 
@@ -847,32 +847,32 @@ int flip_coloring(Table* childj, std::vector<int> &current_vertorder, std::vecto
     return flipped_key;
 }
 
-
-void intro_vert_indomset_update(Graph* graph, Table* child_table,
-                                Set* neighbors_v, Row* row,
+void intro_vert_indomset_update(Graph* graph, Table* parent_table, Table* child_table,
+                                Set* neighbors_v, int row_index,
                                 int v, Variant variant) {
     /* Introducing a vertex w/ coloring set to IN_DOMSET.
      */
-    int new_col_key = phi(row, neighbors_v, child_table->vertices, v);   //k
+    const std::vector<int> coloring = parent_table->get_rowcol(row_index); 
+    int new_col_key = phi(neighbors_v, child_table->vertices, coloring, v);   //k
     int A_phi;
     bool is_perf=true;
-    //Independent variant
-    if(variant == Variant::Indep_Dom_Set) {
-        bool indep = intro_indep_check(graph, child_table->vertices, row->coloring, v);
+    
+    if(variant == Variant::Indep_Dom_Set) {         //------------independent variant
+        bool indep = intro_indep_check(graph, child_table->vertices, coloring, v);
         if(!indep) A_phi = INF;
         else {
             A_phi = child_table->lookup_Ac(new_col_key);
             if(A_phi!=INF) A_phi++;
         }
-    } else if(variant == Variant::Perf_Dom_Set) {
+    } else if(variant == Variant::Perf_Dom_Set) {   //-------------perfect domset variant
         //gets neighbors of the newly added vertex
         //if a neighbor is not in domset and has more than one neighbor in domset, Ac=inf
         for(auto it=neighbors_v->begin(); it!=neighbors_v->end(); it++) {
             int nb = *it;
             int c_index = child_table->get_vertex_col_index(nb);
-            int cp = row->coloring[c_index];
+            int cp = coloring[c_index];
             if(cp==DOMINATED) {
-                int num_doms_rnb = get_num_dominators(graph, row, child_table->vertices, nb);
+                int num_doms_rnb = get_num_dominators(graph, child_table->vertices, coloring, nb);
                 if(graph->adjacent(nb, v)) num_doms_rnb++;  //v not in the child table vertices vec.
                 if(num_doms_rnb > 1) is_perf = false;
             }
@@ -882,30 +882,31 @@ void intro_vert_indomset_update(Graph* graph, Table* child_table,
             A_phi = child_table->lookup_Ac(new_col_key);
             if(A_phi!=INF) A_phi++;
         }
-    } else {
-        A_phi = child_table->lookup_Ac(new_col_key);  //Dom Set variant
+    } else {                                        //------------------Dom Set variant
+        A_phi = child_table->lookup_Ac(new_col_key);  
         if(A_phi!=INF) A_phi++;  // increase by one
     }
     
     int index = child_table->lookup_table_index(new_col_key);
-    row->set_childl_table_ind(-1); 
-    row->set_childr_table_ind(index);
-    row->update_Ac(A_phi);
+    parent_table->update_rows_childl_table_ind(row_index, -1);
+    parent_table->update_rows_childr_table_ind(row_index, index);
+    parent_table->update_Ac(row_index, A_phi);
 }
 
 
-void intro_vert_dominated_update(Graph* graph, Table* child_table,
+void intro_vert_dominated_update(Graph* graph, Table* parent_table, Table* child_table,
                                  Set* neighbors_v, Set* optional_verts,
-                                 Row* r2, Row* r_update, int v, Variant variant) {
+                                 int r2_index, int rupdate_index, int v, Variant variant) {
     /* Update to the introduce table when the introduced vertex coloring
      * is set to DOMINATED.
-     * 
-     * NOTE get rid of r_update in this function
      */
     bool is_xoptional = optional_verts->contains(v);  // in optional set or not?
     int num_dominators_r2 = 0;
     bool ru_isperfect = true;
 
+    const std::vector<int> rupdate_coloring = parent_table->get_rowcol(rupdate_index); 
+    const std::vector<int> r2_coloring = parent_table->get_rowcol(r2_index); 
+    
     //it's either not the annotated version or x is not optional
     if(!is_xoptional) {
         //need to check that the introduced vertex w. the coloring of DOMINATED is justified.
@@ -913,23 +914,23 @@ void intro_vert_dominated_update(Graph* graph, Table* child_table,
             int index = child_table->get_vertex_col_index(*it);
 
             //x is set to DOMINATED and has a neighbor IN_DOMSET
-            if(r2->coloring[index]==IN_DOMSET) {
+            if(r2_coloring[index]==IN_DOMSET) {
                 num_dominators_r2++;
             }
 
             if(variant==Variant::Perf_Dom_Set) {
-                if(r_update->coloring[index]==DOMINATED) {
+                if(rupdate_coloring[index]==DOMINATED) {
                     //checks if the current neighbor of x (xt) has
                     //more than one dominator now.
                     int xt = child_table->vertices[index];
-                    int num_doms_rup_nb = get_num_dominators(graph, r_update,
-                                                             child_table->vertices, xt);
+                    int num_doms_rup_nb = get_num_dominators(graph, child_table->vertices, 
+                                                             rupdate_coloring, xt);
                     if(num_doms_rup_nb > 1) ru_isperfect=false;
                 }
             }
         }
         if(num_dominators_r2<1) {  //not valid coloring
-            r2->update_Ac(INF);
+            parent_table->update_Ac(r2_index, INF);
         }
     } else {
         //annotated version and x IS an optional vertex, dont need to justify.
@@ -939,11 +940,11 @@ void intro_vert_dominated_update(Graph* graph, Table* child_table,
         if(variant==Variant::Perf_Dom_Set) {
             for(auto it=neighbors_v->begin(); it!=neighbors_v->end(); it++) { //*k^2!!
                 int index = child_table->get_vertex_col_index(*it);
-                if(r2->coloring[index]==IN_DOMSET)  num_dominators_r2++;
-                if(r_update->coloring[index]==DOMINATED) {
+                if(r2_coloring[index]==IN_DOMSET)  num_dominators_r2++;
+                if(rupdate_coloring[index]==DOMINATED) {
                     int xt = child_table->vertices[index];
-                    int num_doms_rup_nb = get_num_dominators(graph, r_update,
-                                                            child_table->vertices, xt);
+                    int num_doms_rup_nb = get_num_dominators(graph, child_table->vertices, 
+                                                             rupdate_coloring, xt);
                     if(num_doms_rup_nb > 1) ru_isperfect=false;
                 }
             }
@@ -952,17 +953,23 @@ void intro_vert_dominated_update(Graph* graph, Table* child_table,
 
     if(variant==Variant::Perf_Dom_Set) {
         //More than one dominator for the perfect ds variant not allowed.
-        if(num_dominators_r2>1) r2->update_Ac(INF);
-        if(!ru_isperfect) r2->update_Ac(INF);  //NOTE r2 or r_update?
+        if(num_dominators_r2>1) {
+            parent_table->update_Ac(r2_index, INF);
+        }
+        if(!ru_isperfect) {
+            parent_table->update_Ac(r2_index, INF);  //NOTE r2 or r_update?
+        }
     }
 }
 
 
-int get_num_dominators(Graph* graph, Row* row, std::vector<int> &vertices, int target_vert) {
+int get_num_dominators(Graph* graph, std::vector<int> &vertices, 
+                       const std::vector<int> &coloring, int target_vert) {
     //returns number of vertices dominating target_vert.
     int num_dominators=0;
+    
     for(int j=0; j<vertices.size(); j++) {  //at most k
-        int coloring_j = row->coloring[j];
+        int coloring_j = coloring[j];
 
         if(vertices[j]!=target_vert && coloring_j== IN_DOMSET) {
             if(graph->adjacent(vertices[j], target_vert)) {
@@ -974,7 +981,8 @@ int get_num_dominators(Graph* graph, Row* row, std::vector<int> &vertices, int t
 }
 
 
-bool intro_indep_check(Graph* graph, std::vector<int> &vertices, std::vector<int> &coloring,
+bool intro_indep_check(Graph* graph, std::vector<int> &vertices, 
+                       const std::vector<int> &coloring,
                        int v) {
     Set* independent_check = new Set();
     for(int i=0; i<coloring.size(); i++) {
@@ -1008,4 +1016,5 @@ bool check_independent(Graph* graph, Set* independent_check) {
     }
     return true;
 }
+
 

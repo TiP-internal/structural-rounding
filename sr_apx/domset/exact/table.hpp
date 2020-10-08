@@ -37,7 +37,7 @@ public:
     std::vector<int> coloring;      //all possible colorings for the xi verts
 
     Row();
-    Row(const Row*);
+    Row(const Row&);
     ~Row();
 
     void append_coloring(int val);
@@ -86,7 +86,8 @@ class Table {
      *
      */
 private:
-    std::vector<Row*> table;  
+    //std::vector<Row*> table;  
+    std::vector<Row> table;  
     Map<int> table_lookups;    
     
     //the po_bag associated with the current table. used for correct postorder traversal.
@@ -101,10 +102,17 @@ public:
     
     void set_pobag(po_bag);
     po_bag get_pobag();
+    
+    void update_Ac(int, int);
 
-    void update_row_add(Row*, int);
-    void insert_row(Row*);
+    void update_row_add(int, int);
+    int insert_row(Row);
+    int copyin_row(Table*, int);
+    int copyin_forgetrow(Table*, int, int);
+    
     void delete_row(int);
+    
+    int get_row_col_len(int);
 
     void table_lookups_insert(int, int);
     void table_lookups_remove(int);
@@ -112,15 +120,26 @@ public:
 
     int lookup_table_index(int);
     int lookup_Ac(int);
+    int get_Ac(int); 
+    
+    int get_rows_childl_table_ind(int);
+    int get_rows_childr_table_ind(int);
+    
+    void update_rows_childl_table_ind(int, int);
+    void update_rows_childr_table_ind(int, int);
+    
+    void remove_from_rows_coloring(int, int);
 
-    Row* lookup_row(int);
-    Row* get_row(int);
+    int get_rows_key(int);
+    int create_row(int, int);
+    int create_row(int);
 
-    Row* create_row(Row*, int);
-    Row* create_row(int);
 
     int get_table_size();
     int get_vertex_col_index(int);
+    
+    const std::vector<int>& get_rowcol(int);
+    
 };
 
 

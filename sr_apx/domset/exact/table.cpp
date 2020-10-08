@@ -10,22 +10,20 @@
 
 
 Row::Row() {
-    this->A_c = INF;
-    this->key = -1;
+    A_c = INF;
+    key = -1;
     
-    this->childl_ind = -1;
-    this->childr_ind = -1;
+    childl_ind = -1;
+    childr_ind = -1;
 }
 
-Row::Row(const Row* r) {  //copy constructor
-    for(int i=0; i<r->coloring.size(); i++) {
-        this->coloring.push_back(r->coloring[i]);
-    }
-    this->A_c = r->A_c;
-    this->key = r->key;
+Row::Row(const Row &r) {  //copy constructor
+    coloring = r.coloring;
+    A_c = r.A_c;
+    key = r.key;
     
-    this->childl_ind=r->childl_ind;
-    this->childr_ind=r->childr_ind;
+    childl_ind=r.childl_ind;
+    childr_ind=r.childr_ind;
 }
 
 Row::~Row() {}
@@ -79,28 +77,24 @@ int Row::get_childl_table_ind() {
     return childl_ind;
 }
 
-void Row::set_childl_table_ind(int childl_ind) {
-    this->childl_ind=childl_ind;
+void Row::set_childl_table_ind(int childl_ind_new) {
+    childl_ind=childl_ind_new;
 }
 
 int Row::get_childr_table_ind() {
     return childr_ind;
 }
 
-void Row::set_childr_table_ind(int childr_ind) {
-    this->childr_ind=childr_ind;
+void Row::set_childr_table_ind(int childr_indnew) {
+    childr_ind=childr_indnew;
 }
+
 
 
 
 Table::Table() {}
 
-Table::~Table() {
-    for(int i=0; i<table.size(); i++) {
-        delete table[i];
-    }
-}
-
+Table::~Table() {}
 
 void Table::set_pobag(po_bag po) {
     tables_pobag=po;
@@ -110,10 +104,20 @@ po_bag Table::get_pobag() {
     return tables_pobag;
 }
 
+void Table::update_Ac(int row_index, int new_Ac) {
+    // Updates the row in the tables vector at the index w. new_Ac value
+    table[row_index].update_Ac(new_Ac);
+}
+
+const std::vector<int>& Table::get_rowcol(int row_index) {
+    return table[row_index].coloring;
+}
+
+int Table::get_row_col_len(int row_index) {
+    return table[row_index].coloring.size();
+}
+
 int Table::get_vertex_col_index(int v) {
-    /*
-     * k time
-     */
     int index = -1;
     for(int i=0; i<this->vertices.size(); i++) {
         if(v==vertices[i]) return i;
@@ -121,43 +125,50 @@ int Table::get_vertex_col_index(int v) {
     return index;
 }
 
-
 int Table::lookup_table_index(int key) {
     //Returns the INDEX of the row in the table.
     if(!table_lookups.contains(key)) return -1;
     return table_lookups[key];
 }
 
-
-Row* Table::lookup_row(int key) {
-    //Returns the row from the table w. the given key
-    int index = lookup_table_index(key);
-    return get_row(index);
+void Table::remove_from_rows_coloring(int row_index, int v_index) {
+    table[row_index].remove_from_coloring(v_index);
 }
 
-Row* Table::get_row(int index) {
-    //Returns the row from the table at the given index.
-    if(index >= table.size() || index < 0) {
-        throw("ERROR: out of bounds table index=%d, table size=%ld\n", index, table.size());
-    }
-    return table[index];
+int Table::get_rows_key(int row_index) {
+    return table[row_index].get_key();
 }
 
-
-Row* Table::create_row(Row* r_update, int coloring) {
-    Row* r = new Row(r_update);        //k
-    if(coloring!=-1) r->append_coloring(coloring);
-    insert_row(r);
+int Table::create_row(int coloring) {
+    // creates a new row and adds it to the table/table_lookups
+    Row r;        
+    if(coloring!=-1) r.append_coloring(coloring);
+    int index = insert_row(r);
     
-    return r;
+    return index;
 }
 
-Row* Table::create_row(int coloring) {
-    Row* r = new Row();        
-    if(coloring!=-1) r->append_coloring(coloring);
-    insert_row(r);
-    
-    return r;
+int Table::create_row(int copy_row_index, int coloring) {   
+    Row r = table[copy_row_index];
+    if(coloring!=-1) r.append_coloring(coloring);
+    int index = insert_row(r);
+
+    return index;
+}
+
+int Table::copyin_row(Table* child_table, int child_row_index) {
+    Row r = child_table->table[child_row_index];
+    int index = insert_row(r);
+
+    return index;
+}
+
+int Table::copyin_forgetrow(Table* child_table, int child_row_index, int v_index) {    
+    Row r(child_table->table[child_row_index]);
+    r.remove_from_coloring(v_index);
+    r.set_childr_table_ind(child_row_index);    
+    int index = insert_row(r);
+    return index;
 }
 
 int Table::lookup_Ac(int key) {
@@ -166,23 +177,46 @@ int Table::lookup_Ac(int key) {
      * to that key.
      */
     int index = lookup_table_index(key);
-    return table[index]->get_Ac();
+    return table[index].get_Ac();
 }
 
-void Table::insert_row(Row* r) {
-    //only inserts if r not already inserted 
-    if(lookup_table_index(r->get_key()) == -1) {
-        int index = table.size();
-        table.push_back(r);         //adds row to the table vector.
+int Table::get_Ac(int row_index) {
+    return table[row_index].get_Ac();
+}
+
+int Table::get_rows_childl_table_ind(int row_index) {
+    return table[row_index].get_childl_table_ind();
+}
+
+int Table::get_rows_childr_table_ind(int row_index) {
+    return table[row_index].get_childr_table_ind();
+}
+
+void Table::update_rows_childl_table_ind(int row_index, int new_childind) {
+    table[row_index].set_childl_table_ind(new_childind);
+}
+
+void Table::update_rows_childr_table_ind(int row_index, int new_childind) {
+    table[row_index].set_childr_table_ind(new_childind);
+}
+
+int Table::insert_row(Row r) {
+    // returns the index of the inserted row
+    // only inserts if r not already inserted 
+
+    int index = -1;
+    if(lookup_table_index(r.get_key()) == -1) {
+        index = table.size(); 
+        table.push_back(r);       //NOTE makes copy
             
-        //key is the concatenated coloring, value is the index in table.
-        //table_lookups.insert(r->get_key(), index);
-        table_lookups_insert(r->get_key(), index);
+        // key is the concatenated coloring, value is the index in table.
+        table_lookups_insert(r.get_key(), index);
     }
+    return index;
 }
 
 void Table::delete_row(int index) {
-    table.erase(table.begin()+index);  //*3^ni
+    table.erase(table.begin()+index, table.begin()+index+1);  //*3^ni
 }
 
 void Table::table_lookups_insert(int key, int table_index) {
@@ -202,25 +236,23 @@ bool Table::table_lookups_contains(int key) {
     return table_lookups.contains(key);
 }
 
-
-void Table::update_row_add(Row* r, int value) {
+void Table::update_row_add(int row_index, int value) {
     /* must update key in table_lookups whenever we add values
      * to the current coloring.
      * 
      * used for updating a coloring which is already in the table lookups. 
      */
     //1. erase
-    int index = lookup_table_index(r->get_key());
-    table_lookups_remove(r->get_key());
+    int index = lookup_table_index(table[row_index].get_key());
+    table_lookups_remove(table[row_index].get_key());
     
     //2. re-insert into table_lookups
-    r->append_coloring(value);
-    //table_lookups.insert(r->get_key(), index);  //same index, updated key
-    table_lookups_insert(r->get_key(), index);
+    table[row_index].append_coloring(value);
+    table_lookups_insert(table[row_index].get_key(), index);
 }
 
 int Table::get_table_size() {
-    return table_lookups.size();
+    return table.size();
 }
 
 

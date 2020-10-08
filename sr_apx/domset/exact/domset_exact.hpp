@@ -22,7 +22,7 @@ void calculate_tables(Graph*, std::vector<Set*>&,
 
 //---- Calculating Solution 
 int get_soln_row_index(Table*, Set*);
-void add_to_solution(Set*, Row*, std::vector<int>&, Set*);
+void add_to_solution(Set*, Row&, std::vector<int>&, Set*);
 
 //optimization version
 int get_solution(std::vector<Table*>&, Set*);    
@@ -42,16 +42,17 @@ Table* init_parent_table(Table*, bool);
 int get_left_join_child_tabind(Set*, std::vector<Table*>&, int);
 
 //Dominating Set 
-int locally_valid_coloring(Graph*, Set*, Row*, std::vector<int>&, Variant);
-int phi(Row*, Set*, std::vector<int>&, int);
-int* minAi_c(Table*, Table*, Set*, Row*);
-void intro_vert_indomset_update(Graph*, Table*, Set*, Row*, int, Variant);
+int locally_valid_coloring(Graph*, Table*, Set*, int, Variant);
+int phi(Set*, std::vector<int>&, const std::vector<int>&, int);
+int* minAi_c(Table*, Table*, Set*, std::vector<int> &);
 int flip_coloring(Table*, std::vector<int>&, std::vector<int>&);
-void intro_vert_dominated_update(Graph*, Table*, Set*, Set*, Row*, Row*, int, Variant);
+void intro_vert_dominated_update(Graph*, Table*, Table*, Set*, Set*, int, int, int, Variant);
+void intro_vert_indomset_update(Graph*, Table*, Table*, Set*, int, int, Variant);
+int potential_key(const std::vector<int>&, int);
+int get_num_dominators(Graph*, std::vector<int>&, const std::vector<int>&, int);
 
 //Independent dominating set + Perfect dominating set
-int get_num_dominators(Graph*, Row*, std::vector<int>&, int);
-bool intro_indep_check(Graph*, std::vector<int>&, std::vector<int>&, int);
+bool intro_indep_check(Graph*, std::vector<int>&, const std::vector<int>&, int);
 bool check_independent(Graph*, Set*);
 
 
