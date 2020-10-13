@@ -324,13 +324,22 @@ Set* treewidth_nodeedit(Graph* graph, Set* optional_verts, int w, bool annotated
     int t = decomp.treewidth();
 
 
-    if ( t <= c1*w*sqrt(log2(w)) ) {  //NOTE double check which log base
+    if ( t <= c1*w*sqrt(log2(w)) ) { 
         Set* empty = new Set();
         delete V;
         return empty;
     }
 
     Set* S = balanced_separators(graph, beta);
+    
+    if(annotated_version) {
+        for(int es : *S) {
+            for(int nbr : *graph->neighbors(es)) {
+                if(!S->contains(nbr)) optional_verts->insert(nbr);
+                optional_verts->remove(es);
+            }
+        }
+    }
 
     // for connected components of G[V\S]
     Set* V_min_S = V->set_minus(S);
@@ -350,15 +359,10 @@ Set* treewidth_nodeedit(Graph* graph, Set* optional_verts, int w, bool annotated
  
         if(annotated_version) {
             //Add the neighbors of the edit set to the optinally dominated set.
-            for(auto iev=edited_vertices->begin(); iev!=edited_vertices->end(); iev++) {
-                int e=*iev;
-                for(auto ien=component->neighbors(e)->begin();
-                    ien!=component->neighbors(e)->end(); ien++) {
-                    int optional = *ien;
-                    if(!S->contains(optional)) {
-                        optional_verts->insert(*ien);
-                    }
-                    optional_verts->remove(e);
+            for(int ev : *edited_vertices) {                
+                for(int nbr : *component->neighbors(ev)) {
+                    if(!S->contains(nbr)) optional_verts->insert(nbr);
+                    optional_verts->remove(ev);
                 }
             }
         }
