@@ -3,6 +3,7 @@
 #define DOMSET_EXACT_H
 
 #include <vector>
+#include <iostream>
 
 #include "graph.hpp"
 #include "setmap.hpp"
@@ -22,7 +23,6 @@ void calculate_tables(Graph*, std::vector<Set*>&,
 
 //---- Calculating Solution 
 int get_soln_row_index(Table*, Set*);
-void add_to_solution(Set*, Row&, std::vector<int>&, Set*);
 
 //optimization version
 int get_solution(std::vector<Table*>&, Set*);    
@@ -36,24 +36,14 @@ Table* join_table(Table*, Table*, Set*, po_bag, bool);
 Table* intro_table(Graph*, Table*, Set*, Set*, po_bag, Variant, int, bool);
 Table* forget_table(Table*, Set*, po_bag, Variant, int, bool);
 
-
 //-----Helpers
 Table* init_parent_table(Table*, bool);
-int get_left_join_child_tabind(Set*, std::vector<Table*>&, int);
 
 //Dominating Set 
 int locally_valid_coloring(Graph*, Table*, Set*, int, Variant);
-int phi(Set*, std::vector<int>&, const std::vector<int>&, int);
-int* minAi_c(Table*, Table*, Set*, std::vector<int> &);
-int flip_coloring(Table*, std::vector<int>&, std::vector<int>&);
-void intro_vert_dominated_update(Graph*, Table*, Table*, Set*, Set*, int, int, int, Variant);
-void intro_vert_indomset_update(Graph*, Table*, Table*, Set*, int, int, Variant);
-int potential_key(const std::vector<int>&, int);
+int best_intro_child_row(Set*, std::vector<int>&, const std::vector<int>&, int);
+int* best_join_child_rows(Table*, Table*, Set*, std::vector<int> &);
 int get_num_dominators(Graph*, std::vector<int>&, const std::vector<int>&, int);
-
-//Independent dominating set + Perfect dominating set
-bool intro_indep_check(Graph*, std::vector<int>&, const std::vector<int>&, int);
-bool check_independent(Graph*, Set*);
 
 
 #endif
