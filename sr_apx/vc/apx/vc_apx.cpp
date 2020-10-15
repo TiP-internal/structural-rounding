@@ -78,7 +78,11 @@ Set heuristic_apx(const Graph& g) {
 	int maxdeg = 0;
 
 	for (Map<Set>::const_iterator it = g.begin(); it != g.end(); ++it) {
-		int degree = g.degree(it->first);
+		int degree = it->second.size();
+		if (degree == 0) {
+			continue;
+		}
+
 		deg[it->first] = degree;
 		maxdeg = degree > maxdeg ? degree : maxdeg;
 		revdeg.resize(maxdeg + 1);
@@ -107,7 +111,11 @@ Set std_apx(const Graph& g) {
 	int maxdeg = 0;
 
 	for (Map<Set>::const_iterator it = g.begin(); it != g.end(); ++it) {
-		int degree = g.degree(it->first);
+		int degree = it->second.size();
+		if (degree == 0) {
+			continue;
+		}
+
 		deg[it->first] = degree;
 		maxdeg = degree > maxdeg ? degree : maxdeg;
 		revdeg.resize(maxdeg + 1);

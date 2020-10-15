@@ -74,6 +74,8 @@ Graph Graph::subgraph(const Set& vertices) const {
 			continue;
 		}
 
+		subg.adjlist.insert({u, Set()});
+
 		for (int v : loc->second) {
 			if (vertices.contains(v)) {
 				subg.add_edge(u, v);
