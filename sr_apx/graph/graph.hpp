@@ -2,31 +2,44 @@
 #ifndef GRAPH_H
 #define GRAPH_H
 
-#include "setmap.hpp"
+#include "sr_apx/setmap/setmap.hpp"
+
+#include <vector>
+
+namespace sr_apx {
 
 class Graph {
-public:
 	Map<Set> adjlist;
 
-	Graph() {};
-	Graph(int);
-	~Graph();
+public:
+	Graph() = default;
+	explicit Graph(int);
+
 	void add_edge(int, int);
-	int size();
-	int degree(int);
-	bool adjacent(int, int);
-
-	Map<Set>::Iterator begin();
-	Map<Set>::Iterator end();
-	Set* neighbors(int);
-        Set* get_vertices(); 
-
-	Graph* subgraph(Set*);
 	void remove_vertex(int);
-  Graph* subgraph_wsingles(Set*);
+
+	int size() const;
+	int degree(int) const;
+	bool adjacent(int, int) const;
+	bool contains_vertex(int) const;
+
+	Map<Set>::iterator begin();
+	Map<Set>::iterator end();
+	Map<Set>::const_iterator begin() const;
+	Map<Set>::const_iterator end() const;
+
+	Set& neighbors(int);
+	const Set& neighbors(int) const;
+
+	Graph subgraph(const Set&) const;
+
+	std::vector<Set> connected_components() const;
 };
 
-Graph* read_sparse6(const char*);
-Graph* read_edge_list(const char*);
+Graph read_sparse6(const char*);
+Graph read_edge_list(const char*);
+Graph read_dimacs(const char*);
+
+}
 
 #endif

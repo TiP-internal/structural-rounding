@@ -1,23 +1,26 @@
 
-#include "vc_apx.hpp"
+#include "sr_apx/vc/apx/vc_apx.hpp"
+
 #include <vector>
 
-Set* dfs_apx(Graph* g) {
-	Set* cover = new Set();
+namespace sr_apx::vc::apx {
+
+Set dfs_apx(const Graph& g) {
+	Set cover;
 
 	std::vector<int> stack;
 	Set visited;
 
-	auto vitr = g->begin();
+	Map<Set>::const_iterator vitr = g.begin();
 
-	while (visited.size() < g->size()) {
+	while (visited.size() < g.size()) {
 		int current;
 		if (stack.empty()) {
-			while (visited.contains(*vitr)) {
+			while (visited.contains(vitr->first)) {
 				++vitr;
 			}
 
-			current = *vitr;
+			current = vitr->first;
 		}
 		else {
 			current = stack.back();
@@ -29,16 +32,15 @@ Set* dfs_apx(Graph* g) {
 				continue;
 			}
 
-			cover->insert(previous);
+			cover.insert(previous);
 		}
 
 		visited.insert(current);
 
-		Set* nbrs = g->neighbors(current);
-		for (auto it = nbrs->begin(); it != nbrs->end(); ++it) {
-			if (!visited.contains(*it)) {
+		for (int nbr : g.neighbors(current)) {
+			if (!visited.contains(nbr)) {
 				stack.push_back(current);
-				stack.push_back(*it);
+				stack.push_back(nbr);
 			}
 		}
 	}
@@ -47,40 +49,44 @@ Set* dfs_apx(Graph* g) {
 	return cover;
 }
 
-void remove_vertex(Graph* g, Map<int>& deg, Map<Set>& revdeg, int u) {
-	for (auto nbr = g->neighbors(u)->begin(); nbr != g->neighbors(u)->end(); ++nbr) {
-		if (!deg.contains(*nbr)) {
+void remove_vertex(const Graph& g, Map<int>& deg, std::vector<Set>& revdeg, int u) {
+	for (int nbr : g.neighbors(u)) {
+		if (!deg.contains(nbr)) {
 			continue;
 		}
 
-		int degree = deg[*nbr];
-		revdeg[degree].erase(*nbr);
+		int degree = deg[nbr];
+		revdeg[degree].erase(nbr);
 
 		if (degree == 1) {
-			deg.erase(*nbr);
+			deg.erase(nbr);
 		}
 		else {
-			deg[*nbr] = degree - 1;
-			revdeg[degree - 1].insert(*nbr);
+			deg[nbr] = degree - 1;
+			revdeg[degree - 1].insert(nbr);
 		}
 	}
 
 	deg.erase(u);
 }
 
-Set* heuristic_apx(Graph* g) {
-	Set* cover = new Set();
+Set heuristic_apx(const Graph& g) {
+	Set cover;
 
-	Map<int> deg;
-	deg.reserve(g->size());
-	Map<Set> revdeg;
+	Map<int> deg(g.size());
+	std::vector<Set> revdeg;
 	int maxdeg = 0;
 
-	for (auto it = g->begin(); it != g->end(); ++it) {
-		int degree = g->degree(*it);
-		deg[*it] = degree;
-		revdeg[degree].insert(*it);
+	for (Map<Set>::const_iterator it = g.begin(); it != g.end(); ++it) {
+		int degree = it->second.size();
+		if (degree == 0) {
+			continue;
+		}
+
+		deg[it->first] = degree;
 		maxdeg = degree > maxdeg ? degree : maxdeg;
+		revdeg.resize(maxdeg + 1);
+		revdeg[degree].insert(it->first);
 	}
 
 	while (deg.size() > 0) {
@@ -90,26 +96,30 @@ Set* heuristic_apx(Graph* g) {
 
 		int u = *(revdeg[maxdeg].begin());
 		revdeg[maxdeg].erase(u);
-		cover->insert(u);
+		cover.insert(u);
 		remove_vertex(g, deg, revdeg, u);
 	}
 
 	return cover;
 }
 
-Set* std_apx(Graph* g) {
-	Set* cover = new Set();
+Set std_apx(const Graph& g) {
+	Set cover;
 
-	Map<int> deg;
-	deg.reserve(g->size());
-	Map<Set> revdeg;
+	Map<int> deg(g.size());
+	std::vector<Set> revdeg;
 	int maxdeg = 0;
 
-	for (auto it = g->begin(); it != g->end(); ++it) {
-		int degree = g->degree(*it);
-		deg[*it] = degree;
-		revdeg[degree].insert(*it);
+	for (Map<Set>::const_iterator it = g.begin(); it != g.end(); ++it) {
+		int degree = it->second.size();
+		if (degree == 0) {
+			continue;
+		}
+
+		deg[it->first] = degree;
 		maxdeg = degree > maxdeg ? degree : maxdeg;
+		revdeg.resize(maxdeg + 1);
+		revdeg[degree].insert(it->first);
 	}
 
 	while (deg.size() > 0) {
@@ -120,24 +130,27 @@ Set* std_apx(Graph* g) {
 		int u = *(revdeg[maxdeg].begin());
 		int v;
 		int md = 0;
-		for (auto it = g->neighbors(u)->begin(); it != g->neighbors(u)->end(); ++it) {
-			if (!deg.contains(*it)) {
+		for (int nbr : g.neighbors(u)) {
+			if (!deg.contains(nbr)) {
 				continue;
 			}
 
-			if (g->degree(*it) > md) {
-				md = g->degree(*it);
-				v = *it;
+			if (deg[nbr] > md) {
+				md = deg[nbr];
+				v = nbr;
 			}
 		}
+
 		revdeg[maxdeg].erase(u);
-		cover->insert(u);
+		cover.insert(u);
 		remove_vertex(g, deg, revdeg, u);
 
 		revdeg[deg[v]].erase(v);
-		cover->insert(v);
+		cover.insert(v);
 		remove_vertex(g, deg, revdeg, v);
 	}
 
 	return cover;
+}
+
 }

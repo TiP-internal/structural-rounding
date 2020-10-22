@@ -2,9 +2,13 @@
 #ifndef VC_EXACT_H
 #define VC_EXACT_H
 
-#include "graph.hpp"
-#include "setmap.hpp"
+#include "sr_apx/graph/graph.hpp"
+#include "sr_apx/setmap/setmap.hpp"
 
-Set* bip_exact(Graph*);
+namespace sr_apx::vc::exact {
+
+Set bip_exact(const Graph&);
+
+}
 
 #endif

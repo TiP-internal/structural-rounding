@@ -1,7 +1,7 @@
 
 #include <Python.h>
-#include "setmap.hpp"
-#include "pyset.hpp"
+#include "sr_apx/setmap/setmap.hpp"
+#include "sr_apx/setmap/pyset.hpp"
 
 // set type //////////////////////////////
 
@@ -24,7 +24,7 @@ static PyObject* Set_new(PyTypeObject* type, PyObject* args, PyObject* kwrds) {
 }
 
 static int Set_init(PySet* self) {
-	self->s = new Set();
+	self->s = new sr_apx::Set();
 	self->borrowed = false;
 	return 0;
 }
@@ -97,7 +97,7 @@ static PySequenceMethods Set_sequence_methods = {
 typedef struct {
 	PyObject_HEAD
 	PySet* s;
-	Set::Iterator current;
+	sr_apx::Set::iterator current;
 	int len;
 } PySetIter;
 
@@ -166,7 +166,7 @@ static PyObject* Set_iter(PySet* self) {
 
 	Py_INCREF(self);
 	iter->s = self;
-	iter->current = Set::Iterator(self->s);
+	iter->current = self->s->begin();
 	iter->len = self->s->size();
 	PyObject_GC_Track(iter);
 	return (PyObject*) iter;
@@ -228,9 +228,16 @@ PyMODINIT_FUNC PyInit_lib_setmap() {
 
 // cpp api //////////////////////////////////////////////
 
-PyObject* make_PySet(Set* base, bool b) {
+PyObject* make_PySet(sr_apx::Set* base) {
 	PySet* ret = (PySet*) Set_new(&Set_type, NULL, NULL);
-	ret->borrowed = b;
+	ret->borrowed = true;
 	ret->s = base;
+	return (PyObject*) ret;
+}
+
+PyObject* make_PySet(sr_apx::Set&& base) {
+	PySet* ret = (PySet*) Set_new(&Set_type, NULL, NULL);
+	ret->borrowed = false;
+	ret->s = new sr_apx::Set(std::move(base));
 	return (PyObject*) ret;
 }

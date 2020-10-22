@@ -3,13 +3,14 @@
 #define PYGRAPH_H
 
 #include <Python.h>
-#include "graph.hpp"
+
+#include "sr_apx/graph/graph.hpp"
 
 typedef struct {
 	PyObject_HEAD
-	Graph* g;
+	sr_apx::Graph* g;
 } PyGraph;
 
-PyObject* make_PyGraph(Graph*);
+PyObject* make_PyGraph(sr_apx::Graph&&);
 
 #endif

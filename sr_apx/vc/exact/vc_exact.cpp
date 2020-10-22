@@ -1,35 +1,33 @@
 
-#include "vc_exact.hpp"
-#include "bipartite.hpp"
-#include "matching.hpp"
+#include "sr_apx/vc/exact/vc_exact.hpp"
+#include "sr_apx/bipartite/bipartite.hpp"
+#include "sr_apx/misc/matching.hpp"
 
-#include <cstdio>
+#include <stdexcept>
 #include <vector>
 
-Set* bip_exact(Graph* graph) {
-	Set* empty = new Set();
-	Set** od = verify_bipartite(graph, empty);
-	delete empty;
+namespace sr_apx::vc::exact {
 
-	if (od[0]->size() > 0) {
-		printf("%s\n", "not a bipartite graph");
-		return NULL;
+Set bip_exact(const Graph& graph) {
+	Set empty;
+	Set octset;
+	Set left;
+	Set right;
+	std::tie(octset, left, right) = bipartite::verify_bipartite(graph, empty);
+
+	if (octset.size() > 0) {
+		throw std::invalid_argument("not a bipartite graph");
 	}
 
-	Set* left = od[1];
-	Set* right = od[2];
-	delete[] od;
+	Map<int> match = misc::bipartite_matching(graph, left, right);
 
-	Map<int>* match = bipartite_matching(graph, left, right);
-
-	Set* cover = new Set();
+	Set cover;
 	Set visited;
 	std::vector<int> stack;
 
-	for (Set::Iterator iu = left->begin(); iu != left->end(); ++iu) {
-		int u = *iu;
-		cover->insert(u);
-		if (!match->contains(u)) {
+	for (int u : left) {
+		cover.insert(u);
+		if (!match.contains(u)) {
 			visited.insert(u);
 			stack.push_back(u);
 		}
@@ -40,28 +38,28 @@ Set* bip_exact(Graph* graph) {
 		current = stack.back();
 		stack.pop_back();
 
-		cover->erase(current);
+		cover.erase(current);
 
-		for (Set::Iterator inbr = graph->neighbors(current)->begin(); inbr != graph->neighbors(current)->end(); ++inbr) {
-			int nbr = *inbr;
-
-			if (!match->contains(nbr)) {
-				cover->insert(nbr);
+		for (int nbr : graph.neighbors(current)) {
+			if (!match.contains(nbr)) {
+				cover.insert(nbr);
 				continue;
 			}
 
-			if (match->at(nbr) != current) {
-				cover->insert(nbr);
+			int m = match.at(nbr);
+
+			if (m != current) {
+				cover.insert(nbr);
 			}
 
-			if (!visited.contains(match->at(nbr))) {
-				visited.insert(match->at(nbr));
-				stack.push_back(match->at(nbr));
+			if (!visited.contains(m)) {
+				visited.insert(m);
+				stack.push_back(m);
 			}
 		}
 	}
 
-	delete match;
-
 	return cover;
+}
+
 }

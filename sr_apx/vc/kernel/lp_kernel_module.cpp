@@ -1,10 +1,9 @@
 
 #include <Python.h>
 
-#include "lp_kernel.hpp"
-#include "pygraph.hpp"
-#include "pyset.hpp"
-#include "graph.hpp"
+#include "sr_apx/vc/kernel/lp_kernel.hpp"
+#include "sr_apx/graph/pygraph.hpp"
+#include "sr_apx/setmap/pyset.hpp"
 
 static PyObject* vc_kernel_lpkernel(PyObject* self, PyObject* args) {
     PyObject* g;
@@ -12,12 +11,14 @@ static PyObject* vc_kernel_lpkernel(PyObject* self, PyObject* args) {
         return NULL;
     }
 
-    Graph* graph = ((PyGraph*) g)->g;
+    sr_apx::Graph* graph = ((PyGraph*) g)->g;
 
-    Set** kernel = lp_kernel(graph);
-    PyObject* in = make_PySet(kernel[0], false);
-    PyObject* out = make_PySet(kernel[1], false);
-    delete[] kernel;
+    sr_apx::Set i;
+    sr_apx::Set o;
+    std::tie(i, o) = sr_apx::vc::kernel::lp_kernel(*graph);
+
+    PyObject* in = make_PySet(std::move(i));
+    PyObject* out = make_PySet(std::move(o));
     return Py_BuildValue("OO", in, out);
 }
 

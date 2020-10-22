@@ -1,22 +1,26 @@
 
-#include "graph.hpp"
-#include "util.hpp"
+#include "sr_apx/graph/graph.hpp"
+#include "sr_apx/util/util.hpp"
 
+#include <stdexcept>
 #include <iostream>
 #include <fstream>
 
-#define BUFFER_SIZE 1024
+namespace sr_apx {
 
-Graph::Graph(int n) {
-	adjlist.reserve(n);
+Graph::Graph(int n): adjlist(n) {}
+
+bool Graph::adjacent(int u, int v) const {
+	Map<Set>::const_iterator loc = adjlist.find(u);
+	if (loc == adjlist.end()) {
+		return false;
+	}
+
+    return loc->second.contains(v);
 }
 
-Graph::~Graph() {
-	adjlist.clear();
-}
-
-bool Graph::adjacent(int u, int v) {
-    return adjlist[u].contains(v);
+bool Graph::contains_vertex(int u) const {
+	return adjlist.contains(u);
 }
 
 void Graph::add_edge(int u, int v) {
@@ -24,56 +28,57 @@ void Graph::add_edge(int u, int v) {
 	adjlist[v].insert(u);
 }
 
-int Graph::size() {
+int Graph::size() const {
 	return adjlist.size();
 }
 
-Map<Set>::Iterator Graph::begin() {
+Map<Set>::iterator Graph::begin() {
 	return adjlist.begin();
 }
 
-Map<Set>::Iterator Graph::end() {
+Map<Set>::iterator Graph::end() {
 	return adjlist.end();
 }
 
-Set* Graph::neighbors(int u) {
-	if (!adjlist.contains(u)) {
-		return NULL;
-	}
-	return &(adjlist[u]);
+Map<Set>::const_iterator Graph::begin() const {
+	return adjlist.cbegin();
 }
 
-Set* Graph::get_vertices() {
-    /*
-     * Returns a set containing the vertices in the graph
-     *
-     * NOTE there could be a better way to do this?
-     * This is used in the tree_decomp function. 
-     */
-    
-    Set* verts = new Set();
-    for (auto iu = this->begin(); iu != this->end(); ++iu) {
-        verts->insert(*iu);
-    }
-    return verts;
+Map<Set>::const_iterator Graph::end()const  {
+	return adjlist.cend();
 }
 
-int Graph::degree(int u) {
-	if (!adjlist.contains(u)) {
+Set& Graph::neighbors(int u) {
+	return adjlist.at(u);
+}
+
+const Set& Graph::neighbors(int u) const {
+	return adjlist.at(u);
+}
+
+int Graph::degree(int u) const {
+	Map<Set>::const_iterator loc = adjlist.find(u);
+	if (loc == adjlist.end()) {
 		return 0;
 	}
-	return adjlist[u].size();
+
+	return loc->second.size();
 }
 
-Graph* Graph::subgraph(Set* vertices) {
-	Graph* subg = new Graph(vertices->size());
+Graph Graph::subgraph(const Set& vertices) const {
+	Graph subg(vertices.size());
 
-	for (Set::Iterator iu = vertices->begin(); iu != vertices->end(); ++iu) {
-		int u = *iu;
-		for (Set::Iterator iv = adjlist[u].begin(); iv != adjlist[u].end(); ++iv) {
-			int v = *iv;
-			if (vertices->contains(v)) {
-				subg->add_edge(u, v);
+	for (int u : vertices) {
+		Map<Set>::const_iterator loc = adjlist.find(u);
+		if (loc == adjlist.end()) {
+			continue;
+		}
+
+		subg.adjlist.insert({u, Set()});
+
+		for (int v : loc->second) {
+			if (vertices.contains(v)) {
+				subg.add_edge(u, v);
 			}
 		}
 	}
@@ -82,56 +87,71 @@ Graph* Graph::subgraph(Set* vertices) {
 }
 
 void Graph::remove_vertex(int vertex) {
-	if (degree(vertex) == 0) {
-		adjlist.erase(vertex);
+	Map<Set>::iterator loc = adjlist.find(vertex);
+	if (loc == adjlist.end()) {
 		return;
 	}
 
-	for (int nbr : *(neighbors(vertex))) {
-		neighbors(nbr)->erase(vertex);
+	for (int nbr : loc->second) {
+		loc->second.erase(vertex);
 	}
 
 	adjlist.erase(vertex);
 }
 
-Graph* Graph::subgraph_wsingles(Set* vertices) {
-    /*
-     * Subgraph function which includes single vertices w/ no edges. 
-     * This is necessary for tree decomp algorithm. Otherwise, not all vertices/edges
-     * get added to the bags. 
-     * 
-     * NOTE may need to be careful when looking at neighbors of verts in the subgraph.
-     */
-	Graph* subg = new Graph(vertices->size());
+std::vector<Set> Graph::connected_components() const {
+	std::vector<Set> components;
 
-	for (Set::Iterator iu = vertices->begin(); iu != vertices->end(); ++iu) {
-		int u = *iu;
-                int nb_count = 0;
-                
-		for (Set::Iterator iv = adjlist[u].begin(); iv != adjlist[u].end(); ++iv) {
-			int v = *iv;
-			if (vertices->contains(v)) {
-				subg->add_edge(u, v);
-                                nb_count++;
+	Set comp;
+	std::vector<int> stack;
+	Set visited;
+
+	Map<Set>::const_iterator vitr = adjlist.begin();
+
+	while (!stack.empty() || visited.size() < adjlist.size()) {
+		int current;
+		if (stack.empty()) {
+			if (!comp.empty()) {
+				components.push_back(std::move(comp));
+				comp = Set();
+			}
+
+			while (visited.contains(vitr->first)) {
+				++vitr;
+			}
+
+			current = vitr->first;
+			visited.insert(current);
+			comp.insert(current);
+		}
+		else {
+			current = stack.back();
+			stack.pop_back();
+		}
+
+		for (int nbr : adjlist.at(current)) {
+			if (!comp.contains(nbr)) {
+				stack.push_back(nbr);
+				comp.insert(nbr);
+				visited.insert(nbr);
 			}
 		}
-		
-		if (nb_count < 1) {
-                    subg->add_edge(u, u);  
-                }
 	}
 
-	return subg;
+	if (!comp.empty()) {
+		components.push_back(std::move(comp));
+	}
+
+	return components;
 }
 
-Graph* read_sparse6(const char* filename) {
+Graph read_sparse6(const char* filename) {
 	std::ifstream f;
 	f.open(filename, std::ios::in | std::ios::binary);
 	char c[7];
 	f.read(c, 1);
 	if (c[0] != ':') {
-		printf("%s\n", "not sparse6");
-		return NULL;
+		throw std::invalid_argument("graph is not sparse6");
 	}
 
 	int n;
@@ -157,21 +177,23 @@ Graph* read_sparse6(const char* filename) {
 		}
 	}
 
-	int k = log2(n);
-	Graph* graph = new Graph(n);
+	static constexpr int buffer_size = 1024;
+
+	int k = sr_apx::util::log2(n);
+	Graph graph(n);
 
 	int bitbuffer = 0;
 	int bitavailable = 0;
 
 	int position = 0;
 	int available = 0;
-	char buffer[BUFFER_SIZE];
+	char buffer[buffer_size];
 
 	int v = 0;
 	while (position < available || !f.eof()) {
 		if (bitavailable < 1) {
 			if (position == available) {
-				f.read(buffer, BUFFER_SIZE);
+				f.read(buffer, buffer_size);
 				available = f.gcount();
 				position = 0;
 			}
@@ -185,7 +207,7 @@ Graph* read_sparse6(const char* filename) {
 
 		while (bitavailable < k) {
 			if (position == available) {
-				f.read(buffer, BUFFER_SIZE);
+				f.read(buffer, buffer_size);
 				available = f.gcount();
 				position = 0;
 			}
@@ -209,7 +231,7 @@ Graph* read_sparse6(const char* filename) {
 			v = x;
 		}
 		else {
-			graph->add_edge(x, v);
+			graph.add_edge(x, v);
 		}
 	}
 
@@ -217,19 +239,57 @@ Graph* read_sparse6(const char* filename) {
 	return graph;
 }
 
-Graph* read_edge_list(const char* filename) {
+Graph read_edge_list(const char* filename) {
 	std::ifstream f;
 	f.open(filename, std::ios::in);
 
-	Graph* g = new Graph();
+	Graph g;
 
 	char s[100];
+	f.getline(s, 100);
 	while (f.getline(s, 100)) {
 		int u, v;
 		sscanf(s, "%d %d", &u, &v);
-		g->add_edge(u, v);
+		g.add_edge(u, v);
 	}
 
 	f.close();
 	return g;
+}
+
+Graph read_dimacs(const char* filename) {
+	std::ifstream f;
+	f.open(filename, std::ios::in);
+
+	char s[100];
+	f.getline(s, 100);
+	f.getline(s, 100);
+
+	int n;
+	sscanf(s, "%d", &n);
+
+	Graph g(n);
+
+	int nextu;
+	int nextv;
+	f.getline(s, 100);
+	sscanf(s, "%d %d", &nextu, &nextv);
+
+	for (int u = 1; u <= n; u++) {
+		for (int v = 1; v < u; v++) {
+			if (u == nextu && v == nextv) {
+				if (f.getline(s, 100)) {
+					sscanf(s, "%d %d", &nextu, &nextv);
+				}
+				continue;
+			}
+
+			g.add_edge(u, v);
+		}
+	}
+
+	f.close();
+	return g;
+}
+
 }

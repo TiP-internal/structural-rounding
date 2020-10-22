@@ -2,11 +2,15 @@
 #ifndef VC_APX_H
 #define VC_APX_H
 
-#include "setmap.hpp"
-#include "graph.hpp"
+#include "sr_apx/setmap/setmap.hpp"
+#include "sr_apx/graph/graph.hpp"
 
-Set* dfs_apx(Graph*);
-Set* std_apx(Graph*);
-Set* heuristic_apx(Graph*);
+namespace sr_apx::vc::apx {
+	
+Set dfs_apx(const Graph&);
+Set std_apx(const Graph&);
+Set heuristic_apx(const Graph&);
+
+}
 
 #endif

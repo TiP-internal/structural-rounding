@@ -1,11 +1,9 @@
 
 #include <Python.h>
 
-#include "vc_apx.hpp"
-#include "graph.hpp"
-#include "setmap.hpp"
-#include "pyset.hpp"
-#include "pygraph.hpp"
+#include "sr_apx/vc/apx/vc_apx.hpp"
+#include "sr_apx/setmap/pyset.hpp"
+#include "sr_apx/graph/pygraph.hpp"
 
 static PyObject* vc_apx_dfsapx(PyObject* self, PyObject* args) {
 	PyObject* graph;
@@ -13,9 +11,9 @@ static PyObject* vc_apx_dfsapx(PyObject* self, PyObject* args) {
 		return NULL;
 	}
 
-	Graph* g = ((PyGraph*) graph)->g;
-	Set* cover = dfs_apx(g);
-	return make_PySet(cover, false);
+	sr_apx::Graph* g = ((PyGraph*) graph)->g;
+	sr_apx::Set cover = sr_apx::vc::apx::dfs_apx(*g);
+	return make_PySet(std::move(cover));
 }
 
 static PyObject* vc_apx_stdapx(PyObject* self, PyObject* args) {
@@ -24,9 +22,9 @@ static PyObject* vc_apx_stdapx(PyObject* self, PyObject* args) {
 		return NULL;
 	}
 
-	Graph* g = ((PyGraph*) graph)->g;
-	Set* cover = std_apx(g);
-	return make_PySet(cover, false);
+	sr_apx::Graph* g = ((PyGraph*) graph)->g;
+	sr_apx::Set cover = sr_apx::vc::apx::std_apx(*g);
+	return make_PySet(std::move(cover));
 }
 
 static PyObject* vc_apx_heuristic(PyObject* self, PyObject* args) {
@@ -35,9 +33,9 @@ static PyObject* vc_apx_heuristic(PyObject* self, PyObject* args) {
 		return NULL;
 	}
 
-	Graph* g = ((PyGraph*) graph)->g;
-	Set* cover = heuristic_apx(g);
-	return make_PySet(cover, false);
+	sr_apx::Graph* g = ((PyGraph*) graph)->g;
+	sr_apx::Set cover = sr_apx::vc::apx::heuristic_apx(*g);
+	return make_PySet(std::move(cover));
 }
 
 static PyMethodDef vc_apx_methods[] = {

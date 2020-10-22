@@ -3,14 +3,16 @@
 #define PYSET_H
 
 #include <Python.h>
-#include "setmap.hpp"
+
+#include "sr_apx/setmap/setmap.hpp"
 
 typedef struct {
 	PyObject_HEAD
-	Set* s;
+	sr_apx::Set* s;
 	bool borrowed;
 } PySet;
 
-PyObject* make_PySet(Set*, bool);
+PyObject* make_PySet(sr_apx::Set&&);
+PyObject* make_PySet(sr_apx::Set*);
 
 #endif

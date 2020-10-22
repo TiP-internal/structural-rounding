@@ -6,13 +6,7 @@
 
 #include "time.h"
 
-#include "graph.hpp"
-#include "bipartite.hpp"
-#include "setmap.hpp"
-
-#include "vc_apx.hpp"
-#include "vc_exact.hpp"
-#include "vc_lift.hpp"
+#include "sr_apx/sr_apx.hpp"
 
 // helper function declarations ////////////////////////////////////////////////
 
@@ -23,44 +17,37 @@ void read_directory(const std::string& name, std::vector<std::string>& v);
 
 // main.py functions ///////////////////////////////////////////////////////////
 
-double run_apx(Set* (*apx)(Graph*), Graph* graph, int n, int &minsol, int &maxsol) {
-	double* times = new double[n];
-	int* sols = new int[n];
+double run_apx(sr_apx::Set (*apx)(const sr_apx::Graph&), const sr_apx::Graph& graph, int n, int &minsol, int &maxsol) {
+	double times[n];
+	int sols[n];
 	for (int i = 0; i < n; i++) {
 		clock_t start = clock();
-		Set* cover = apx(graph);
+		sr_apx::Set cover = apx(graph);
 		clock_t end = clock();
 		times[i] = (double) (end - start);
-		sols[i] = cover->size();
-		delete cover;
+		sols[i] = cover.size();
 	}
 
 	double avgtime = sum(times, n) / n;
 	minsol = min(sols, n);
 	maxsol = max(sols, n);
-	delete[] times;
-	delete[] sols;
 	return avgtime;
 }
 
-double run_lift(Set* (*lift)(Graph*, Set*, Set*), Graph* graph, int n, Set* octset,
-				Set* partial, int &minsol, int &maxsol) {
-	double* times = new double[n];
-	int* sols = new int[n];
+double run_lift(sr_apx::Set (*lift)(const sr_apx::Graph&, const sr_apx::Set&, const sr_apx::Set&), const sr_apx::Graph& graph, int n, const sr_apx::Set& octset, const sr_apx::Set& partial, int &minsol, int &maxsol) {
+	double times[n];
+	int sols[n];
 	for (int i = 0; i < n; i++) {
 		clock_t start = clock();
-		Set* cover = lift(graph, octset, partial);
+		sr_apx::Set cover = lift(graph, octset, partial);
 		clock_t end = clock();
 		times[i] = (double) end - start;
-		sols[i] = cover->size();
-		delete cover;
+		sols[i] = cover.size();
 	}
 
 	double avgtime = sum(times, n) / n;
 	minsol = min(sols, n);
 	maxsol = max(sols, n);
-	delete[] times;
-	delete[] sols;
 	return avgtime;
 }
 
@@ -99,111 +86,95 @@ int main(int argc, char* argv[]) {
 		printf("%s\n", (filename.substr(0, filename.length()-3)).c_str());
 
 		clock_t start = clock();
-		Graph* graph = read_sparse6((filepath + filename).c_str());
+		sr_apx::Graph graph = sr_apx::read_sparse6((filepath + filename).c_str());
 		clock_t end = clock();
-		printf("n: %d\n", graph->size());
+		printf("n: %d\n", graph.size());
 		printf("time: %.4f\n", (double)(end-start)/1000000);
 
 		int minsol;
 		int maxsol;
 		double t;
 
-		t = run_apx(heuristic_apx, graph, n, minsol, maxsol);
+		t = run_apx(sr_apx::vc::apx::heuristic_apx, graph, n, minsol, maxsol);
 		printf("heuristic apx\n");
 		printf("\tavg time: %.4f\n", t/1000000);
 		printf("\tmin size: %d\n", minsol);
 		printf("\tmax size: %d\n", maxsol);
 
-		t = run_apx(dfs_apx, graph, n, minsol, maxsol);
+		t = run_apx(sr_apx::vc::apx::dfs_apx, graph, n, minsol, maxsol);
 		printf("dfs apx\n");
 		printf("\tavg time: %.4f\n", t/1000000);
 		printf("\tmin size: %d\n", minsol);
 		printf("\tmax size: %d\n", maxsol);
 
-		t = run_apx(std_apx, graph, n, minsol, maxsol);
+		t = run_apx(sr_apx::vc::apx::std_apx, graph, n, minsol, maxsol);
 		printf("std apx\n");
 		printf("\tavg time: %.4f\n", t/1000000);
 		printf("\tmin size: %d\n", minsol);
 
 		start = clock();
-		Set* oct = vertex_delete(graph);
-		Set** od = verify_bipartite(graph, oct);
+		sr_apx::Set oct = sr_apx::bipartite::vertex_delete(graph);
+		sr_apx::Set left;
+		sr_apx::Set right;
+		std::tie(std::ignore, left, right) = sr_apx::bipartite::verify_bipartite(graph, oct);
 
-		Set* bippart = new Set();
-		for (Set::Iterator left_it = od[1]->begin(); left_it != od[1]->end(); left_it++) {
-			int left = *left_it;
-			bippart->insert(left);
-		}
-		for (Set::Iterator right_it = od[2]->begin(); right_it != od[2]->end(); right_it++) {
-			int right = *right_it;
-			bippart->insert(right);
-		}
+		left.insert(right.begin(), right.end());
 
-		Set* partial = bip_exact(graph->subgraph(bippart));
+		sr_apx::Set partial = sr_apx::vc::exact::bip_exact(graph.subgraph(left));
 		end = clock();
-
-		delete bippart;
-		delete[] od;
 
 		printf("bip solve\n");
 		printf("\tavg time: %.4f\n", (double)(end-start)/1000000);
 
-		printf("%d\n", partial->size());
+		printf("%d\n", partial.size());
 
-		t = run_lift(naive_lift, graph, n, oct, partial, minsol, maxsol);
+		t = run_lift(sr_apx::vc::lift::naive_lift, graph, n, oct, partial, minsol, maxsol);
 		printf("naive lift\n");
 		printf("\tavg time: %.4f\n", t/1000000);
 		printf("\tmin size: %d\n", minsol);
 		printf("\tmax size: %d\n", maxsol);
 
-		t = run_lift(greedy_lift, graph, n, oct, partial, minsol, maxsol);
+		t = run_lift(sr_apx::vc::lift::greedy_lift, graph, n, oct, partial, minsol, maxsol);
 		printf("greedy lift\n");
 		printf("\tavg time: %.4f\n", t/1000000);
 		printf("\tmin size: %d\n", minsol);
 		printf("\tmax size: %d\n", maxsol);
 
-		t = run_lift(apx_lift, graph, n, oct, partial, minsol, maxsol);
+		t = run_lift(sr_apx::vc::lift::apx_lift, graph, n, oct, partial, minsol, maxsol);
 		printf("apx lift\n");
 		printf("\tavg time: %.4f\n", t/1000000);
 		printf("\tmin size: %d\n", minsol);
 		printf("\tmax size: %d\n", maxsol);
 
-		t = run_lift(oct_lift, graph, n, oct, partial, minsol, maxsol);
+		t = run_lift(sr_apx::vc::lift::oct_lift, graph, n, oct, partial, minsol, maxsol);
 		printf("oct lift\n");
 		printf("\tavg time: %.4f\n", t/1000000);
 		printf("\tmin size: %d\n", minsol);
 		printf("\tmax size: %d\n", maxsol);
 
-		t = run_lift(bip_lift, graph, n, oct, partial, minsol, maxsol);
+		t = run_lift(sr_apx::vc::lift::bip_lift, graph, n, oct, partial, minsol, maxsol);
 		printf("bip lift\n");
 		printf("\tavg time: %.4f\n", t/1000000);
 		printf("\tmin size: %d\n", minsol);
 		printf("\tmax size: %d\n", maxsol);
 
-		t = run_lift(recursive_lift, graph, n, oct, partial, minsol, maxsol);
+		t = run_lift(sr_apx::vc::lift::recursive_lift, graph, n, oct, partial, minsol, maxsol);
 		printf("recursive lift\n");
 		printf("\tavg time: %.4f\n", t/1000000);
 		printf("\tmin size: %d\n", minsol);
 		printf("\tmax size: %d\n", maxsol);
 
-		t = run_lift(recursive_oct_lift, graph, n, oct, partial, minsol, maxsol);
+		t = run_lift(sr_apx::vc::lift::recursive_oct_lift, graph, n, oct, partial, minsol, maxsol);
 		printf("recursive oct lift\n");
 		printf("\tavg time: %.4f\n", t/1000000);
 		printf("\tmin size: %d\n", minsol);
 		printf("\tmax size: %d\n", maxsol);
 
-		t = run_lift(recursive_bip_lift, graph, n, oct, partial, minsol, maxsol);
+		t = run_lift(sr_apx::vc::lift::recursive_bip_lift, graph, n, oct, partial, minsol, maxsol);
 		printf("recursive bip lift\n");
 		printf("\tavg time: %.4f\n", t/1000000);
 		printf("\tmin size: %d\n", minsol);
 		printf("\tmax size: %d\n", maxsol);
-
-
-		delete oct;
-		delete partial;
-		printf("start\n");
-		delete graph;
-		graph = NULL;
 
 		printf("\n");
 	}
