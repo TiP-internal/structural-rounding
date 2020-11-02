@@ -70,8 +70,8 @@ int main(int argc, char* argv[]) {
 		printf(",%d", deg >> 1);
 		printf(",%.4f", (double)(end-start)/1000000);
 
-		// TreeDecomp init(graph);
-		// printf(",%d", init.treewidth());
+		sr_apx::treewidth::Decomposition init(graph);
+		printf(",%d", init.treewidth());
 
 		// start = clock();
 		// Set* domset = logn_apx(graph);
@@ -80,30 +80,24 @@ int main(int argc, char* argv[]) {
 		// printf(",%.4f", (double)(end-start)/1000000);
 		// delete domset;
 
-		// for (int i = 2; i <= 5; i++) {
-		// 	start = clock();
-		// 	Set* opt = new Set();
-		// 	Set* edit = treewidth_nodeedit(graph, opt, i, true);
-		// 	Set* verts = graph->get_vertices();
-		// 	Set* rest = verts->set_minus(edit);
-		// 	Graph* sub_g = graph->subgraph_wsingles(rest);
-		// 	end = clock();
-		// 	double time1 = (double)(end-start)/1000000;
-		// 	printf(",%d,%.4f", edit->size(), time1);
-		// 	delete verts;
-		// 	delete rest;
-		//
-		// 	start = clock();
-		// 	TreeDecomp* decomp = new TreeDecomp(sub_g);
-		// 	int domset_size = calculate(sub_g, decomp, NULL, opt, Variant::Dom_Set, false);
-		// 	end = clock();
-		// 	double time2 = (double)(end-start)/1000000;
-		// 	printf(",%d,%d,%.4f,%d,%.4f", decomp->treewidth(), domset_size, time2, domset_size + edit->size(), time1 + time2);
-		// 	delete opt;
-		// 	delete edit;
-		// 	delete sub_g;
-		// 	delete decomp;
-		// }
+		for (int i = 2; i <= 5; i++) {
+			start = clock();
+			sr_apx::Set edit = sr_apx::treewidth::vertex_delete(graph, i);
+			end = clock();
+			double time1 = (double)(end-start)/1000000;
+			printf(",%d,%.4f", edit.size(), time1);
+
+			// start = clock();
+			// TreeDecomp* decomp = new TreeDecomp(sub_g);
+			// int domset_size = calculate(sub_g, decomp, NULL, opt, Variant::Dom_Set, false);
+			// end = clock();
+			// double time2 = (double)(end-start)/1000000;
+			// printf(",%d,%d,%.4f,%d,%.4f", decomp->treewidth(), domset_size, time2, domset_size + edit->size(), time1 + time2);
+			// delete opt;
+			// delete edit;
+			// delete sub_g;
+			// delete decomp;
+		}
 
 		printf("\n");
 	}

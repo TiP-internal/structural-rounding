@@ -1,34 +1,21 @@
 
 #include "treewidth.hpp"
-// #include "treedecomp.hpp"
 
-#include "time.h"
+namespace sr_apx::treewidth {
 
-#include <fstream>
-#include <limits>
-#include <math.h>       // sqrt, log
-#include <cmath>        // floor
-#include <vector>
-
-TreeDecomp::TreeDecomp() {
-    tw = -1;
+Decomposition::Decomposition() {
+    tw = 0;
 }
 
-TreeDecomp::TreeDecomp(Graph* graph): TreeDecomp() {
+Decomposition::Decomposition(const Graph& graph): Decomposition() {
     build_decomposition(graph);
 }
 
-TreeDecomp::~TreeDecomp() {
-    for (Set* s : components_bags) {
-        delete s;
-    }
-}
-
-int TreeDecomp::treewidth() {
+int Decomposition::treewidth() {
     return tw - 1;
 }
 
-std::vector<po_bag> TreeDecomp::get_post_order() {
+std::vector<po_bag> Decomposition::get_post_order() {
     std::vector<po_bag> po;
     for (auto it = pre_order.rbegin(); it != pre_order.rend(); ++it) {
         po.push_back(*it);
@@ -37,22 +24,19 @@ std::vector<po_bag> TreeDecomp::get_post_order() {
     return po;
 }
 
-Set* copyset(Set* s) {
-    Set* copy = new Set();
-    for (int x : *s) {
-        copy->insert(x);
-    }
-    return copy;
-}
-
 // returns placement of new bag
 // parent_index should be 0 for root bag
 // only modifies pre_order and components_bags
-int TreeDecomp::add_bag(int parent, bool last_child, Set* bag) {
+int Decomposition::add_bag(int parent, bool last_child, Set& bag) {
     // ensures that root bag exists
     if (components_bags.empty()) {
-        components_bags.push_back(new Set());
+        components_bags.push_back(Set());
         pre_order.push_back(po_bag(0, -1));
+    }
+
+    if (bag == components_bags[parent]) {
+        printf("%s\n", "equal bags");
+        return parent;
     }
 
     int true_parent = pre_order[parent].current_join_child;
@@ -60,7 +44,7 @@ int TreeDecomp::add_bag(int parent, bool last_child, Set* bag) {
     if (pre_order[true_parent].num_children > 0 && !last_child) {
         // create a new join bag to hold the child
         int index = components_bags.size();
-        components_bags.push_back(copyset(components_bags[true_parent]));
+        components_bags.push_back(components_bags[true_parent]);
         pre_order.push_back(po_bag(index, true_parent));
         pre_order[true_parent].num_children++;
         pre_order[parent].current_join_child = index;
@@ -69,7 +53,7 @@ int TreeDecomp::add_bag(int parent, bool last_child, Set* bag) {
 
     if (pre_order[true_parent].num_children > 0 || !last_child) {
         int index = components_bags.size();
-        components_bags.push_back(copyset(components_bags[true_parent]));
+        components_bags.push_back(components_bags[true_parent]);
         pre_order.push_back(po_bag(index, true_parent));
         pre_order[true_parent].num_children++;
         true_parent = index;
@@ -77,92 +61,60 @@ int TreeDecomp::add_bag(int parent, bool last_child, Set* bag) {
 
     // create the child
     int use_parent = true_parent;
-    Set* use_bag = copyset(components_bags[true_parent]);
+    Set use_bag = components_bags[true_parent];
 
     // add introduce bags
-    for (int x : *(components_bags[true_parent])) {
+    for (int x : components_bags[true_parent]) {
         // only look at vertices to be added
-        if (bag->contains(x)) {
+        if (bag.contains(x)) {
             continue;
         }
 
-        use_bag->erase(x);
+        use_bag.erase(x);
         int index = components_bags.size();
-        components_bags.push_back(copyset(use_bag));
+        components_bags.push_back(use_bag);
         pre_order.push_back(po_bag(index, use_parent));
         pre_order[use_parent].num_children++;
         use_parent = index;
     }
 
     // add forget bags
-    for (int x : *bag) {
+    for (int x : bag) {
         // only look at vertices to be removed
-        if (components_bags[true_parent]->contains(x)) {
+        if (components_bags[true_parent].contains(x)) {
             continue;
         }
 
-        use_bag->insert(x);
+        use_bag.insert(x);
         int index = components_bags.size();
-        components_bags.push_back(copyset(use_bag));
+        components_bags.push_back(use_bag);
         pre_order.push_back(po_bag(index, use_parent));
         pre_order[use_parent].num_children++;
         use_parent = index;
     }
 
-    tw = tw < bag->size() ? bag->size() : tw;
-    delete use_bag;
+    tw = tw < bag.size() ? bag.size() : tw;
 
     // return index of final bag
     return components_bags.size() - 1;
 }
 
-void TreeDecomp::build_decomposition(Graph* graph) {
-    // tree decomp doesnt quite work correctly when there are multiple components in graph.
+void Decomposition::build_decomposition(const Graph& graph) {
+    std::vector<Set> components = graph.connected_components();
+    int nc = components.size();
 
-    std::vector<Set*> components = connected_components(graph);
-    int n_components = components.size();
-
-
-    if(n_components > 1) {
-        for (int i = 0; i + 1 < n_components; ++i) {
-            Set* component_set = components[i];
-            Graph* component = graph->subgraph_wsingles(component_set);
-
-            Set* W = new Set();
-            Set* V = component->get_vertices();
-
-            tree_decomp(component, V, W, 0, false);
-            delete component_set;
-            delete component;
-            delete V;
-            delete W;
-        }
-
-        Set* component_set = components[n_components - 1];
-        Graph* component = graph->subgraph_wsingles(component_set);
-
-        Set* W = new Set();
-        Set* V = component->get_vertices();
-
-        tree_decomp(component, V, W, 0, true);
-        delete component_set;
-        delete component;
-        delete W;
-        delete V;
-
+    for (int i = 0; i + 1 < nc; ++i) {
+        Graph component = graph.subgraph(components[i]);
+        Set empty;
+        tree_decomp(component, components[i], empty, 0, false);
     }
-    else {
-        Set* W = new Set();
-        Set* V = graph->get_vertices();
 
-        tree_decomp(graph, V, W, 0, true);
-        delete components[0];
-        delete V;
-        delete W;
-    }
+    Graph component = graph.subgraph(components[nc - 1]);
+    Set empty;
+    tree_decomp(component, components[nc - 1], empty, 0, true);
 }
 
-void TreeDecomp::tree_decomp(Graph* graph, Set* Z, Set* W, int parent, bool last_child) {
+void Decomposition::tree_decomp(Graph& graph, Set& Z, Set& W, int parent, bool last_child) {
     /*
     * Algorithm 4 from SR.
     *
@@ -173,514 +125,205 @@ void TreeDecomp::tree_decomp(Graph* graph, Set* Z, Set* W, int parent, bool last
     *
     */
 
-    std::vector<Set*> components;
+    Set Z_union_W = Z;
+    Z_union_W.insert(W.begin(), W.end());
 
-    Set* Z_un_W = Z->set_union(W);
-
-    int betaS, betaT;
-
-    if(8*Z->size() <= W->size()) {
-        int leaf = add_bag(parent, last_child, Z_un_W);
-        delete Z_un_W;
+    if (Z_union_W.size() <= tw) {
+        add_bag(parent, last_child, Z_union_W);
         return;
     }
 
-    betaS = floor(3*W->size()/4);
-    betaT = floor(3*Z_un_W->size()/4);
+    Graph graph_Z_union_W = graph.subgraph(Z_union_W);
+    Set sep = balanced_separator(graph_Z_union_W, W);
 
-    Graph* graph_Z_un_W = graph->subgraph_wsingles(Z_un_W);
-
-    //balanced_separators of W in G[Z ∪ W];
-    //NOTE: balanced_separator calls take up something like 98% of the total time the alg. takes to run.
-    Set* S = balanced_separators(graph_Z_un_W, W, betaS);
-
-    /* NOTE this is what takes the most time
-     * balanced_separators of Z ∪ W in G[Z ∪ W];
-     * T = balanced_separators(graph_Z_un_W, Z_un_W, betaT);
-     * Switched to the version below. Less complicated function.
-     */
-    Set* T = balanced_separators(graph_Z_un_W, betaT);
-
-    // let G[V1], · · · , G[Vl] be the connected components of G[(W ∪ Z) \ (S ∪ T)]
-    Set* S_un_T = S->set_union(T);
-
-    Set* Z_un_W_minus_S_un_T = Z_un_W->set_minus(S_un_T);
-
-    Graph* sub_g = graph->subgraph_wsingles(Z_un_W_minus_S_un_T);
-
-    components = connected_components(sub_g);
-
-    delete S;
-    delete T;
-    delete sub_g;
-    delete Z_un_W_minus_S_un_T;
-    delete graph_Z_un_W;
-
-    Set* W_un_S_un_T = W->set_union(S_un_T);
-    int x = add_bag(parent, last_child, W_un_S_un_T);
-    delete W_un_S_un_T;
-
-    for (int i = 0; i + 1 < components.size(); i++) {
-        Set* Vi = components[i];
-
-        Set* Zi = Z->set_intersection(Vi);
-        Set* Wi = W->set_intersection(Vi);
-        Set* Wi_un_S_un_T = Wi->set_union(S_un_T);
-
-        delete Vi;
-        delete Wi;
-        tree_decomp(graph, Zi, Wi_un_S_un_T, x, false);
-        delete Zi;
-        delete Wi_un_S_un_T;
+    W.insert(sep.begin(), sep.end());
+    for (int s : sep) {
+        Z.erase(s);
     }
 
-    if (components.size() > 0) {
-        int i = components.size() - 1;
-        Set* Vi = components[i];
-
-        Set* Zi = Z->set_intersection(Vi);
-        Set* Wi = W->set_intersection(Vi);
-        Set* Wi_un_S_un_T = Wi->set_union(S_un_T);
-
-        delete Vi;
-        delete Wi;
-        tree_decomp(graph, Zi, Wi_un_S_un_T, x, true);
-        delete Zi;
-        delete Wi_un_S_un_T;
+    for (int s : sep) {
+        for (int w : W) {
+            graph.remove_edge(s, w);
+        }
     }
 
-    delete S_un_T;
-    delete Z_un_W;
+    int x = add_bag(parent, last_child, W);
+
+    if (Z.empty()) {
+        return;
+    }
+
+    Graph sub_g = graph.subgraph(Z);
+    std::vector<Set> components = sub_g.connected_components();
+    int nc = components.size();
+
+    for (int i = 0; i + 1 < nc; ++i) {
+        Set Wi;
+        for (int v : components[i]) {
+            for (int nbr : graph.neighbors(v)) {
+                if (W.contains(nbr)) {
+                    Wi.insert(nbr);
+                }
+            }
+        }
+        tree_decomp(graph, components[i], Wi, x, false);
+    }
+
+    Set Wi;
+    for (int v : components[nc - 1]) {
+        for (int nbr : graph.neighbors(v)) {
+            if (W.contains(nbr)) {
+                Wi.insert(nbr);
+            }
+        }
+    }
+    tree_decomp(graph, components[nc - 1], Wi, x, true);
 }
 
-// end of treedecomp object //////////////////////////
+// end of Decomposition object //////////////////////////
 
-std::vector<Set*> connected_components(Graph* graph) {
-    /*
-     * DFS for finding connected components in G[V]
-     *
-     * n+m time
-     */
-
-    std::vector<Set*> components;
-
-    std::vector<int> stack;
-    Set visited;
-    Map<Set>::Iterator vitr = graph->begin();
-
-    Set* component = NULL;
-
-    while (!stack.empty() || visited.size() < graph->size()) {
-        int current;
-        if (stack.empty()) {
-            if (component != NULL) {
-                components.push_back(component);
-            }
-
-            component = new Set();
-
-            while (visited.contains(*vitr)) {
-                ++vitr;
-            }
-
-            current = *vitr;
-            component->insert(current);
-            visited.insert(current);
-        }
-        else {
-            current = stack.back();
-            stack.pop_back();
-        }
-
-        for (int nbr : *(graph->neighbors(current))) {
-            if (!component->contains(nbr)) {
-                stack.push_back(nbr);
-                component->insert(nbr);
-                visited.insert(nbr);
-            }
-        }
-    }
-
-    if (component != NULL) {
-        components.push_back(component);
-    }
-
-    return components;
-
-}
-
-
-Set* treewidth_nodeedit(Graph* graph, Set* optional_verts, int w, bool annotated_version) {
+Set vertex_delete(const Graph& graph, int w) {
     /*
      * TreeWidthNodeEdit() from SR paper.
      *
      */
-    int beta = floor(3*graph->size()/4);
-    int c1 = 1;                         // NOTE constant value
 
-    Set* V = graph->get_vertices();
-
-    TreeDecomp decomp(graph);
+    Decomposition decomp(graph);
     int t = decomp.treewidth();
 
-
-    if ( t <= c1*w*sqrt(log2(w)) ) { 
-        Set* empty = new Set();
-        delete V;
-        return empty;
+    if (t <= w) {
+        return Set();
     }
 
-    Set* S = balanced_separators(graph, beta);
-    
-    if(annotated_version) {
-        for(int es : *S) {
-            for(int nbr : *graph->neighbors(es)) {
-                if(!S->contains(nbr)) optional_verts->insert(nbr);
-                optional_verts->remove(es);
-            }
+    Set S = balanced_separator(graph, Set());
+
+    Set V_minus_S;
+    Map<Set>::const_iterator iu = graph.begin();
+    for ( ; iu != graph.end(); ++iu) {
+        if (!S.contains(iu->first)) {
+            V_minus_S.insert(iu->first);
         }
     }
 
-    // for connected components of G[V\S]
-    Set* V_min_S = V->set_minus(S);
-    delete V;
-    Graph* sub_g = graph->subgraph_wsingles(V_min_S);
+    Graph sub_g = graph.subgraph(V_minus_S);
+    std::vector<Set> components = sub_g.connected_components();
 
-    std::vector<Set*> components = connected_components(sub_g);
-    delete V_min_S;
-    delete sub_g;
-
-    for (auto ic=components.begin(); ic!=components.end(); ic++) {
-        Set* component_set = *ic;
-        Graph* component = graph->subgraph_wsingles(component_set);
-
-        Set* edited_vertices = treewidth_nodeedit(component, optional_verts, w, annotated_version);
-        S->add_all(edited_vertices); //set union but modifies S
- 
-        if(annotated_version) {
-            //Add the neighbors of the edit set to the optinally dominated set.
-            for(int ev : *edited_vertices) {                
-                for(int nbr : *component->neighbors(ev)) {
-                    if(!S->contains(nbr)) optional_verts->insert(nbr);
-                    optional_verts->remove(ev);
-                }
-            }
-        }
-
-        delete edited_vertices;
-        delete component_set;
-        delete component;
+    for (int i = 0; i < components.size(); ++i) {
+        Graph component = graph.subgraph(components[i]);
+        Set edited = vertex_delete(component, w);
+        S.insert(edited.begin(), edited.end());
     }
 
     return S;
 }
 
-int min_deg_vert(Graph* graph) {
-    float md_v = std::numeric_limits<float>::infinity();
-    int min_deg_value = (int)md_v;
-    int min_deg_vert=0;
-
-    //Find a minimum degree vertex to add to A
-    for (auto iu = graph->begin(); iu!=graph->end(); iu++) {
-        int u = *iu;
-        int u_deg = graph->neighbors(u)->size();
-
-        if ( u_deg < min_deg_value) {
-            min_deg_value = u_deg;
-            min_deg_vert = u;
+Set balanced_separator(const Graph& graph, const Set& W) {
+    if (graph.size() <= 2) {
+        Set C;
+        Map<Set>::const_iterator iu = graph.begin();
+        for ( ; iu != graph.end(); ++iu) {
+            C.insert(iu->first);
         }
+        return C;
     }
-    return min_deg_vert;
+
+    // cannot legitimately call with empty W so used for V case
+    if (W.empty()) {
+        Set V;
+        Map<Set>::const_iterator iu = graph.begin();
+        for ( ; iu != graph.end(); ++iu) {
+            V.insert(iu->first);
+        }
+        return balanced_separator(graph, V);
+    }
+
+    if (W.size() < 2) {
+        Set C;
+        int w = *(W.begin());
+        int nbr = *(graph.neighbors(w).begin());
+        C.insert(nbr);
+        return C;
+    }
+
+    Map<int> deg;
+    std::vector<Set> revdeg;
+    int maxdeg = 0;
+
+    Map<Set>::const_iterator iu = graph.begin();
+    for ( ; iu != graph.end(); ++iu) {
+        // deg is number of neighbors in B
+        int degree = iu->second.size() + 1;
+        deg[iu->first] = degree;
+        maxdeg = degree > maxdeg ? degree : maxdeg;
+        revdeg.resize(maxdeg + 1);
+        revdeg[degree].insert(iu->first);
+    }
+
+    int A_count = 0;
+    int C_count = 0;
+    Set C;
+
+    while (A_count + C_count < W.size() - ((2 * W.size()) / 3) || !revdeg[0].empty() || (!revdeg[1].empty() && A_count + C_count < W.size() - 1)) {
+        int mindeg;
+        for (mindeg = 0; revdeg[mindeg].empty(); ++mindeg);
+        int vert = *(revdeg[mindeg].begin());
+
+        // move vert to A
+        revdeg[mindeg].erase(vert);
+        deg.erase(vert);
+        if (W.contains(vert)) {
+            ++A_count;
+            if (C.contains(vert)) {
+                --C_count;
+            }
+        }
+
+        for (int add_c : graph.neighbors(vert)) {
+            // neighbor already in A
+            if (!deg.contains(add_c)) {
+                continue;
+            }
+
+            // update degree of add_c if vert was in B
+            if (!C.contains(vert)) {
+                int degree = deg[add_c];
+                deg[add_c] = degree - 1;
+                revdeg[degree].erase(add_c);
+                revdeg[degree - 1].insert(add_c);
+            }
+
+            // don't readd to C
+            if (C.contains(add_c)) {
+                continue;
+            }
+
+            for (int nbr : graph.neighbors(add_c)) {
+                // nbr in A
+                if (!deg.contains(nbr)) {
+                    continue;
+                }
+
+                int degree = deg[nbr];
+                deg[nbr] = degree - 1;
+                revdeg[degree].erase(nbr);
+                revdeg[degree - 1].insert(nbr);
+            }
+
+            if (W.contains(add_c)) {
+                ++C_count;
+            }
+            C.insert(add_c);
+
+            int degree = deg[add_c];
+            deg[add_c] = degree - 1;
+            revdeg[degree].erase(add_c);
+            revdeg[degree - 1].insert(add_c);
+        }
+
+        C.erase(vert);
+    }
+
+    return C;
 }
 
-
-Set* balanced_separators(Graph* graph, int beta) {
-    /*
-     * Balanced separator greedy algorithm from from (Althoby et al. 2020)
-     *
-     * Beta = floor(2n/3), or floor(3n/4)
-     *
-     */
-
-    Set* A = new Set();
-    Set* B = new Set();
-    Set* C = new Set();
-
-    int min_deg_v = min_deg_vert(graph);;
-
-    A->insert(min_deg_v);
-
-    // C=N(A), where A={min_deg_v}
-    for (Set::Iterator ia_nbs = graph->neighbors(min_deg_v)->begin();
-         ia_nbs != graph->neighbors(min_deg_v)->end(); ia_nbs++) {
-        if(*ia_nbs != min_deg_v) C->insert(*ia_nbs);
-    }
-
-    // B = V\(A union C)
-    Set* AunC = A->set_union(C);
-    for (auto ib = graph->begin(); ib != graph->end(); ib++) {
-        int b = *ib;
-        if (!AunC->contains(b)) B->insert(b);
-    }
-    delete AunC;
-
-
-    while(A->size() + C->size() < graph->size() - beta) {
-        float min_inbsB = std::numeric_limits<float>::infinity();
-        int vert; // the i s.t. |N(i) intersect B| is minimum.
-
-        //Finds i in V\A  s.t.  |N(i) intersect B| is minimum.
-        for (auto iu = graph->begin(); iu !=graph->end(); iu++) {
-            int u = *iu;
-            if(!A->contains(u)) {
-                Set* nbi_B = graph->neighbors(u)->set_intersection(B);
-                nbi_B->remove(u);  //in case u is a single vertex in subgraph (neighbor of itself)
-
-                if (nbi_B->size() < min_inbsB)  {
-                    min_inbsB = nbi_B->size();
-                    vert = u;
-                }
-                delete nbi_B;
-            }
-        }
-
-        //A = A union vert
-        A->insert(vert);
-        B->remove(vert);
-
-        // C=N(A), where A = A union vert
-        C->remove(vert);
-        for (Set::Iterator iv_nbs = graph->neighbors(vert)->begin();
-            iv_nbs != graph->neighbors(vert)->end(); iv_nbs++) {
-            if(*iv_nbs != vert) {    //in case vert is a single vertex in subgraph (neighbor of itself)
-                if(!A->contains(*iv_nbs)) {
-                    C->insert(*iv_nbs);
-                    B->remove(*iv_nbs);
-                }
-            }
-        }
-    }
-
-    delete A;
-    delete B;
-
-    return C; //Set of separator vertices
-}
-
-
-Set* balanced_separators(Graph* graph, Set* W, int beta) {
-    /*
-     * Balanced separator greedy algorithm from from (Althoby et al. 2020)
-     * modified to find separators of subset W. If W=V it's the same.
-     *
-     * Beta = floor(2n/3), or floor(3n/4)
-     *
-     * Definition 5.1. For a subset of vertices W, a set of vertices S ⊆ V(G)
-     * is a vertex c-separator of W in G if each component of G[V \ S] contains
-     * at most c|W| vertices of W. The minimum size vertex c-separator of a graph,
-     * denoted sepc(G), is the minimum integer k such that for any subset W ⊆ V
-     * there exists a vertex c-separator of W in G of size k.
-     *
-     */
-
-    int A_count=0, B_count=0, C_count=0;  // counts of vertices in A,B,C which are in W.
-    Set* A = new Set();
-    Set* B = new Set();
-    Set* C = new Set();
-    int min_deg_v, min_deg_value;
-
-    if(graph->size() == 1) {
-        // Single vertex must be the separator. Otherwise decomp doesnt work.
-        Set* separator = new Set();
-        separator->insert(*graph->begin());
-        delete A;
-        delete B;
-        delete C;
-        return separator;
-    }
-
-    if(beta == 0 && W->size()==0) {  //no separator necessary
-        Set* empty = new Set();
-        delete A;
-        delete B;
-        delete C;
-        return empty;
-    }
-
-    if(beta == 0 && W->size()>0) {  // beta is zero, then all of W must be in the set C (as part of separators).
-        for (auto iw = W->begin(); iw!=W->end(); iw++) {
-            int w = *iw;
-
-            //find the min deg neighbor of w to add to A.
-            float md_v = std::numeric_limits<float>::infinity();
-            int min_deg_value = (int)md_v;
-            int min_deg_vertex=0;
-
-            //if W has no neighbors
-            if(graph->neighbors(w)->size() <=1 && *graph->neighbors(w)->begin()==w) {
-                if(!C->contains(w)) {
-                    C->insert(w);
-                    if(W->contains(w)) C_count++;
-                }
-            } else {  //else add min degree nebs of W to A, so W will be added to C.
-                for (auto in=graph->neighbors(w)->begin(); in!=graph->neighbors(w)->end(); in++) {
-                    int neb = *in;
-                    if(neb != w) {
-                        int neb_deg = graph->neighbors(neb)->size();
-
-                        if ( neb_deg < min_deg_value) {
-                            min_deg_value = neb_deg;
-                            min_deg_vertex = neb;
-                        }
-                    }
-                }
-                if(!A->contains(min_deg_vertex)) {
-                    A->insert(min_deg_vertex);
-                    if(W->contains(min_deg_vertex)) A_count++;
-                }
-            }
-        }
-    } else {
-        min_deg_v = min_deg_vert(graph);
-        A->insert(min_deg_v);
-        if(W->contains(min_deg_v)) A_count++;
-    }
-
-    // C=N(A), where A={min_deg_v} or A=min deg neighbors of W.
-    for (auto ia = A->begin(); ia != A->end(); ia++) {
-        int a = *ia;
-        for (auto ia_nbs=graph->neighbors(a)->begin(); ia_nbs!=graph->neighbors(a)->end(); ia_nbs++) {
-            if(*ia_nbs != a) {  //in case min_deg_v is a single vertex in subgraph (neighbor of itself)
-                if(!C->contains(*ia_nbs)) {
-                    C->insert(*ia_nbs);
-                    if(W->contains(*ia_nbs)) C_count++;
-                }
-            }
-        }
-    }
-
-     // B = V\(A union C)
-    Set* AunC = A->set_union(C);
-    for (auto ib = graph->begin(); ib!=graph->end(); ib++) {
-        int b = *ib;
-        if (!AunC->contains(b)) {
-            if(!B->contains(b)) {
-                B->insert(b);
-                if (W->contains(b)) B_count++;
-            }
-        }
-    }
-    delete AunC;
-
-    // if (W->size()==0), shouldnt enter while loop
-    while(A_count + C_count < W->size() - beta) {
-        float min_inbsB = std::numeric_limits<float>::infinity();
-        int vert; // the i s.t. |N(i) intersect B| is minimum.
-
-        //Finds i in V\A  s.t.  |N(i) intersect B| is minimum.
-        for (auto iu = graph->begin(); iu !=graph->end(); iu++) {
-            int u = *iu;
-            if(!A->contains(u)) {
-                Set* nbi_B = graph->neighbors(u)->set_intersection(B);
-                nbi_B->remove(u);  //in case u is a single vertex in subgraph (neighbor of itself)
-
-                if (nbi_B->size() < min_inbsB)  {
-                    min_inbsB = nbi_B->size();
-                    vert = u;
-                }
-                delete nbi_B;
-            }
-        }
-
-        //A = A union vert
-        if(!A->contains(vert)) {
-            A->insert(vert);
-            if (W->contains(vert)) A_count++;
-        }
-
-        if (B->contains(vert)) {
-            B->remove(vert);
-            if (W->contains(vert)) B_count--;
-        }
-
-        // C=N(A), where A = A union vert
-        if(C->contains(vert)) {
-            C->remove(vert);
-            if(W->contains(vert)) C_count--;
-        }
-
-        for (auto iv_nbs = graph->neighbors(vert)->begin();
-                iv_nbs != graph->neighbors(vert)->end(); iv_nbs++) {
-
-            if(*iv_nbs != vert) {  //in case vert is a single vertex in subgraph (neighbor of itself)
-                if(!A->contains(*iv_nbs)) {
-                    if (!C->contains(*iv_nbs)) {
-                        C->insert(*iv_nbs);
-                        if(W->contains(*iv_nbs)) C_count++;
-                    }
-
-                    if (B->contains(*iv_nbs)) {
-                        B->remove(*iv_nbs);
-                        if (W->contains(*iv_nbs)) B_count--;
-                    }
-                }
-            }
-        }
-    }
-
-
-    if(B->size() == 0) {
-        //NOTE figure out the size of graph for which to test this. 
-        //As to minimize the number of times this is called
-        //NOTE: not the most efficient function either.
-        bool is_graph_clique = is_clique(graph);   
-        if(is_graph_clique) {    
-            //NOTE: in case of future issues, potentially get rid of this case.
-            for (auto ia = A->begin(); ia!=A->end(); ia++) {
-                int a = *ia;
-                C->insert(a);
-
-                A->remove(a);
-                if (W->contains(a)) A_count--;
-            }
-        }
-    }
-
-    delete A;
-    delete B;
-
-    return C; //Set of separator vertices
-}
-
-
-bool is_clique(Graph* graph) {
-
-    bool clique = true;
-
-    for (auto iu = graph->begin(); iu !=graph->end(); iu++) {
-        int u = *iu;
-
-        for (auto iv = graph->begin(); iv !=graph->end(); iv++) {
-            int v = *iv;
-
-            if(u!= v && !graph->adjacent(u,v)) clique = false;
-        }
-    }
-
-    return clique;
-}
-
-
-bool sets_equal(Set* A, Set* B) {
-    bool are_equal = true;
-
-    for(auto iv=A->begin(); iv!=A->end(); iv++) {
-        if(!B->contains(*iv)) are_equal=false;
-    }
-
-    for(auto iv=B->begin(); iv!=B->end(); iv++) {
-        if(!A->contains(*iv)) are_equal=false;
-    }
-
-    return are_equal;
 }
