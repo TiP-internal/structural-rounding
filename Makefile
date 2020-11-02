@@ -42,8 +42,7 @@ cpp: build/main.o lib_sr_apx.so
 
 
 build/exp.o: exp.cpp
-	mkdir -p build
-	$(CC) -O3 -std=c++11 -c $(INCLUDES) -o build/exp.o exp.cpp
+	$(CC) -O3 -std=c++11 -I./ -c -o build/exp.o exp.cpp
 
 exp: build/exp.o lib_sr_apx.so
 	$(CC) -o exp -L. -Wl,-rpath,. build/exp.o -l_sr_apx
@@ -113,6 +112,7 @@ generator/generator.out: generator/OCTgenerator.c
 clean:
 	rm -f -r build
 	rm -f main
+	rm -f exp
 	rm -f lib_sr_apx.so
 	rm -f generator/generator.out
 	rm -f sr_apx/util/lib_util.so
