@@ -114,6 +114,46 @@ void Decomposition::build_decomposition(const Graph& graph) {
     tree_decomp(component, components[nc - 1], empty, 0, true);
 }
 
+void Decomposition::build_decomposition(const Graph& graph, std::vector<int> ordering) {
+    Graph h = graph;
+    tree_decomp_ordering(h, ordering.size(), ordering);
+}
+
+void Decomposition::tree_decomp_ordering(Graph& graph, int n, std::vector<int> ordering) {
+    Graph g = graph;
+    Set bags [n];
+
+    /* add vn's bag containing only vn */
+    Set x_vn;
+    int vn = ordering[n-1];
+    x_vn.insert(vn);
+    for (int w : g.neighbors(vn))
+        g.remove_edge(vn,w);
+    g.remove_vertex(vn);
+    bags[n-1] = x_vn;
+    add_bag(0, false, x_vn);
+
+    /* add the rest of the bags */
+    for (int i = n-2; i > -1; i--) {
+        Set x_vi;
+        int vi = ordering[i];
+        x_vi.insert(vi); /* add vi to bag */
+
+        /* add vi's forward neighbors */
+        if (g.contains_vertex(vi)) {
+            for (int w : g.neighbors(vi)) {
+                x_vi.insert(w);
+                g.remove_edge(vi,w);
+            }
+            g.remove_vertex(vi);
+        }
+
+        bags[i] = x_vi;
+        if (i == 0) add_bag(ordering[i+1], true, x_vi);
+        else add_bag(ordering[i+1], false, x_vi);
+    }
+}
+
 void Decomposition::tree_decomp(Graph& graph, Set& Z, Set& W, int parent, bool last_child) {
     /*
     * Algorithm 4 from SR.
@@ -324,6 +364,248 @@ Set balanced_separator(const Graph& graph, const Set& W) {
     }
 
     return C;
+}
+
+
+// greedy heuristics
+
+int chordal(const Graph&);
+bool clique(const Graph&, int);
+int lowest_neighbor(const Graph&, int, std::vector<int>);
+int min_degree_vertex(const Graph&);
+int min_fill_edges_vertex(const Graph&);
+int fill_edges(const Graph&, int);
+
+
+Graph fill(const Graph& g, int n, std::vector<int> ordering) {
+    /* Algorithm 1 from Treewidth computations I. Upper bounds */
+
+    /* create map of ordering */
+    Map<int> pi;
+    for (int i = 0; i < n; i++)
+        pi[ordering[i]] = i;
+
+    Graph h = g; /* h = g */
+
+    for (int i = 0; i < n; i++) {
+        int v = ordering[i]; /* let v be the ith vertex in the ordering*/
+
+        /* make a clique of v's neighbors in h... */
+        std::vector<int> neighbors;
+        for (int w : h.neighbors(v))
+            neighbors.push_back(w);
+        for (int j = 0; j < neighbors.size()-1; j++) {
+            int w = neighbors[j];
+            for (int k = 1; k < neighbors.size(); k++) {
+                int x = neighbors[k];
+                if (pi[w] > pi[v] && pi[x] > pi[v]) { /* ... if this ordering is satisfied */
+                    if (!h.adjacent(w,x))
+                        h.add_edge(w,x);
+                }
+            }
+        }
+    }
+
+    return h;
+}
+
+std::vector<int> greedy_degree(const Graph& g, int n) {
+    /* Algorithm 3 from Treewidth computations I. Upper bounds */
+
+    Graph h = g; /* h = g */
+
+    std::vector<int> ordering;
+    for (int i = 0; i < n; i++) {
+        int v = min_degree_vertex(h); /* choose v as a vertex of smallest degree in h */
+        ordering.push_back(v); /* let v be the ith vertex in the ordering */
+
+        /* make a clique of v's neighbors in h */
+        std::vector<int> neighbors;
+        for (int w : h.neighbors(v))
+            neighbors.push_back(w);
+        for (int j = 0; j < neighbors.size()-1; j++) {
+            int w = neighbors[j];
+            for (int k = 1; k < neighbors.size(); k++) {
+                int x = neighbors[k];
+                if (!h.adjacent(w,x))
+                    h.add_edge(w,x);
+            }
+        }
+
+        /* remove v and all its edges */
+        for (int w : h.neighbors(v))
+            h.remove_edge(v,w);
+        h.remove_vertex(v);
+    }
+
+    return ordering;
+}
+
+std::vector<int> greedy_fill_in(const Graph& g, int n) {
+    /* Algorithm 3 from Treewidth computations I. Upper bounds */
+
+    Graph h = g; /* h = g */
+
+    std::vector<int> ordering;
+    for (int i = 0; i < n; i++) {
+        int v = min_fill_edges_vertex(h); /* choose v as a vertex that causes the smallest number of fill edges */
+        ordering.push_back(v); /* let v be the ith vertex in the ordering */
+
+        /* make a clique of v's neighbors in h */
+        std::vector<int> neighbors;
+        for (int w : h.neighbors(v))
+            neighbors.push_back(w);
+        for (int j = 0; j < neighbors.size()-1; j++) {
+            int w = neighbors[j];
+            for (int k = 1; k < neighbors.size(); k++) {
+                int x = neighbors[k];
+                if (!h.adjacent(w,x))
+                    h.add_edge(w,x);
+            }
+        }
+
+        /* remove v and all its edges */
+        for (int w : h.neighbors(v))
+            h.remove_edge(v,w);
+        h.remove_vertex(v);
+    }
+
+    return ordering;
+}
+
+Graph minimal_triangulation(const Graph& g) {
+    /* Algorithm 6 from Treewidth computations I. Upper bounds */
+
+    Graph g_prime = g; /* g' = g */
+
+    int s = chordal(g_prime);
+    while (s != -1) { /* while g' is not chordal */
+
+        /* complete s in h */
+        std::vector<int> neighbors;
+        for (int w : g_prime.neighbors(s))
+            neighbors.push_back(w);
+        for (int j = 0; j < neighbors.size()-1; j++) {
+            int w = neighbors[j];
+            for (int k = 1; k < neighbors.size(); k++) {
+                int x = neighbors[k];
+                if (!g_prime.adjacent(w,x))
+                    g_prime.add_edge(w,x);
+            }
+        }
+
+        s = chordal(g_prime);
+    }
+
+    return g_prime;
+}
+
+int chordal(const Graph& g) {
+    Graph h = g;
+    int n = h.size();
+    for (int i = 0; i < n; i++) {
+        int min_v = min_degree_vertex(h);
+        if (!clique(h, min_v))
+            return min_v;
+
+        /* remove v and all its edges */
+        for (int w : h.neighbors(min_v))
+            h.remove_edge(min_v,w);
+        h.remove_vertex(min_v);
+    }
+
+    return -1; /* if chordal */
+}
+
+bool clique(const Graph& g, int v) {
+    int n = g.neighbors(v).size();
+    int v_neighbors [n];
+    Set clique;
+
+    int i = 0;
+    clique.insert(v);
+    for (int w : g.neighbors(v)) {
+        clique.insert(w);
+        v_neighbors[i] = w;
+        i++;
+    }
+
+    for (int j = 0; j < n; j++) {
+        int clique_size = clique.size()-1;
+        int vj = v_neighbors[j];
+        for (int w : g.neighbors(vj))
+            if (clique.contains(w))
+                clique_size--;
+        if (clique_size > 0)
+            return false;
+    }
+
+    return true;
+}
+
+int lowest_neighbor(const Graph& g, int v, std::vector<int> r_ordering) {
+    Map<int> pi;
+    for (int i = 0; i < r_ordering.size(); i++)
+        pi[r_ordering[i]] = i;
+
+    int lowest;
+    for (int n : g.neighbors(v)) {
+        lowest = n;
+        break;
+    }
+
+    for (int n : g.neighbors(v))
+        if (pi[n] > pi[lowest])
+            lowest = n;
+
+    return pi[lowest];
+}
+
+int min_degree_vertex(const Graph& g) {
+    Map<Set>::const_iterator iu = g.begin();
+    int v = iu->first;
+
+    for ( ; iu != g.end(); ++iu)
+        if (g.degree(iu->first) < g.degree(v))
+            v = iu->first;
+
+    return v;
+}
+
+int min_fill_edges_vertex(const Graph& g) {
+    Map<Set>::const_iterator iu = g.begin();
+    int iu_e;
+    int v = iu->first;
+    int ve = fill_edges(g, v);
+
+    for ( ; iu != g.end(); ++iu) {
+        iu_e = fill_edges(g, iu->first);
+        if (iu_e < ve) {
+            v = iu->first;
+            ve = iu_e;
+        }
+    }
+
+    return v;
+}
+
+int fill_edges(const Graph& g, int v) {
+    int non_adjacent_pairs = 0;
+
+    std::vector<int> neighbors;
+    for (int w : g.neighbors(v))
+        neighbors.push_back(w);
+
+    for (int j = 0; j < neighbors.size()-1; j++) {
+        int w = neighbors[j];
+        for (int k = 1; k < neighbors.size(); k++) {
+            int x = neighbors[k];
+            if (!g.adjacent(w,x))
+                non_adjacent_pairs++;
+        }
+    }
+
+    return non_adjacent_pairs;
 }
 
 }
