@@ -73,12 +73,11 @@ int main(int argc, char* argv[]) {
 		sr_apx::treewidth::Decomposition init(graph);
 		printf(",%d", init.treewidth());
 
-		// start = clock();
-		// Set* domset = logn_apx(graph);
-		// end = clock();
-		// printf(",%d", domset->size());
-		// printf(",%.4f", (double)(end-start)/1000000);
-		// delete domset;
+		start = clock();
+		sr_apx::Set domset = sr_apx::domset::apx::greedy_apx(graph);
+		end = clock();
+		printf(",%d", domset.size());
+		printf(",%.4f", (double)(end-start)/1000000);
 
 		for (int i = 2; i <= 5; i++) {
 			start = clock();

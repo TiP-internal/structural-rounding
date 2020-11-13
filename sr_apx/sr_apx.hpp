@@ -9,3 +9,4 @@
 #include "sr_apx/vc/kernel/lp_kernel.hpp"
 #include "sr_apx/vc/lift/vc_lift.hpp"
 #include "sr_apx/treewidth/treewidth.hpp"
+#include "sr_apx/domset/apx/domset_apx.hpp"
