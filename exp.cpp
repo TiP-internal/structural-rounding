@@ -82,20 +82,35 @@ int main(int argc, char* argv[]) {
 		for (int i = 2; i <= 5; i++) {
 			start = clock();
 			sr_apx::Set edit = sr_apx::treewidth::vertex_delete(graph, i);
+
+            sr_apx::Graph sub_g(graph.size() - edit.size());
+            sr_apx::Set opt;
+            for (sr_apx::Map<sr_apx::Set>::const_iterator iu = graph.begin(); iu != graph.end(); ++iu) {
+                for (int v : iu->second) {
+                    if (edit.contains(v)) {
+                        continue;
+                    }
+
+                    if (edit.contains(iu->first)) {
+                        opt.insert(v);
+                    }
+                    else {
+                        sub_g.add_edge(iu->first, v);
+                    }
+                }
+            }
+
 			end = clock();
 			double time1 = (double)(end-start)/1000000;
 			printf(",%d,%.4f", edit.size(), time1);
 
-			// start = clock();
-			// TreeDecomp* decomp = new TreeDecomp(sub_g);
-			// int domset_size = calculate(sub_g, decomp, NULL, opt, Variant::Dom_Set, false);
-			// end = clock();
-			// double time2 = (double)(end-start)/1000000;
-			// printf(",%d,%d,%.4f,%d,%.4f", decomp->treewidth(), domset_size, time2, domset_size + edit->size(), time1 + time2);
-			// delete opt;
-			// delete edit;
-			// delete sub_g;
-			// delete decomp;
+			start = clock();
+            sr_apx::treewidth::Decomposition decomp(sub_g);
+            sr_apx::Set empty;
+			int domset_size = sr_apx::domset::exact::calculate(sub_g, decomp, empty, opt, sr_apx::domset::exact::Variant::Dom_Set, false);
+			end = clock();
+			double time2 = (double)(end-start)/1000000;
+			printf(",%d,%d,%.4f,%d,%.4f", decomp.treewidth(), domset_size, time2, domset_size + edit.size(), time1 + time2);
 		}
 
 		printf("\n");

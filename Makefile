@@ -37,8 +37,14 @@ build/treewidth.o: sr_apx/treewidth/treewidth.cpp sr_apx/treewidth/treewidth.hpp
 build/domset_apx.o: sr_apx/domset/apx/domset_apx.cpp sr_apx/domset/apx/domset_apx.hpp
 	$(CC) $(CCFLAGS) -c -o build/domset_apx.o sr_apx/domset/apx/domset_apx.cpp
 
-lib_sr_apx.so: build/util.o build/matching.o build/graph.o build/vc_apx.o build/vc_exact.o build/vc_lift.o build/vc_kernel.o build/bipartite.o build/treewidth.o build/domset_apx.o sr_apx/setmap/setmap.hpp
-	$(CC) -shared -o lib_sr_apx.so build/util.o build/matching.o build/graph.o build/vc_apx.o build/vc_exact.o build/vc_lift.o build/vc_kernel.o build/bipartite.o build/treewidth.o build/domset_apx.o
+build/domset_exact.o: sr_apx/domset/exact/domset_exact.cpp sr_apx/domset/exact/domset_exact.hpp
+	$(CC) $(CCFLAGS) -c -o build/domset_exact.o sr_apx/domset/exact/domset_exact.cpp
+
+build/table.o: sr_apx/domset/exact/table.cpp sr_apx/domset/exact/table.hpp
+	$(CC) $(CCFLAGS) -c -o build/table.o sr_apx/domset/exact/table.cpp
+
+lib_sr_apx.so: build/util.o build/matching.o build/graph.o build/vc_apx.o build/vc_exact.o build/vc_lift.o build/vc_kernel.o build/bipartite.o build/treewidth.o build/domset_apx.o build/domset_exact.o build/table.o sr_apx/setmap/setmap.hpp
+	$(CC) -shared -o lib_sr_apx.so build/util.o build/matching.o build/graph.o build/vc_apx.o build/vc_exact.o build/vc_lift.o build/vc_kernel.o build/bipartite.o build/treewidth.o build/domset_apx.o build/domset_exact.o build/table.o
 
 build/main.o: main.cpp
 	$(CC) -O3 -std=c++11 -I./ -c -o build/main.o main.cpp

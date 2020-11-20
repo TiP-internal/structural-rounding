@@ -7,16 +7,13 @@
 #include <string>
 
 #include <limits>       // inf
-#include <map>
-#include <iostream>     // throw
 #include <math.h>       // pow
 
-#include "graph.hpp"
-#include "setmap.hpp"
-#include "treewidth.hpp"
+#include "sr_apx/graph/graph.hpp"
+#include "sr_apx/setmap/setmap.hpp"
+#include "sr_apx/treewidth/treewidth.hpp"
 
-using namespace std;
-
+namespace sr_apx::domset::exact {
 
 #define IN_DOMSET 1
 #define DOMINATED 2
@@ -32,7 +29,7 @@ class Row {
      */
 private:
     int A_c;                        //domset size
-    unsigned long long int key;     
+    unsigned long long int key;
 
     int childl_ind;
     int childr_ind;
@@ -42,7 +39,6 @@ public:
     Row();
     Row(const Row&);
     Row& operator=(const Row&);
-    ~Row();
 
     void append_coloring(int val);
     void remove_from_coloring(int v_index);
@@ -85,7 +81,7 @@ class Table {
      *      - Vector of the vertices in the current bag.
      *      - Each row coloring corresponds to a vertex. Indices match between
      *        colorings and the vertices.
-     * 
+     *
      * po_bag:
      *      - associated with the current table. used for correct postorder traversal.
      *
@@ -93,23 +89,22 @@ class Table {
      *
      */
 private:
-    std::deque<Row> table;  
-    Map<int> table_lookups;    
-    po_bag  tables_pobag; 
+    std::deque<Row> table;
+    Map<int> table_lookups;
+    treewidth::po_bag  tables_pobag;
 
 public:
     std::vector<int> vertices;
 
     Table();
     Table& operator=(const Table&);
-    ~Table();
-    
+
     // Table specific functions
-    void set_pobag(po_bag);
-    po_bag get_pobag();
-    
+    void set_pobag(treewidth::po_bag);
+    treewidth::po_bag get_pobag();
+
     int get_table_size();
-    
+
     int create_row(int, int);
     int create_row(int);
     int insert_row(Row);
@@ -117,21 +112,21 @@ public:
     int copyin_forgetrow(Table*, int, int);
     int copyin_introrow(Table*, int, int);
     void update_row_add(int, int);
-    
+
     void delete_row(int);
     void pop_front_row();
-    
-    int get_rows_Ac(int); 
+
+    int get_rows_Ac(int);
     int get_rows_childl_table_ind(int);
     int get_rows_childr_table_ind(int);
-    
+
     void update_rows_childl_table_ind(int, int);
     void update_rows_childr_table_ind(int, int);
-    
+
     void remove_from_rows_coloring(int, int);
-    
-    
-    // Functions for specific rows in the table vector. 
+
+
+    // Functions for specific rows in the table vector.
     void update_Ac(int, int);
     int get_rows_key(int);
     int get_vertex_col_index(int);
@@ -143,22 +138,11 @@ public:
 
     int lookup_table_index(unsigned long long int);
     int lookup_Ac(unsigned long long int);
-    
-    void update_table_lookups(int, int);
-    
 
-    //NOTE for testing
-    void print_tablelookups() {
-        printf("\n===============Table Lookups==================\n");
-        for(auto it=table_lookups.begin(); it!=table_lookups.end(); it++) {
-            int key = *it;
-            printf("coloring=%d, \t table_index=%d\n", key, table_lookups[key]);
-        }
-        
-        printf("\n===========================================\n\n\n");
-    }
-    
+    void update_table_lookups(int, int);
+
 };
 
+}
 
 #endif
