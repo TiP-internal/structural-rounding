@@ -9,7 +9,9 @@
 #include "sr_apx/domset/exact/table.hpp"
 #include "sr_apx/treewidth/treewidth.hpp"
 
-namespace sr_apx::domset::exact {
+namespace sr_apx {
+namespace domset {
+namespace exact {
 
 enum class Variant {Dom_Set, Indep_Dom_Set, Perf_Dom_Set};
 
@@ -45,6 +47,6 @@ int best_intro_child_row(const Set&, std::vector<int>&, const std::vector<int>&,
 int* best_join_child_rows(Table*, Table*, const Set&, std::vector<int> &);
 int get_num_dominators(const Graph&, std::vector<int>&, const std::vector<int>&, int);
 
-}
+}}}
 
 #endif

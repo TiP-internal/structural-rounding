@@ -5,11 +5,13 @@
 #include "sr_apx/setmap/setmap.hpp"
 #include "sr_apx/graph/graph.hpp"
 
-namespace sr_apx::domset::apx {
+namespace sr_apx {
+namespace domset {
+namespace apx {
 
 Set greedy_apx(const Graph&);
 
-}
+}}}
 
 // struct Domset{
 //     Set* base = new Set();  //universe

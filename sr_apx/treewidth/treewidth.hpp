@@ -7,7 +7,8 @@
 
 #include <vector>
 
-namespace sr_apx::treewidth {
+namespace sr_apx {
+namespace treewidth {
 
 struct po_bag {  //for postorder bag.
     int bag_index;
@@ -42,6 +43,6 @@ public:
 Set vertex_delete(const Graph&, int);
 Set balanced_separator(const Graph&, const Set&);
 
-}
+}}
 
 #endif

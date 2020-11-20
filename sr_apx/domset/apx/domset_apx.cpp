@@ -3,7 +3,9 @@
 
 #include <vector>
 
-namespace sr_apx::domset::apx {
+namespace sr_apx {
+namespace domset {
+namespace apx {
 
 void mark_dominated(const Graph& graph, Map<int>& deg, std::vector<Set>& revdeg, int u) {
     for (int nbr : graph.neighbors(u)) {
@@ -77,7 +79,7 @@ Set greedy_apx(const Graph& graph) {
     return domset;
 }
 
-}
+}}}
 
 
 // Domset reduction(Graph* graph) {

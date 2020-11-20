@@ -2,11 +2,12 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-namespace sr_apx::util {
+namespace sr_apx {
+namespace util {
 
 int log2(int);
 int pow(int, int);
 
-}
+}}
 
 #endif

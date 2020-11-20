@@ -4,7 +4,9 @@
 #include <deque>
 #include <iostream>
 
-namespace sr_apx::domset::exact {
+namespace sr_apx{
+namespace domset {
+namespace exact {
 
 //--- Calculating Solution
 int get_soln_row_index(Table* table, const Set& optional_verts){
@@ -874,4 +876,4 @@ int get_num_dominators(const Graph& graph, std::vector<int> &vertices,
     return num_dominators;
 }
 
-}
+}}}

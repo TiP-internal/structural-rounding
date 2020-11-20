@@ -13,7 +13,9 @@
 #include "sr_apx/setmap/setmap.hpp"
 #include "sr_apx/treewidth/treewidth.hpp"
 
-namespace sr_apx::domset::exact {
+namespace sr_apx {
+namespace domset {
+namespace exact {
 
 #define IN_DOMSET 1
 #define DOMINATED 2
@@ -143,6 +145,6 @@ public:
 
 };
 
-}
+}}}
 
 #endif

@@ -3,7 +3,9 @@
 
 #include <iostream>
 
-namespace sr_apx::domset::exact {
+namespace sr_apx {
+namespace domset {
+namespace exact {
 
 Row::Row() {
     A_c = INF;
@@ -328,4 +330,4 @@ int Table::get_table_size() {
     return table.size();
 }
 
-}
+}}}

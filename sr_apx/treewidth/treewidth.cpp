@@ -1,7 +1,8 @@
 
 #include "treewidth.hpp"
 
-namespace sr_apx::treewidth {
+namespace sr_apx {
+namespace treewidth {
 
 Decomposition::Decomposition() {
     tw = 0;
@@ -326,4 +327,4 @@ Set balanced_separator(const Graph& graph, const Set& W) {
     return C;
 }
 
-}
+}}
