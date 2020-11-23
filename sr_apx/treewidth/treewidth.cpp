@@ -140,13 +140,11 @@ void Decomposition::tree_decomp_ordering(Graph& graph, int n, std::vector<int> o
         x_vi.insert(vi); /* add vi to bag */
 
         /* add vi's forward neighbors */
-        if (g.contains_vertex(vi)) {
-            for (int w : g.neighbors(vi)) {
-                x_vi.insert(w);
-                g.remove_edge(vi,w);
-            }
-            g.remove_vertex(vi);
+        for (int w : g.neighbors(vi)) {
+            x_vi.insert(w);
+            g.remove_edge(vi,w);
         }
+        g.remove_vertex(vi);
 
         bags[i] = x_vi;
         if (i == 0) add_bag(ordering[i+1], true, x_vi);
@@ -375,6 +373,7 @@ int lowest_neighbor(const Graph&, int, std::vector<int>);
 int min_degree_vertex(const Graph&);
 int min_fill_edges_vertex(const Graph&);
 int fill_edges(const Graph&, int);
+void print_graph(const sr_apx::Graph&);
 
 
 Graph fill(const Graph& g, int n, std::vector<int> ordering) {
@@ -396,7 +395,7 @@ Graph fill(const Graph& g, int n, std::vector<int> ordering) {
             neighbors.push_back(w);
         for (int j = 0; j < neighbors.size()-1; j++) {
             int w = neighbors[j];
-            for (int k = 1; k < neighbors.size(); k++) {
+            for (int k = j+1; k < neighbors.size(); k++) {
                 int x = neighbors[k];
                 if (pi[w] > pi[v] && pi[x] > pi[v]) { /* ... if this ordering is satisfied */
                     if (!h.adjacent(w,x))
@@ -413,6 +412,7 @@ std::vector<int> greedy_degree(const Graph& g, int n) {
     /* Algorithm 3 from Treewidth computations I. Upper bounds */
 
     Graph h = g; /* h = g */
+    int flag = 0;
 
     std::vector<int> ordering;
     for (int i = 0; i < n; i++) {
@@ -425,17 +425,30 @@ std::vector<int> greedy_degree(const Graph& g, int n) {
             neighbors.push_back(w);
         for (int j = 0; j < neighbors.size()-1; j++) {
             int w = neighbors[j];
-            for (int k = 1; k < neighbors.size(); k++) {
+            for (int k = j+1; k < neighbors.size(); k++) {
                 int x = neighbors[k];
-                if (!h.adjacent(w,x))
-                    h.add_edge(w,x);
+                h.add_edge(w,x);
+                // printf("w: %d, x: %d\n", w, x);
             }
         }
+
+
+        // printf("cliquing %d\n", v);
+        // if (v == 63) print_graph(h);
 
         /* remove v and all its edges */
         for (int w : h.neighbors(v))
             h.remove_edge(v,w);
         h.remove_vertex(v);
+        printf("removed %d\n", v);
+        if (v == 34) flag = 1;
+        if (v == 82 || v == 63) {
+            print_graph(h);
+
+            printf("  %d\n", h.contains_vertex(34));
+        }
+
+        // if (v == 82 || v == 63) printf("34 d: %d\n", h.degree(34));
     }
 
     return ordering;
@@ -457,7 +470,7 @@ std::vector<int> greedy_fill_in(const Graph& g, int n) {
             neighbors.push_back(w);
         for (int j = 0; j < neighbors.size()-1; j++) {
             int w = neighbors[j];
-            for (int k = 1; k < neighbors.size(); k++) {
+            for (int k = j+1; k < neighbors.size(); k++) {
                 int x = neighbors[k];
                 if (!h.adjacent(w,x))
                     h.add_edge(w,x);
@@ -487,7 +500,7 @@ Graph minimal_triangulation(const Graph& g) {
             neighbors.push_back(w);
         for (int j = 0; j < neighbors.size()-1; j++) {
             int w = neighbors[j];
-            for (int k = 1; k < neighbors.size(); k++) {
+            for (int k = j+1; k < neighbors.size(); k++) {
                 int x = neighbors[k];
                 if (!g_prime.adjacent(w,x))
                     g_prime.add_edge(w,x);
@@ -598,7 +611,7 @@ int fill_edges(const Graph& g, int v) {
 
     for (int j = 0; j < neighbors.size()-1; j++) {
         int w = neighbors[j];
-        for (int k = 1; k < neighbors.size(); k++) {
+        for (int k = j+1; k < neighbors.size(); k++) {
             int x = neighbors[k];
             if (!g.adjacent(w,x))
                 non_adjacent_pairs++;
@@ -606,6 +619,12 @@ int fill_edges(const Graph& g, int v) {
     }
 
     return non_adjacent_pairs;
+}
+
+void print_graph(const sr_apx::Graph& g) {
+    sr_apx::Map<sr_apx::Set>::const_iterator iu = g.begin();
+    for ( ; iu != g.end(); ++iu)
+        printf("v: %d (%d)\n", iu->first, g.degree(iu->first));
 }
 
 }
