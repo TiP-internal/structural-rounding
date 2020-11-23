@@ -264,7 +264,7 @@ Set balanced_separator(const Graph& graph, const Set& W) {
     int C_count = 0;
     Set C;
 
-    while (A_count + C_count < W.size() - ((2 * W.size()) / 3) || !revdeg[0].empty() || (!revdeg[1].empty() && A_count + C_count < W.size() - 1)) {
+    while (A_count + C_count < W.size() - ((2 * W.size()) / 3) || (!revdeg[0].empty() && A_count + C_count < W.size() - 1) || (!revdeg[1].empty() && A_count + C_count < W.size() - 1)) {
         int mindeg;
         for (mindeg = 0; revdeg[mindeg].empty(); ++mindeg);
         int vert = *(revdeg[mindeg].begin());
