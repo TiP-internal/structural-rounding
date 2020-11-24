@@ -437,8 +437,6 @@ std::vector<int> greedy_degree(const Graph& g, int n) {
         // if (v == 63) print_graph(h);
 
         /* remove v and all its edges */
-        for (int w : h.neighbors(v))
-            h.remove_edge(v,w);
         h.remove_vertex(v);
         printf("removed %d\n", v);
         if (v == 34) flag = 1;

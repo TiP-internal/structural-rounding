@@ -109,7 +109,7 @@ void Graph::remove_vertex(int vertex) {
 	}
 
 	for (int nbr : loc->second) {
-		loc->second.erase(vertex);
+		adjlist.at(nbr).erase(vertex);
 	}
 
 	adjlist.erase(vertex);
