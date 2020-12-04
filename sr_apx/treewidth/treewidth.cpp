@@ -395,7 +395,7 @@ Graph fill(const Graph& g, int n, std::vector<int> ordering) {
         std::vector<int> neighbors;
         for (int w : h.neighbors(v))
             neighbors.push_back(w);
-        for (int j = 0; j < neighbors.size()-1; j++) {
+        for (int j = 0; j+1 < neighbors.size(); j++) {
             int w = neighbors[j];
             for (int k = j+1; k < neighbors.size(); k++) {
                 int x = neighbors[k];
@@ -424,13 +424,11 @@ std::vector<int> greedy_degree(const Graph& g, int n) {
         std::vector<int> neighbors;
         for (int w : h.neighbors(v))
             neighbors.push_back(w);
-        if (neighbors.size() > 1) {
-            for (int j = 0; j < neighbors.size()-1; j++) {
-                int w = neighbors[j];
-                for (int k = j+1; k < neighbors.size(); k++) {
-                    int x = neighbors[k];
-                    h.add_edge(w,x);
-                }
+        for (int j = 0; j+1 < neighbors.size(); j++) {
+            int w = neighbors[j];
+            for (int k = j+1; k < neighbors.size(); k++) {
+                int x = neighbors[k];
+                h.add_edge(w,x);
             }
         }
 
@@ -454,9 +452,9 @@ std::vector<int> greedy_fill_in(const Graph& g, int n) {
         std::vector<int> neighbors;
         for (int w : h.neighbors(v))
             neighbors.push_back(w);
-        for (int j = 0; j < neighbors.size()-1; j++) {
+        for (int j = 0; j+1 < neighbors.size(); j++) {
             int w = neighbors[j];
-            for (int k = 1; k < neighbors.size(); k++) {
+            for (int k = j+1; k < neighbors.size(); k++) {
                 int x = neighbors[k];
                 h.add_edge(w,x);
             }
@@ -480,7 +478,7 @@ Graph minimal_triangulation(const Graph& g) {
         std::vector<int> neighbors;
         for (int w : g_prime.neighbors(s))
             neighbors.push_back(w);
-        for (int j = 0; j < neighbors.size()-1; j++) {
+        for (int j = 0; j+1 < neighbors.size(); j++) {
             int w = neighbors[j];
             for (int k = j+1; k < neighbors.size(); k++) {
                 int x = neighbors[k];
@@ -587,7 +585,7 @@ int fill_edges(const Graph& g, int v) {
     for (int w : g.neighbors(v))
         neighbors.push_back(w);
 
-    for (int j = 0; j < neighbors.size()-1; j++) {
+    for (int j = 0; j+1 < neighbors.size(); j++) {
         int w = neighbors[j];
         for (int k = j+1; k < neighbors.size(); k++) {
             int x = neighbors[k];
