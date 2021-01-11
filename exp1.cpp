@@ -13,6 +13,7 @@ int main(int argc, char* argv[]) {
     std::string file = argv[1];
     sr_apx::Graph g = sr_apx::read_edge_list(file.c_str());
     int n = g.size();
+    // print_graph(g);
 
     double total = 0;
     printf("\nfile: %s (n: %d) (k: ?)\n", file.c_str(), n);
@@ -36,7 +37,6 @@ int main(int argc, char* argv[]) {
     total += (double)(end-start);
     printf("tree decomp    = %.4f%s", (double)(end-start)/1000000, "s\n");
     printf("total          = %.4f%s", total/1000000, "s\n\n");
-
 
 
     total = 0;
@@ -83,7 +83,7 @@ void print_graph(const sr_apx::Graph& g) {
 void print_ordering(std::vector<int> ordering) {
     int n = 0;
     for (std::vector<int>::iterator it = ordering.begin(); it != ordering.end(); ++it) {
-        printf("%d\n", *it);
+        printf("%d, ", *it);
         n++;
     }
     printf("(%d)\n", n);
@@ -100,4 +100,5 @@ void verify_ordering(const sr_apx::Graph& g, std::vector<int> ordering, int n) {
         if (count > 1) printf("%d duplicates of %d\n", count, iu->first);
         if (count == 0) printf("missing %d\n", iu->first);
     }
+    printf(" .. done\n");
 }

@@ -45,9 +45,9 @@ public:
 Set vertex_delete(const Graph&, int);
 Set balanced_separator(const Graph&, const Set&);
 
-Graph fill(const Graph&, int, std::vector<int>);
-std::vector<int> greedy_degree(const Graph&, int);
 std::vector<int> greedy_fill_in(const Graph&, int);
+std::vector<int> greedy_degree(const Graph&, int);
+Graph fill(const Graph&, int, std::vector<int>);
 Graph minimal_triangulation(const Graph&);
 
 }
