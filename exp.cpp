@@ -17,6 +17,27 @@ void read_directory(const std::string& name, std::vector<std::string>& v) {
     closedir(dirp);
 }
 
+void check_ds(const sr_apx::Graph& graph, const sr_apx::Set& ds) {
+    sr_apx::Map<sr_apx::Set>::const_iterator iu = graph.begin();
+    for ( ; iu != graph.end(); ++iu) {
+        if (ds.contains(iu->first)) {
+            continue;
+        }
+
+        bool flag = false;
+        for (int nbr : iu->second) {
+            if (ds.contains(nbr)) {
+                flag = true;
+                break;
+            }
+        }
+
+        if (!flag) {
+            printf("%d is not dominated\n", iu->first);
+        }
+    }
+}
+
 int main(int argc, char* argv[]) {
 	std::string filepath = argv[1];
 	bool directory = true;
@@ -79,6 +100,7 @@ int main(int argc, char* argv[]) {
 		end = clock();
 		printf(",%d", domset.size());
 		printf(",%.4f", (double)(end-start)/1000000);
+        check_ds(graph, domset);
 
 		for (int i = 2; i <= 5; i++) {
 			start = clock();
@@ -124,6 +146,7 @@ int main(int argc, char* argv[]) {
             sr_apx::Set domset = sr_apx::domset::lift::greedy_lift(graph, edit, partial);
 
             printf(",%d,%.4f", domset.size(), time1 + time2);
+            check_ds(graph, domset);
 		}
 
 		printf("\n");
