@@ -4,11 +4,12 @@
 namespace sr_apx {
 namespace treewidth {
 
-Decomposition::Decomposition() {
+Decomposition::Decomposition(bool b = true) {
     tw = 0;
+    build = b;
 }
 
-Decomposition::Decomposition(const Graph& graph): Decomposition() {
+Decomposition::Decomposition(const Graph& graph): Decomposition(true) {
     build_decomposition(graph);
 }
 
@@ -29,6 +30,12 @@ std::vector<po_bag> Decomposition::get_post_order() {
 // parent_index should be 0 for root bag
 // only modifies pre_order and components_bags
 int Decomposition::add_bag(int parent, bool last_child, Set& bag) {
+    tw = tw < bag.size() ? bag.size() : tw;
+
+    if (!build) {
+        return -1;
+    }
+
     // ensures that root bag exists
     if (components_bags.empty()) {
         components_bags.push_back(Set());
@@ -93,8 +100,6 @@ int Decomposition::add_bag(int parent, bool last_child, Set& bag) {
         pre_order[use_parent].num_children++;
         use_parent = index;
     }
-
-    tw = tw < bag.size() ? bag.size() : tw;
 
     // return index of final bag
     return components_bags.size() - 1;
@@ -189,7 +194,22 @@ Set vertex_delete(const Graph& graph, int w) {
      *
      */
 
-    Decomposition decomp(graph);
+    std::vector<Set> comps = graph.connected_components();
+    int nc = comps.size();
+
+    if (nc > 1) {
+        Set res;
+        for (int i = 0; i < nc; i++) {
+            Graph component = graph.subgraph(comps[i]);
+            Set part = vertex_delete(component, w);
+            res.insert(part.begin(), part.end());
+        }
+
+        return res;
+    }
+
+    Decomposition decomp(false);
+    decomp.build_decomposition(graph);
     int t = decomp.treewidth();
 
     if (t <= w) {

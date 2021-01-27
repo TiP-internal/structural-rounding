@@ -22,8 +22,9 @@ struct po_bag {  //for postorder bag.
 
 class Decomposition {
 private:
-    int tw;
     std::vector<po_bag> pre_order;
+    int tw;
+    bool build;
 
 	int add_bag(int parent, bool last_child, Set& bag);
 	void tree_decomp(Graph&, Set&, Set&, int, bool);
@@ -31,7 +32,7 @@ private:
 public:
     std::vector<Set> components_bags;
 
-    Decomposition();
+    explicit Decomposition(bool b);
 	Decomposition(const Graph&);
 
 	void build_decomposition(const Graph&);
