@@ -10,6 +10,7 @@ namespace domset {
 namespace apx {
 
 Set greedy_apx(const Graph&);
+Set greedy_apx(const Graph&, const Set&, const Set&);
 
 }}}
 

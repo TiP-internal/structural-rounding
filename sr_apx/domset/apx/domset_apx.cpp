@@ -9,6 +9,10 @@ namespace apx {
 
 void mark_dominated(const Graph& graph, Map<int>& deg, std::vector<Set>& revdeg, int u) {
     for (int nbr : graph.neighbors(u)) {
+        if (!deg.contains(nbr)) {
+            continue;
+        }
+
         int degree = deg[nbr];
 		revdeg[degree].erase(nbr);
 
@@ -19,6 +23,10 @@ void mark_dominated(const Graph& graph, Map<int>& deg, std::vector<Set>& revdeg,
 			deg[nbr] = degree - 1;
 			revdeg[degree - 1].insert(nbr);
 		}
+    }
+
+    if (!deg.contains(u)) {
+        return;
     }
 
     int degree = deg[u];
@@ -33,13 +41,13 @@ void mark_dominated(const Graph& graph, Map<int>& deg, std::vector<Set>& revdeg,
     }
 }
 
-
-Set greedy_apx(const Graph& graph) {
+Set greedy_apx(const Graph& graph, const Set& dominators, const Set& undominated) {
     /*
      * Chooses vertex of max degree and adds to dominating set.
      * Adds all of the neighbors and itself to the visited set.
      * Repeats while some vertices have not been visited yet.
-     */
+    */
+
     Set domset;
 
     Set dominated;
@@ -47,15 +55,25 @@ Set greedy_apx(const Graph& graph) {
     std::vector<Set> revdeg;
     int maxdeg = 0;
 
-    for (Map<Set>::const_iterator iu = graph.begin(); iu != graph.end(); ++iu) {
-        int degree = iu->second.size() + 1;
-        deg[iu->first] = degree;
+    for (int u : dominators) {
+        int degree = undominated.contains(u) ? 1 : 0;
+        for (int v : graph.neighbors(u)) {
+            if (undominated.contains(v)) {
+                ++degree;
+            }
+        }
+
+        if (degree == 0) {
+            continue;
+        }
+
+        deg[u] = degree;
         maxdeg = degree > maxdeg ? degree : maxdeg;
         revdeg.resize(maxdeg + 1);
-        revdeg[degree].insert(iu->first);
+        revdeg[degree].insert(u);
     }
 
-    while (dominated.size() < graph.size()) {
+    while (dominated.size() < undominated.size()) {
         while (revdeg[maxdeg].empty()) {
             --maxdeg;
         }
@@ -64,19 +82,30 @@ Set greedy_apx(const Graph& graph) {
         domset.insert(u);
 
         for (int nbr : graph.neighbors(u)) {
-            if (!dominated.contains(nbr)) {
+            if (undominated.contains(nbr) && !dominated.contains(nbr)) {
                 mark_dominated(graph, deg, revdeg, nbr);
                 dominated.insert(nbr);
             }
         }
 
-        if (!dominated.contains(u)) {
+        if (undominated.contains(u) && !dominated.contains(u)) {
             mark_dominated(graph, deg, revdeg, u);
             dominated.insert(u);
         }
     }
 
     return domset;
+}
+
+Set greedy_apx(const Graph& graph) {
+    Set vertices(graph.size());
+
+    Map<Set>::const_iterator iu = graph.begin();
+    for ( ; iu != graph.end(); ++iu) {
+        vertices.insert(iu->first);
+    }
+
+    return greedy_apx(graph, vertices, vertices);
 }
 
 }}}
