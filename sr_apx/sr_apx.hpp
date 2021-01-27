@@ -11,3 +11,4 @@
 #include "sr_apx/treewidth/treewidth.hpp"
 #include "sr_apx/domset/apx/domset_apx.hpp"
 #include "sr_apx/domset/exact/domset_exact.hpp"
+#include "sr_apx/domset/lift/domset_lift.hpp"
