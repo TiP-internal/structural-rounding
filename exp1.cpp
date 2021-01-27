@@ -44,6 +44,7 @@ int main(int argc, char* argv[]) {
     std::vector<int> ordering1 = sr_apx::treewidth::greedy_fill_in(g, n);
     end = clock();
     total += (double)(end-start);
+    // total_new = total;
     printf("greedy_fill_in = %.4f%s", (double)(end-start)/1000000, "s\n");
     // verify_ordering(g, ordering1, n);
 
@@ -61,7 +62,7 @@ int main(int argc, char* argv[]) {
     printf("tree decomp    = %.4f%s", (double)(end-start)/1000000, "s\n");
 
     start = clock();
-    sr_apx::Graph tm = sr_apx::treewidth::minimal_triangulation(g_plus1);
+    sr_apx::Graph tm = sr_apx::treewidth::minimal_triangulation(g_plus1, n);
     end = clock();
     total += (double)(end-start);
     printf("tri minimiz    = %.4f%s", (double)(end-start)/1000000, "s\n");

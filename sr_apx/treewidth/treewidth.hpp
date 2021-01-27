@@ -48,7 +48,7 @@ Set balanced_separator(const Graph&, const Set&);
 std::vector<int> greedy_fill_in(const Graph&, int);
 std::vector<int> greedy_degree(const Graph&, int);
 Graph fill(const Graph&, int, std::vector<int>);
-Graph minimal_triangulation(const Graph&);
+Graph minimal_triangulation(const Graph&, int);
 
 }
 

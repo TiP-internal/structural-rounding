@@ -367,7 +367,8 @@ Set balanced_separator(const Graph& graph, const Set& W) {
 
 // greedy heuristics
 
-int chordal(const Graph&, std::vector<Set>&);
+int chordal(Graph&, std::vector<Set>&);
+// int chordal(const Graph&, std::vector<Set>&);
 bool clique(const Graph&, int);
 int lowest_neighbor(const Graph&, int, std::vector<int>);
 int min_vertex(const Graph&, std::vector<Set>&);
@@ -423,26 +424,20 @@ std::vector<int> greedy_degree(const Graph& g, int n) {
     /* Algorithm 3 from Treewidth computations I. Upper bounds */
 
     Graph h = g; /* h = g */
-    std::vector<Set> deg_sets;
+    std::vector<Set> deg_sets(n, Set());
 	int max_deg = 0;
 
     /* initialize deg_sets */
     for (Map<Set>::const_iterator it = h.begin(); it != h.end(); ++it) {
 		int degree = it->second.size();
-		max_deg = degree > max_deg ? degree : max_deg;
-		deg_sets.resize(max_deg+1);
 		deg_sets[degree].insert(it->first);
 	}
 
-    deg_sets.resize(max_deg * 1000); // TODO
-
     /* iterate over h */
-    int last_deg = 1;
     std::vector<int> ordering;
     for (int i = 0; i < n; i++) {
-        int v = min_vertex(h, deg_sets, last_deg); /* choose v as a vertex of smallest degree in h */
+        int v = min_vertex(h, deg_sets, 1); /* choose v as a vertex of smallest degree in h */
         ordering.push_back(v); /* let v be the ith vertex in the ordering */
-        last_deg = h.degree(v); /* new min degree vertex can be no less than last_deg-1 */
 
         /* make a clique of v's neighbors in h */
         std::vector<int> neighbors;
@@ -459,8 +454,6 @@ std::vector<int> greedy_degree(const Graph& g, int n) {
                     h.add_edge(w,x);
                     /* increase degree of x */
                     deg_sets[x_deg].erase(x);
-                    max_deg = x_deg+1 > max_deg ? x_deg+1 : max_deg;
-                    deg_sets.resize(max_deg+1);
                     deg_sets[x_deg+1].insert(x);
                     count++;
                 }
@@ -468,8 +461,6 @@ std::vector<int> greedy_degree(const Graph& g, int n) {
             /* increase degree of w */
             if (count > 0) {
                 deg_sets[w_deg].erase(w);
-                max_deg = w_deg+count > max_deg ? w_deg+count : max_deg;
-                deg_sets.resize(max_deg+1);
                 deg_sets[w_deg+count].insert(w);
             }
         }
@@ -490,21 +481,21 @@ std::vector<int> greedy_degree(const Graph& g, int n) {
 std::vector<int> greedy_fill_in(const Graph& g, int n) {
     /* Algorithm 3 from Treewidth computations I. Upper bounds */
 
+    /* calculate max possible amount of fill any v could have */
+    int max_fill = 0;
+    for (int i = n-1; i > 0; i--)
+        max_fill += i;
+
     Graph h = g; /* h = g */
     Map<int> fill(h.size());
-    std::vector<Set> fill_sets;
-	int max_fill = 0;
+    std::vector<Set> fill_sets(max_fill, Set());
 
     /* initialize fill and fill_sets */
     for (Map<Set>::const_iterator it = h.begin(); it != h.end(); ++it) {
 		int f = fill_edges(h, it->first);
-		max_fill = f > max_fill ? f : max_fill;
-		fill_sets.resize(max_fill+1);
 		fill_sets[f].insert(it->first);
         fill[it->first] = f;
 	}
-
-    fill_sets.resize(max_fill*1000); // TODO
 
     /* iterate over h */
     std::vector<int> ordering;
@@ -554,8 +545,6 @@ std::vector<int> greedy_fill_in(const Graph& g, int n) {
         for (int w : neighbors) {
             fill_sets[fill[w]].erase(w);
             int new_fill = fill_edges(h, w);
-            max_fill = new_fill > max_fill ? new_fill : max_fill;
-            fill_sets.resize(max_fill+1);
             fill_sets[new_fill].insert(w);
             fill[w] = new_fill;
             j++;
@@ -565,22 +554,18 @@ std::vector<int> greedy_fill_in(const Graph& g, int n) {
     return ordering;
 }
 
-Graph minimal_triangulation(const Graph& g) {
+Graph minimal_triangulation(const Graph& g, int n) {
     /* Algorithm 6 from Treewidth computations I. Upper bounds */
 
     Graph g_prime = g; /* g' = g */
-    std::vector<Set> deg_sets;
-	int max_deg = 0;
+    std::vector<Set> deg_sets(n, Set());
+	int max_deg = g_prime.size()+1;
 
     /* initialize deg_sets */
     for (Map<Set>::const_iterator it = g_prime.begin(); it != g_prime.end(); ++it) {
 		int degree = it->second.size();
-		max_deg = degree > max_deg ? degree : max_deg;
-		deg_sets.resize(max_deg+1);
 		deg_sets[degree].insert(it->first);
 	}
-
-    deg_sets.resize(max_deg*10000); // TODO
 
     int s = chordal(g_prime, deg_sets);
     while (s != -1) { /* while g' is not chordal */
@@ -600,8 +585,6 @@ Graph minimal_triangulation(const Graph& g) {
                     g_prime.add_edge(w,x);
                     /* increase degree of x */
                     deg_sets[x_deg].erase(x);
-                    max_deg = x_deg+1 > max_deg ? x_deg+1 : max_deg;
-                    deg_sets.resize(max_deg+1);
                     deg_sets[x_deg+1].insert(x);
                     count++;
                 }
@@ -609,37 +592,29 @@ Graph minimal_triangulation(const Graph& g) {
             /* increase degree of w */
             if (count > 0) {
                 deg_sets[w_deg].erase(w);
-                max_deg = w_deg+count > max_deg ? w_deg+count : max_deg;
-                deg_sets.resize(max_deg+1);
                 deg_sets[w_deg+count].insert(w);
             }
         }
-
         s = chordal(g_prime, deg_sets);
     }
 
     return g_prime;
 }
 
-int chordal(const Graph& g, std::vector<Set>& deg_sets) {
-    Graph h = g;
-    int n = h.size();
-
-    int last_deg = 1;
+int chordal(Graph& g, std::vector<Set>& deg_sets) {
+    int n = g.size();
     for (int i = 0; i < n; i++) {
-        int min_v = min_vertex(h, deg_sets, last_deg);
-        last_deg = h.degree(min_v);
-
-        if (!clique(h, min_v))
+        int min_v = min_vertex(g, deg_sets, 1);
+        if (!clique(g, min_v))
             return min_v;
 
         /* remove v and all its edges */
-        for (int w : h.neighbors(min_v)) {
-            int degree = h.degree(w);
+        for (int w : g.neighbors(min_v)) {
+            int degree = g.degree(w);
     		deg_sets[degree].erase(w);
     	    deg_sets[degree-1].insert(w);
     	}
-        h.remove_vertex(min_v);
+        g.remove_vertex(min_v);
     }
 
     return -1; /* if chordal */
