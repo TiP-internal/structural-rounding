@@ -7,7 +7,8 @@
 
 #include <vector>
 
-namespace sr_apx::treewidth {
+namespace sr_apx {
+namespace treewidth {
 
 struct po_bag {  //for postorder bag.
     int bag_index;
@@ -21,8 +22,9 @@ struct po_bag {  //for postorder bag.
 
 class Decomposition {
 private:
-    int tw;
     std::vector<po_bag> pre_order;
+    int tw;
+    bool build;
 
 	int add_bag(int parent, bool last_child, Set& bag);
 	void tree_decomp(Graph&, Set&, Set&, int, bool);
@@ -32,7 +34,7 @@ private:
 public:
     std::vector<Set> components_bags;
 
-    Decomposition();
+    explicit Decomposition(bool b);
 	Decomposition(const Graph&);
 
 	void build_decomposition(const Graph&);
@@ -44,12 +46,13 @@ public:
 
 Set vertex_delete(const Graph&, int);
 Set balanced_separator(const Graph&, const Set&);
+Set close_balanced_separator(const Graph&, const Set&);
 
 std::vector<int> greedy_fill_in(const Graph&, int);
 std::vector<int> greedy_degree(const Graph&, int);
 Graph fill(const Graph&, int, std::vector<int>);
 Graph minimal_triangulation(const Graph&, int);
 
-}
+}}
 
 #endif

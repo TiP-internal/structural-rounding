@@ -1,18 +1,16 @@
 
-#include "table.hpp"
-
-#include "domset_exact.hpp"   //NOTE temporary for print
-
+#include "sr_apx/domset/exact/table.hpp"
 
 #include <iostream>
-#include <fstream>
-#include <limits>  //infinity
 
+namespace sr_apx {
+namespace domset {
+namespace exact {
 
 Row::Row() {
     A_c = INF;
     key = -1;
-    
+
     childl_ind = -1;
     childr_ind = -1;
 }
@@ -21,7 +19,7 @@ Row::Row(const Row &r) {  //copy constructor
     coloring = r.coloring;
     A_c = r.A_c;
     key = r.key;
-    
+
     childl_ind=r.childl_ind;
     childr_ind=r.childr_ind;
 }
@@ -30,13 +28,11 @@ Row& Row::operator=( const Row& r ) {
     coloring = r.coloring;
     A_c = r.A_c;
     key = r.key;
-    
+
     childl_ind=r.childl_ind;
     childr_ind=r.childr_ind;
     return *this;
 }
-
-Row::~Row() {}
 
 int Row::get_Ac() {
     return A_c;
@@ -58,16 +54,16 @@ void Row::update_key(int newKey) {
 void Row::append_coloring(int val) {
     //val should only ever be a single int (1,2, or 3)
     coloring.push_back(val);
-    
+
     if (key==-1) key = val;
     else {
-        key = key*10;  
+        key = key*10;
         key = key+val;
     }
 }
 
 void Row::remove_from_coloring(int v_index) {
-    /* Creates a new coloring that does not include the 
+    /* Creates a new coloring that does not include the
      * coloring that was at v_index previously.
      */
     unsigned long long int updated_key=-99;
@@ -111,14 +107,12 @@ Table& Table::operator=( const Table& r ) {
     return *this;
 }
 
-Table::~Table() {}
 
-
-po_bag Table::get_pobag() {
+treewidth::po_bag Table::get_pobag() {
     return tables_pobag;
 }
 
-void Table::set_pobag(po_bag po) {
+void Table::set_pobag(treewidth::po_bag po) {
     tables_pobag=po;
 }
 
@@ -128,7 +122,7 @@ void Table::update_Ac(int row_index, int new_Ac) {
     try {
         table[row_index].update_Ac(new_Ac);
     } catch (const char* msg) {
-        cerr << msg << endl;
+        std::cerr << msg << std::endl;
         exit(0);
     }
 }
@@ -161,34 +155,34 @@ int Table::get_rows_key(int row_index) {
 
 int Table::create_row(int coloring) {
     // creates a new row and adds it to the table/table_lookups
-    Row r;        
+    Row r;
     if(coloring!=-1) r.append_coloring(coloring);
-    
+
     int index = -1;
     try {
         index = insert_row(r);
     } catch (const char* msg) {
-        cerr << msg << endl;
+        std::cerr << msg << std::endl;
         exit(0);
     }
-    
+
     return index;
 }
 
-int Table::create_row(int copy_row_index, int coloring) {   
+int Table::create_row(int copy_row_index, int coloring) {
     Row r = table[copy_row_index];
 
     int keybefore=r.get_key();
     if(coloring!=-1) r.append_coloring(coloring);
-    
+
     int index = -1;
     try {
         index = insert_row(r);
     } catch (const char* msg) {
-        cerr << msg << endl;
+        std::cerr << msg << std::endl;
         exit(0);
     }
-    
+
     return index;
 }
 
@@ -196,19 +190,19 @@ int Table::copyin_row(Table* child_table, int child_row_index) {
     Row r = child_table->table[child_row_index];
     r.set_childl_table_ind(-1);
     r.set_childr_table_ind(child_row_index);
-    
+
     int index=-1;
     try {
         index = insert_row(r);
     } catch (const char* msg) {
-        cerr << msg << endl;
+        std::cerr << msg << std::endl;
         exit(0);
     }
 
     return index;
 }
 
-int Table::copyin_introrow(Table* child_table, int child_row_index, int coloring) {    
+int Table::copyin_introrow(Table* child_table, int child_row_index, int coloring) {
     Row r = child_table->table[child_row_index];
     r.append_coloring(coloring);
     r.set_childl_table_ind(-1);
@@ -218,13 +212,13 @@ int Table::copyin_introrow(Table* child_table, int child_row_index, int coloring
     try {
         index = insert_row(r);
     } catch (const char* msg) {
-        cerr << msg << endl;
+        std::cerr << msg << std::endl;
         exit(0);
     }
     return index;
 }
 
-int Table::copyin_forgetrow(Table* child_table, int child_row_index, int v_index) {    
+int Table::copyin_forgetrow(Table* child_table, int child_row_index, int v_index) {
     Row r = child_table->table[child_row_index];
     r.remove_from_coloring(v_index);
     r.set_childl_table_ind(-1);
@@ -234,7 +228,7 @@ int Table::copyin_forgetrow(Table* child_table, int child_row_index, int v_index
     try {
         index = insert_row(r);
     } catch (const char* msg) {
-        cerr << msg << endl;
+        std::cerr << msg << std::endl;
         exit(0);
     }
     return index;
@@ -247,34 +241,34 @@ void Table::update_table_lookups(int key, int new_row_index) {
 
 int Table::insert_row(Row r) {
     // returns the index of the inserted row
-    // only inserts if r not already inserted 
+    // only inserts if r not already inserted
 
     int index = -1;
     if(lookup_table_index(r.get_key()) == -1) {
-        index = table.size(); 
-        table.push_back(r);      
-            
+        index = table.size();
+        table.push_back(r);
+
         // key is the concatenated coloring, value is the index in table.
-        table_lookups_insert(r.get_key(), index); 
+        table_lookups_insert(r.get_key(), index);
     } else throw("Row already inserted into table.\n");
     return index;
 }
 
 void Table::update_row_add(int row_index, int value) {
     /* Updates a row, and updates the table lookups too.
-     * Used for updating a coloring which is already in the table lookups. 
+     * Used for updating a coloring which is already in the table lookups.
      */
     // 1. erase
     int index = lookup_table_index(table[row_index].get_key());
     table_lookups_remove(table[row_index].get_key());
-    
+
     // 2. re-insert into table_lookups
     table[row_index].append_coloring(value);
-    
+
     try {
         table_lookups_insert(table[row_index].get_key(), index);
     } catch (const char* msg) {
-        cerr << msg << endl;
+        std::cerr << msg << std::endl;
     }
 }
 
@@ -317,9 +311,9 @@ void Table::pop_front_row() {
 
 void Table::table_lookups_insert(unsigned long long int key, int table_index) {
     if(key<0) throw("Incorrect key: table_lookups_insert");
-    
+
     //Adds an entry to table_lookups_insert Map
-    table_lookups.insert(key, table_index);
+    table_lookups.insert({key, table_index});
 }
 
 
@@ -336,4 +330,4 @@ int Table::get_table_size() {
     return table.size();
 }
 
-
+}}}

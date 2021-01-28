@@ -1,13 +1,15 @@
 
 #include "treewidth.hpp"
 
-namespace sr_apx::treewidth {
+namespace sr_apx {
+namespace treewidth {
 
-Decomposition::Decomposition() {
+Decomposition::Decomposition(bool b = true) {
     tw = 0;
+    build = b;
 }
 
-Decomposition::Decomposition(const Graph& graph): Decomposition() {
+Decomposition::Decomposition(const Graph& graph): Decomposition(true) {
     build_decomposition(graph);
 }
 
@@ -28,6 +30,12 @@ std::vector<po_bag> Decomposition::get_post_order() {
 // parent_index should be 0 for root bag
 // only modifies pre_order and components_bags
 int Decomposition::add_bag(int parent, bool last_child, Set& bag) {
+    tw = tw < bag.size() ? bag.size() : tw;
+
+    if (!build) {
+        return -1;
+    }
+
     // ensures that root bag exists
     if (components_bags.empty()) {
         components_bags.push_back(Set());
@@ -92,8 +100,6 @@ int Decomposition::add_bag(int parent, bool last_child, Set& bag) {
         pre_order[use_parent].num_children++;
         use_parent = index;
     }
-
-    tw = tw < bag.size() ? bag.size() : tw;
 
     // return index of final bag
     return components_bags.size() - 1;
@@ -226,7 +232,22 @@ Set vertex_delete(const Graph& graph, int w) {
      *
      */
 
-    Decomposition decomp(graph);
+    std::vector<Set> comps = graph.connected_components();
+    int nc = comps.size();
+
+    if (nc > 1) {
+        Set res;
+        for (int i = 0; i < nc; i++) {
+            Graph component = graph.subgraph(comps[i]);
+            Set part = vertex_delete(component, w);
+            res.insert(part.begin(), part.end());
+        }
+
+        return res;
+    }
+
+    Decomposition decomp(false);
+    decomp.build_decomposition(graph);
     int t = decomp.treewidth();
 
     if (t <= w) {
@@ -301,7 +322,7 @@ Set balanced_separator(const Graph& graph, const Set& W) {
     int C_count = 0;
     Set C;
 
-    while (A_count + C_count < W.size() - ((2 * W.size()) / 3) || !revdeg[0].empty() || (!revdeg[1].empty() && A_count + C_count < W.size() - 1)) {
+    while (A_count + C_count < W.size() - ((2 * W.size()) / 3) || (!revdeg[0].empty() && A_count + C_count < W.size() - 1) || (!revdeg[1].empty() && A_count + C_count < W.size() - 1)) {
         int mindeg;
         for (mindeg = 0; revdeg[mindeg].empty(); ++mindeg);
         int vert = *(revdeg[mindeg].begin());
@@ -364,6 +385,142 @@ Set balanced_separator(const Graph& graph, const Set& W) {
     return C;
 }
 
+
+Set close_balanced_separator(const Graph& graph, const Set& W) {
+    if (graph.size() <= 2) {
+        Set C;
+        Map<Set>::const_iterator iu = graph.begin();
+        for ( ; iu != graph.end(); ++iu) {
+            C.insert(iu->first);
+        }
+        return C;
+    }
+
+    // cannot legitimately call with empty W so used for V case
+    if (W.empty()) {
+        Set V;
+        Map<Set>::const_iterator iu = graph.begin();
+        for ( ; iu != graph.end(); ++iu) {
+            V.insert(iu->first);
+        }
+        return close_balanced_separator(graph, V);
+    }
+
+    if (W.size() < 2) {
+        Set C;
+        int w = *(W.begin());
+        int nbr = *(graph.neighbors(w).begin());
+        C.insert(nbr);
+        return C;
+    }
+
+    Map<int> deg;
+    std::vector<Set> revdeg;
+    int maxdeg = 0;
+    int mindeg = graph.size() + 1;
+    int min_deg_vertex = -1;
+
+    Map<Set>::const_iterator iu = graph.begin();
+    for ( ; iu != graph.end(); ++iu) {
+        int degree = iu->second.size() + 1;
+        maxdeg = degree > maxdeg ? degree : maxdeg;
+        if (degree < mindeg) {
+            mindeg = degree;
+            min_deg_vertex = iu->first;
+        }
+    }
+
+    deg[min_deg_vertex] = 0;
+    revdeg.resize(maxdeg + 1);
+    revdeg[0].insert(min_deg_vertex);
+
+    for (int nbr : graph.neighbors(min_deg_vertex)) {
+        int degree = graph.degree(nbr) + 1;
+        deg[nbr] = degree;
+        revdeg[degree].insert(nbr);
+    }
+
+    int A_count = 0;
+    int C_count = 0;
+    Set C;
+    Set A;
+
+    while (A_count + C_count < W.size() - ((2 * W.size()) / 3) || (!revdeg[0].empty() && A_count + C_count < W.size() - 1) || (!revdeg[1].empty() && A_count + C_count < W.size() - 1)) {
+        int mindeg;
+        for (mindeg = 0; revdeg[mindeg].empty(); ++mindeg);
+        int vert = *(revdeg[mindeg].begin());
+
+        // move vert to A
+        revdeg[mindeg].erase(vert);
+        deg.erase(vert);
+        A.insert(vert);
+        if (W.contains(vert)) {
+            ++A_count;
+            if (C.contains(vert)) {
+                --C_count;
+            }
+        }
+
+        for (int add_c : graph.neighbors(vert)) {
+            // neighbor already in A
+            if (A.contains(add_c)) {
+                continue;
+            }
+
+            if (!deg.contains(add_c)) {
+                int degree = graph.degree(add_c) + 1;
+                deg[add_c] = degree;
+                revdeg[degree].insert(add_c);
+            }
+
+            // update degree of add_c if vert was in B
+            if (!C.contains(vert)) {
+                int degree = deg[add_c];
+                deg[add_c] = degree - 1;
+                revdeg[degree].erase(add_c);
+                revdeg[degree - 1].insert(add_c);
+            }
+
+            // don't readd to C
+            if (C.contains(add_c)) {
+                continue;
+            }
+
+            for (int nbr : graph.neighbors(add_c)) {
+                // nbr in A
+                if (A.contains(nbr)) {
+                    continue;
+                }
+
+                // nbr is a new available choice
+                if (!deg.contains(nbr)) {
+                    int degree = graph.degree(nbr) + 1;
+                    deg[nbr] = degree;
+                    revdeg[degree].insert(nbr);
+                }
+
+                int degree = deg[nbr];
+                deg[nbr] = degree - 1;
+                revdeg[degree].erase(nbr);
+                revdeg[degree - 1].insert(nbr);
+            }
+
+            if (W.contains(add_c)) {
+                ++C_count;
+            }
+            C.insert(add_c);
+
+            int degree = deg[add_c];
+            deg[add_c] = degree - 1;
+            revdeg[degree].erase(add_c);
+            revdeg[degree - 1].insert(add_c);
+        }
+
+        C.erase(vert);
+    }
+
+    return C;
+}
 
 // greedy heuristics
 
@@ -683,4 +840,5 @@ int fill_edges(const Graph& g, int v) {
 
     return non_adjacent_pairs;
 }
-}
+
+}}

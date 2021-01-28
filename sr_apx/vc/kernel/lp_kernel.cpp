@@ -2,7 +2,9 @@
 #include "sr_apx/vc/kernel/lp_kernel.hpp"
 #include "sr_apx/vc/exact/vc_exact.hpp"
 
-namespace sr_apx::vc::kernel {
+namespace sr_apx {
+namespace vc {
+namespace kernel {
 
 std::tuple<Set, Set> lp_kernel(const Graph& g) {
     Graph h(g.size() * 2);
@@ -35,7 +37,7 @@ std::tuple<Set, Set> lp_kernel(const Graph& g) {
         }
     }
 
-    return {std::move(in), std::move(out)};
+    return std::make_tuple(std::move(in), std::move(out));
 }
 
-}
+}}}

@@ -4,7 +4,9 @@
 #include "sr_apx/vc/exact/vc_exact.hpp"
 #include "sr_apx/bipartite/bipartite.hpp"
 
-namespace sr_apx::vc::lift {
+namespace sr_apx {
+namespace vc {
+namespace lift {
 
 Set naive_lift(const Graph& graph, const Set& octset, const Set& partial) {
 	Set cover(octset);
@@ -208,4 +210,4 @@ Set recursive_bip_lift(const Graph& graph, const Set& octset, const Set& partial
 	return cover;
 }
 
-}
+}}}

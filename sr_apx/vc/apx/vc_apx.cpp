@@ -3,7 +3,9 @@
 
 #include <vector>
 
-namespace sr_apx::vc::apx {
+namespace sr_apx {
+namespace vc {
+namespace apx {
 
 Set dfs_apx(const Graph& g) {
 	Set cover;
@@ -153,4 +155,4 @@ Set std_apx(const Graph& g) {
 	return cover;
 }
 
-}
+}}}
