@@ -28,6 +28,8 @@ private:
 
 	int add_bag(int parent, bool last_child, Set& bag);
 	void tree_decomp(Graph&, Set&, Set&, int, bool);
+    void tree_decomp_ordering(Graph&, int, std::vector<int>);
+
 
 public:
     std::vector<Set> components_bags;
@@ -36,6 +38,7 @@ public:
 	Decomposition(const Graph&);
 
 	void build_decomposition(const Graph&);
+    void build_decomposition(const Graph&, std::vector<int>);
 
     int treewidth();
     std::vector<po_bag> get_post_order();
@@ -44,6 +47,11 @@ public:
 Set vertex_delete(const Graph&, int);
 Set balanced_separator(const Graph&, const Set&);
 Set close_balanced_separator(const Graph&, const Set&);
+
+std::vector<int> greedy_fill_in(const Graph&, int);
+std::vector<int> greedy_degree(const Graph&, int);
+Graph fill(const Graph&, int, std::vector<int>);
+Graph minimal_triangulation(const Graph&, int);
 
 }}
 
