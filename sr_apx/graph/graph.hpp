@@ -16,6 +16,7 @@ public:
 	explicit Graph(int);
 
 	void add_edge(int, int);
+	void remove_edge(int, int);
 	void remove_vertex(int);
 
 	int size() const;

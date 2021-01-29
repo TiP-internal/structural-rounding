@@ -30,6 +30,22 @@ void Graph::add_edge(int u, int v) {
 	adjlist[v].insert(u);
 }
 
+void Graph::remove_edge(int u, int v) {
+	Map<Set>::iterator loc = adjlist.find(u);
+	if (loc == adjlist.end()) {
+		return;
+	}
+
+	loc->second.erase(v);
+
+	loc = adjlist.find(v);
+	if (loc == adjlist.end()) {
+		return;
+	}
+
+	loc->second.erase(u);
+}
+
 int Graph::size() const {
 	return adjlist.size();
 }
@@ -95,7 +111,7 @@ void Graph::remove_vertex(int vertex) {
 	}
 
 	for (int nbr : loc->second) {
-		loc->second.erase(vertex);
+		adjlist.at(nbr).erase(vertex);
 	}
 
 	adjlist.erase(vertex);

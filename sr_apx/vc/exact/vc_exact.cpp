@@ -6,7 +6,9 @@
 #include <stdexcept>
 #include <vector>
 
-namespace sr_apx::vc::exact {
+namespace sr_apx {
+namespace vc {
+namespace exact {
 
 Set bip_exact(const Graph& graph) {
 	Set empty;
@@ -62,4 +64,4 @@ Set bip_exact(const Graph& graph) {
 	return cover;
 }
 
-}
+}}}

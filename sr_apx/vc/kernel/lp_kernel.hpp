@@ -7,10 +7,12 @@
 #include "sr_apx/setmap/setmap.hpp"
 #include "sr_apx/graph/graph.hpp"
 
-namespace sr_apx::vc::kernel {
+namespace sr_apx {
+namespace vc {
+namespace kernel {
 
 std::tuple<Set, Set> lp_kernel(const Graph&);
 
-}
+}}}
 
 #endif
