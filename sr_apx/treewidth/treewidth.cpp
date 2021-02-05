@@ -30,38 +30,92 @@ std::vector<po_bag> Decomposition::get_post_order() {
 // parent_index should be 0 for root bag
 // only modifies pre_order and components_bags
 int Decomposition::add_bag(int parent, bool last_child, Set& bag) {
+        
+    if(parent==0 || parent==-1) {
+        parbag_tracker.clear();  // no verts in root
+    } else {
+        bool traversing=true;
+        
+        // parent non-leaf then empty tracker to traverse up tree
+        if(parent!=pre_order.size()-1) parbag_tracker.clear();
+        int par_ind = parent;
+        
+        int ind=0;
+        while (traversing) {       
+            po_bag curr = pre_order[par_ind];
+                         
+            // only look at bags added last call if par leaf
+            if (ind >= bags_added && parent==pre_order.size()-1) break;  
+            
+            if(curr.type==-1) {
+                bool contains=false;
+                for(auto i : parbag_tracker) {
+                    if(i==curr.vertex) contains=true;
+                }
+                if (!contains && curr.vertex>=0) {
+                    parbag_tracker.push_back(curr.vertex);
+                }
+            } else if (curr.type==1) {
+                int pos=-1, j=0;
+                for(auto i : parbag_tracker) {
+                    if (i==curr.vertex) pos=j; break;
+                    j++;
+                }
+                if (pos >= 0) {
+                    parbag_tracker.erase(parbag_tracker.begin()+pos);
+                }
+            }
+            
+            par_ind = curr.parent_bag_index;
+            if(par_ind==0) traversing=false;
+            
+            ind++;
+        }
+    }
+    
+    bags_added=0;
+        
     tw = tw < bag.size() ? bag.size() : tw;
 
     if (!build) {
         return -1;
     }
-
+    
     // ensures that root bag exists
-    if (components_bags.empty()) {
-        components_bags.push_back(Set());
+    if(pre_order.empty()) {
+        bags_added++;
         pre_order.push_back(po_bag(0, -1));
     }
-
-    if (bag == components_bags[parent]) {
-        printf("%s\n", "equal bags");
-        return parent;
+    
+    if (bag.size()==parbag_tracker.size()) {
+        bool cont=true;
+        for(auto i : parbag_tracker) {
+            if (!bag.contains(i)) cont=false;
+        }
+        
+        if(cont) {
+            printf("%s\n", "equal bags");
+            return parent;
+        }
     }
-
-    int true_parent = pre_order[parent].current_join_child;
+    
+    int true_parent = pre_order[parent].current_join_child;  
 
     if (pre_order[true_parent].num_children > 0 && !last_child) {
         // create a new join bag to hold the child
-        int index = components_bags.size();
-        components_bags.push_back(components_bags[true_parent]);
+        int index = pre_order.size();
+        
+        bags_added++;
         pre_order.push_back(po_bag(index, true_parent));
         pre_order[true_parent].num_children++;
         pre_order[parent].current_join_child = index;
         true_parent = index;
     }
-
+    
     if (pre_order[true_parent].num_children > 0 || !last_child) {
-        int index = components_bags.size();
-        components_bags.push_back(components_bags[true_parent]);
+        int index = pre_order.size();
+        
+        bags_added++;
         pre_order.push_back(po_bag(index, true_parent));
         pre_order[true_parent].num_children++;
         true_parent = index;
@@ -69,40 +123,51 @@ int Decomposition::add_bag(int parent, bool last_child, Set& bag) {
 
     // create the child
     int use_parent = true_parent;
-    Set use_bag = components_bags[true_parent];
-
+    
     // add introduce bags
-    for (int x : components_bags[true_parent]) {
+    for(int x : parbag_tracker) {
         // only look at vertices to be added
-        if (bag.contains(x)) {
+        if (bag.contains(x)) {                
             continue;
         }
-
-        use_bag.erase(x);
-        int index = components_bags.size();
-        components_bags.push_back(use_bag);
+        
+        int index = pre_order.size();
+        
+        bags_added++;
         pre_order.push_back(po_bag(index, use_parent));
+        pre_order[index].type=1;
+        pre_order[index].vertex=x;
+        
         pre_order[use_parent].num_children++;
         use_parent = index;
     }
-
+    
     // add forget bags
-    for (int x : bag) {
-        // only look at vertices to be removed
-        if (components_bags[true_parent].contains(x)) {
+    for (int x : bag) {                           
+        // only look at vertices to be removed        
+        bool cont=false;
+        for(auto i : parbag_tracker) {
+            if (i==x) { 
+                cont=true; break;
+            }
+        }   
+        if (cont) {
             continue;
         }
-
-        use_bag.insert(x);
-        int index = components_bags.size();
-        components_bags.push_back(use_bag);
+                
+        int index = pre_order.size();
+        
+        bags_added++;
         pre_order.push_back(po_bag(index, use_parent));
+        pre_order[index].type=-1;
+        pre_order[index].vertex=x;
+        
         pre_order[use_parent].num_children++;
         use_parent = index;
     }
 
     // return index of final bag
-    return components_bags.size() - 1;
+    return pre_order.size()-1;
 }
 
 void Decomposition::build_decomposition(const Graph& graph) {
@@ -190,7 +255,7 @@ void Decomposition::tree_decomp(Graph& graph, Set& Z, Set& W, int parent, bool l
             graph.remove_edge(s, w);
         }
     }
-
+    
     int x = add_bag(parent, last_child, W);
 
     if (Z.empty()) {
