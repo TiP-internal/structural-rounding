@@ -106,18 +106,81 @@ int Decomposition::add_bag(int parent, bool last_child, Set& bag) {
 }
 
 void Decomposition::build_decomposition(const Graph& graph) {
-    std::vector<Set> components = graph.connected_components();
-    int nc = components.size();
+    // std::vector<Set> components = graph.connected_components();
+    // int nc = components.size();
+    //
+    // for (int i = 0; i + 1 < nc; ++i) {
+    //     Graph component = graph.subgraph(components[i]);
+    //     Set empty;
+    //     tree_decomp(component, components[i], empty, 0, false);
+    // }
+    //
+    // Graph component = graph.subgraph(components[nc - 1]);
+    // Set empty;
+    // tree_decomp(component, components[nc - 1], empty, 0, true);
 
-    for (int i = 0; i + 1 < nc; ++i) {
-        Graph component = graph.subgraph(components[i]);
-        Set empty;
-        tree_decomp(component, components[i], empty, 0, false);
+    Map<int> first_bag;
+    std::vector<int> stack;
+
+    Map<Set>::const_iterator vertices = graph.begin();
+
+    clock_t tstart = clock();
+
+    while (first_bag.size() < graph.size()) {
+        Graph subgraph;
+        Set W;
+        int parent_bag = 0;
+
+        for ( ; vertices != graph.end(); ++vertices) {
+            if (!first_bag.contains(vertices->first)) {
+                stack.push_back(vertices->first);
+                break;
+            }
+        }
+
+        while (!stack.empty()) {
+            int u = stack.back();
+            stack.pop_back();
+
+            if (first_bag.contains(u)) {
+                W.insert(u);
+                parent_bag = parent_bag > first_bag[u] ? parent_bag : first_bag[u];
+                continue;
+            }
+
+            for (int v : graph.neighbors(u)) {
+                if (!subgraph.contains_vertex(v)) {
+                    stack.push_back(v);
+                }
+                subgraph.add_edge(u, v);
+            }
+        }
+
+        if (subgraph.size() <= tw) {
+            Set S;
+            Map<Set>::const_iterator iu = subgraph.begin();
+            for ( ; iu != subgraph.end(); ++iu) {
+                S.insert(iu->first);
+            }
+
+            int index = add_bag(parent_bag, false, S);
+            for (int s : S) {
+                if (!first_bag.contains(s)) {
+                    first_bag[s] = index;
+                }
+            }
+            continue;
+        }
+
+        Set sep = balanced_separator(subgraph, W);
+        sep.insert(W.begin(), W.end());
+        int index = add_bag(parent_bag, false, sep);
+        for (int s : sep) {
+            if (!first_bag.contains(s)) {
+                first_bag[s] = index;
+            }
+        }
     }
-
-    Graph component = graph.subgraph(components[nc - 1]);
-    Set empty;
-    tree_decomp(component, components[nc - 1], empty, 0, true);
 }
 
 void Decomposition::build_decomposition(const Graph& graph, std::vector<int> ordering) {
