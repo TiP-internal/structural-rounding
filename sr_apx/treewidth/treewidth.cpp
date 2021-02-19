@@ -124,8 +124,6 @@ void Decomposition::build_decomposition(const Graph& graph) {
 
     Map<Set>::const_iterator vertices = graph.begin();
 
-    clock_t tstart = clock();
-
     while (first_bag.size() < graph.size()) {
         Graph subgraph;
         Set W;
@@ -154,6 +152,14 @@ void Decomposition::build_decomposition(const Graph& graph) {
                 }
                 subgraph.add_edge(u, v);
             }
+        }
+
+        if (subgraph.size() == 0) {
+            Set S;
+            S.insert(vertices->first);
+            int index = add_bag(parent_bag, false, S);
+            first_bag[vertices->first] = index;
+            continue;
         }
 
         if (subgraph.size() <= tw) {
