@@ -106,6 +106,10 @@ int Decomposition::add_bag(int parent, bool last_child, Set& bag) {
 }
 
 void Decomposition::build_decomposition(const Graph& graph) {
+    build_decomposition(graph, graph.size() + 1);
+}
+
+void Decomposition::build_decomposition(const Graph& graph, int limit) {
     // std::vector<Set> components = graph.connected_components();
     // int nc = components.size();
     //
@@ -125,6 +129,11 @@ void Decomposition::build_decomposition(const Graph& graph) {
     Map<Set>::const_iterator vertices = graph.begin();
 
     while (first_bag.size() < graph.size()) {
+        // early out for decision variant
+        if (tw > limit) {
+            return;
+        }
+
         Graph subgraph;
         Set W;
         int parent_bag = 0;
@@ -316,7 +325,7 @@ Set vertex_delete(const Graph& graph, int w) {
     }
 
     Decomposition decomp(false);
-    decomp.build_decomposition(graph);
+    decomp.build_decomposition(graph, w);
     int t = decomp.treewidth();
 
     if (t <= w) {

@@ -38,6 +38,7 @@ public:
 	Decomposition(const Graph&);
 
 	void build_decomposition(const Graph&);
+    void build_decomposition(const Graph&, int);
     void build_decomposition(const Graph&, std::vector<int>);
 
     int treewidth();
