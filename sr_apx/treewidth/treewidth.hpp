@@ -11,8 +11,15 @@ namespace sr_apx {
 namespace treewidth {
 
 struct po_bag {  //for postorder bag.
+    int vertex=-1;  //vertex in decomp bag 
+    int type=-2;    //vertex type, -1:forget, 1:intro
     int bag_index;
-    int num_children = 0;  //leaf if num_children==0
+    
+    //leaf if num_children==0
+    //forget if num_children==-1
+    //intro if num_children==1
+    //join if num_children==2
+    int num_children = 0; 
     int parent_bag_index;
     int current_join_child;
 
@@ -22,22 +29,26 @@ struct po_bag {  //for postorder bag.
 
 class Decomposition {
 private:
-    std::vector<po_bag> pre_order;
+    std::vector<po_bag> pre_order;  
     int tw;
     bool build;
 
-	int add_bag(int parent, bool last_child, Set& bag);
-	void tree_decomp(Graph&, Set&, Set&, int, bool);
+    int add_bag(int parent, bool last_child, Set& bag);
+    void tree_decomp(Graph&, Set&, Set&, int, bool);
     void tree_decomp_ordering(Graph&, int, std::vector<int>);
 
 
 public:
-    std::vector<Set> components_bags;
+    //NOTE not being used, but necessary for domset compilation
+    std::vector<Set> components_bags;  
+    
+    int bags_added=0;
+    std::vector<int> parbag_tracker; 
 
     explicit Decomposition(bool b);
-	Decomposition(const Graph&);
+    Decomposition(const Graph&);
 
-	void build_decomposition(const Graph&);
+    void build_decomposition(const Graph&);
     void build_decomposition(const Graph&, std::vector<int>);
 
     int treewidth();
