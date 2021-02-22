@@ -343,15 +343,7 @@ Set vertex_delete(const Graph& graph, int w) {
     }
 
     Graph sub_g = graph.subgraph(V_minus_S);
-    std::vector<Set> components = sub_g.connected_components();
-
-    for (int i = 0; i < components.size(); ++i) {
-        Graph component = graph.subgraph(components[i]);
-        Set edited = vertex_delete(component, w);
-        S.insert(edited.begin(), edited.end());
-    }
-
-    return S;
+    return vertex_delete(sub_g, w);
 }
 
 Set balanced_separator(const Graph& graph, const Set& W) {
