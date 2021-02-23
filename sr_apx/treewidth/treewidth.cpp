@@ -263,6 +263,82 @@ void Decomposition::build_decomposition(const Graph& graph, int limit) {
     }
 }
 
+void Decomposition::build_gd_decomposition(const Graph& graph) {
+    /* Algorithm 3 from Treewidth computations I. Upper bounds */
+
+    Graph h = graph; /* h = graph */
+    int n = h.size();
+    Set bags [n];
+
+    /* initialize deg_sets */
+    std::vector<Set> deg_sets(n, Set());
+    for (Map<Set>::const_iterator it = h.begin(); it != h.end(); ++it) {
+        int degree = it->second.size();
+        deg_sets[degree].insert(it->first);
+    }
+
+    /* iterate over h */
+    int min_degree = 1;
+    std::vector<int> ordering;
+    for (int i = 0; i < n; i++) {
+        int v = min_vertex(h, deg_sets, min_degree); /* choose v as a vertex of smallest degree in h */
+	min_degree = h.degree(v);
+	if (min_degree < 1) min_degree = 1;
+
+	/* make a clique of v's neighbors in h */
+	std::vector<int> neighbors;
+	for (int w : h.neighbors(v))
+	    neighbors.push_back(w);
+	for (int j = 0; j+1 < neighbors.size(); j++) {
+	    int w = neighbors[j];
+	    int w_deg = h.degree(w);
+	    int count = 0;
+	    for (int k = j+1; k < neighbors.size(); k++) {
+	        int x = neighbors[k];
+		int x_deg = h.degree(x);
+		if (!h.adjacent(w,x)) {
+		    h.add_edge(w,x);
+		    /* increase degree of x */
+		    deg_sets[x_deg].erase(x);
+		    deg_sets[x_deg+1].insert(x);
+		    count++;
+		}
+	    }
+	    /* increase degree of w */
+	    if (count > 0) {
+	        deg_sets[w_deg].erase(w);
+		deg_sets[w_deg+count].insert(w);
+	    }
+	}
+
+	/* add bags */
+	Set x_vi;
+	if (i == 0) {
+            x_vi.insert(v);
+	    bags[n-(i+1)] = x_vi;
+	    add_bag(0, false, x_vi);
+	} else {
+	    x_vi.insert(v);
+	    /* add vi's forward neighbors */
+	    for (int w : h.neighbors(v))
+	        x_vi.insert(w);
+	    bags[n-(i+1)] = x_vi;
+	    if (i == n-1) add_bag(ordering.back(), true, x_vi);
+	    else add_bag(ordering.back(), false, x_vi);
+	}
+
+	/* remove v and all its edges */
+	for (int w : h.neighbors(v)) {
+	    int degree = h.degree(w);
+	    deg_sets[degree].erase(w);
+	    deg_sets[degree-1].insert(w);
+	}
+	h.remove_vertex(v);
+
+	ordering.push_back(v); /* let v be the last vertex in the ordering */
+    }
+}
+
 void Decomposition::build_decomposition(const Graph& graph, std::vector<int> ordering) {
     Graph h = graph;
     tree_decomp_ordering(h, ordering.size(), ordering);
@@ -289,10 +365,8 @@ void Decomposition::tree_decomp_ordering(Graph& graph, int n, std::vector<int> o
         x_vi.insert(vi); /* add vi to bag */
 
         /* add vi's forward neighbors */
-        for (int w : g.neighbors(vi)) {
+        for (int w : g.neighbors(vi))
             x_vi.insert(w);
-            g.remove_edge(vi,w);
-        }
         g.remove_vertex(vi);
 
         bags[i] = x_vi;
@@ -663,7 +737,7 @@ int chordal(Graph&, std::vector<Set>&);
 // int chordal(const Graph&, std::vector<Set>&);
 bool clique(const Graph&, int);
 int lowest_neighbor(const Graph&, int, std::vector<int>);
-int min_vertex(const Graph&, std::vector<Set>&);
+  int min_vertex(const Graph&, std::vector<Set>&, int);
 int fill_edges(const Graph&, int);
 int min_degree_vertex1(const Graph&);
 int min_fill_edges_vertex1(const Graph&);
@@ -680,7 +754,7 @@ Graph fill(const Graph& g, int n, std::vector<int> ordering) {
     Graph h = g; /* h = g */
 
     for (int i = 0; i < n; i++) {
-        int v = ordering[i]; /* let v be the ith vertex in the ordering*/
+        int v = ordering[i]; /* let v be the ith vertex in the ordering  */
 
         /* make a clique of v's neighbors in h... */
         std::vector<int> neighbors;

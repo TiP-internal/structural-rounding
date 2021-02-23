@@ -51,6 +51,7 @@ public:
     void build_decomposition(const Graph&);
     void build_decomposition(const Graph&, int);
     void build_decomposition(const Graph&, std::vector<int>);
+  void build_gd_decomposition(const Graph&);
 
     int treewidth();
     std::vector<po_bag> get_post_order();
@@ -60,6 +61,7 @@ Set vertex_delete(const Graph&, int);
 Set balanced_separator(const Graph&, const Set&);
 Set close_balanced_separator(const Graph&, const Set&);
 
+int min_vertex(const Graph&, std::vector<Set>&, int);
 std::vector<int> greedy_fill_in(const Graph&, int);
 std::vector<int> greedy_degree(const Graph&, int);
 Graph fill(const Graph&, int, std::vector<int>);
