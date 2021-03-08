@@ -284,6 +284,10 @@ void Decomposition::build_gd_decomposition(const Graph& graph) {
         int v = min_vertex(h, deg_sets, min_degree); /* choose v as a vertex of smallest degree in h */
 	min_degree = h.degree(v);
 	if (min_degree < 1) min_degree = 1;
+	if (!h.contains_vertex(v)) { /* hotfix for graphs with self-loop nodes */
+	  i--;
+	  continue;
+	}
 
 	/* make a clique of v's neighbors in h */
 	std::vector<int> neighbors;
@@ -803,7 +807,11 @@ std::vector<int> greedy_degree(const Graph& g, int n) {
     std::vector<int> ordering;
     for (int i = 0; i < n; i++) {
         int v = min_vertex(h, deg_sets, 1); /* choose v as a vertex of smallest degree in h */
-        ordering.push_back(v); /* let v be the ith vertex in the ordering */
+        if (!h.contains_vertex(v)) {
+	  i--;
+	  continue;
+	}
+	ordering.push_back(v); /* let v be the ith vertex in the ordering */
 
         /* make a clique of v's neighbors in h */
         std::vector<int> neighbors;

@@ -42,8 +42,8 @@ int main(int argc, char* argv[]) {
     // printf(",edit5 size,edit5 time,edit5 actualtw,partial5 size,partial5 time,total5 size,total5 time");
     // printf("\n");
 
-    printf("graph,read time,k,n,m,den,es,esden,esdenbw,es size,tw (sep),tw (gd),sep time,gd time,speedup,");
-    //printf("graph,read time,n,m,tw (sep),tw (gd),sep time,gd time,speedup,");
+    //printf("graph,read time,k,n,m,den,es,esden,esdenbw,es size,tw (sep),tw (gd),tw dif,sep time,gd time,speedup,");
+    printf("graph,read time,n,m,tw (sep),tw (gd),tw dif,sep time,gd time,speedup,");
     //printf("graph,read time,n,m,tw (sep),tw (gd),tw (gfi),sep time,gd time,gfi time,");
     printf("log size,log time\n");
 
@@ -82,9 +82,9 @@ int main(int argc, char* argv[]) {
 	printf("%.4fs,", (double)(end-start)/1000000);
 
 	/* print k */
-	int l = filename.find_first_of("k")+1;
+	/*int l = filename.find_first_of("k")+1;
 	int r = filename.substr(l).find_first_of("_");
-	printf("%d,", std::stoi(filename.substr(l, r)));
+	printf("%d,", std::stoi(filename.substr(l, r)));*/
 
 	/* find m */
 	int deg = 0;
@@ -96,26 +96,26 @@ int main(int argc, char* argv[]) {
 	printf("%d,", deg >> 1);
 
 	// print den 
-	l = filename.find_first_of("r")+1;
+	/*l = filename.find_first_of("r")+1;
 	r = filename.substr(l).find_first_of("_");
 	printf("%.3f,", std::stod(filename.substr(l, r)));
 	/* print es */ 
-	int pad = l+1;
+	/*int pad = l+1;
 	l = filename.substr(pad).find_first_of("s")+1;
 	r = filename.substr(pad).substr(l).find_first_of("_");
 	printf("%d,", std::stoi(filename.substr(pad).substr(l, r)));
 	/* print esd */
-	pad += l+r;
+	/*pad += l+r;
 	l = filename.substr(pad).find_first_of("d")+1;
 	r = filename.substr(pad).substr(l).find_first_of("_");
 	printf("%.2f,", std::stod(filename.substr(pad).substr(l, r)));
 	/* print esdbw */
-	pad += l+r;
+	/*pad += l+r;
 	l = filename.substr(pad).find_first_of("w")+1;
 	r = filename.substr(pad).substr(l).find_first_of("_");
 	printf("%.2f,", std::stod(filename.substr(pad).substr(l, r)));
 	/* print es size */
-	pad += l+r;
+	/*pad += l+r;
 	l = filename.substr(pad).find_last_of("e")+1;
 	r = filename.substr(pad).substr(l).find_first_of("_");
 	printf("%.2f,", std::stod(filename.substr(pad).substr(l, r)));
@@ -128,15 +128,16 @@ int main(int argc, char* argv[]) {
 	double sep = (double)(end-start)/1000000;
 	tw_sep.push_back(init_decomp.treewidth());
 	tw_sep_times.push_back((double)(end-start)/1000000);
-	printf("%d,", init_decomp.treewidth());
+	int sep_tw = init_decomp.treewidth();
+	printf("%d,", sep_tw);
 	// greedy degre
 	start = clock();
-	sr_apx::treewidth::Decomposition gd_decomp(false);
-	gd_decomp.build_gd_decomposition(graph);
-	//init_decomp.build_gd_decomposition(graph);
+	//sr_apx::treewidth::Decomposition gd_decomp(false);
+	//gd_decomp.build_gd_decomposition(graph);
+	init_decomp.build_gd_decomposition(graph);
 	end = clock();
 	double gd = (double)(end-start)/1000000;
-	printf("%d,", gd_decomp.treewidth());
+	//printf("%d,", gd_decomp.treewidth());
 	// greedy degree old
 	start = clock();
 	std::vector<int> gd_order = sr_apx::treewidth::greedy_degree(graph, graph.size());
@@ -146,7 +147,9 @@ int main(int argc, char* argv[]) {
 	double gd_old = (double)(end-start)/1000000;
 	tw_gd.push_back(init_decomp.treewidth());
 	tw_gd_times.push_back((double)(end-start)/1000000);
-	//printf("%d,", init_decomp.treewidth());
+	int gd_tw = init_decomp.treewidth();
+	printf("%d,", gd_tw);
+	printf("%.3f,", (double) gd_tw/sep_tw);
 	
 	// greedy fill in
 	/*start = clock();
