@@ -1,11 +1,11 @@
 
-#include "treewidth.hpp"
+#include "sr_apx/treewidth/treewidth.hpp"
 
 namespace sr_apx {
 namespace treewidth {
 
 Decomposition::Decomposition(bool b = true) {
-    tw = 0;
+    width = 0;
     build = b;
 }
 
@@ -14,160 +14,53 @@ Decomposition::Decomposition(const Graph& graph): Decomposition(true) {
 }
 
 int Decomposition::treewidth() {
-    return tw - 1;
-}
-
-std::vector<po_bag> Decomposition::get_post_order() {
-    std::vector<po_bag> po;
-    for (auto it = pre_order.rbegin(); it != pre_order.rend(); ++it) {
-        po.push_back(*it);
-    }
-
-    return po;
+    return width - 1;
 }
 
 // returns placement of new bag
 // parent_index should be 0 for root bag
 // only modifies pre_order and components_bags
-int Decomposition::add_bag(int parent, bool last_child, Set& bag) {
-        
-    if(parent==0 || parent==-1) {
-        parbag_tracker.clear();  // no verts in root
-    } else {
-        bool traversing=true;
-        
-        // parent non-leaf then empty tracker to traverse up tree
-        if(parent!=pre_order.size()-1) parbag_tracker.clear();
-        int par_ind = parent;
-        
-        int ind=0;
-        while (traversing) {       
-            po_bag curr = pre_order[par_ind];
-                         
-            // only look at bags added last call if par leaf
-            if (ind >= bags_added && parent==pre_order.size()-1) break;  
-            
-            if(curr.type==-1) {
-                bool contains=false;
-                for(auto i : parbag_tracker) {
-                    if(i==curr.vertex) contains=true;
-                }
-                if (!contains && curr.vertex>=0) {
-                    parbag_tracker.push_back(curr.vertex);
-                }
-            } else if (curr.type==1) {
-                int pos=-1, j=0;
-                for(auto i : parbag_tracker) {
-                    if (i==curr.vertex) pos=j; break;
-                    j++;
-                }
-                if (pos >= 0) {
-                    parbag_tracker.erase(parbag_tracker.begin()+pos);
-                }
-            }
-            
-            par_ind = curr.parent_bag_index;
-            if(par_ind==0) traversing=false;
-            
-            ind++;
-        }
-    }
-    
-    bags_added=0;
-        
-    tw = tw < bag.size() ? bag.size() : tw;
+int Decomposition::add_bag(int parent, bool last_child, const Set& bag) {
+    width = width < bag.size() ? bag.size() : width;
 
     if (!build) {
         return -1;
     }
-    
+
     // ensures that root bag exists
     if(pre_order.empty()) {
-        bags_added++;
-        pre_order.push_back(po_bag(0, -1));
+        pre_order.push_back(po_bag());
     }
-    
-    if (bag.size()==parbag_tracker.size()) {
-        bool cont=true;
-        for(auto i : parbag_tracker) {
-            if (!bag.contains(i)) cont=false;
-        }
-        
-        if(cont) {
-            printf("%s\n", "equal bags");
-            return parent;
-        }
-    }
-    
-    int true_parent = pre_order[parent].current_join_child;  
 
-    if (pre_order[true_parent].num_children > 0 && !last_child) {
+    int true_parent = pre_order[parent].current_join_child;
+
+    if (pre_order[true_parent].left_child != -1 && !last_child) {
         // create a new join bag to hold the child
         int index = pre_order.size();
-        
-        bags_added++;
-        pre_order.push_back(po_bag(index, true_parent));
-        pre_order[true_parent].num_children++;
+
+        pre_order.push_back(po_bag(index, pre_order[true_parent].bag));
         pre_order[parent].current_join_child = index;
-        true_parent = index;
-    }
-    
-    if (pre_order[true_parent].num_children > 0 || !last_child) {
-        int index = pre_order.size();
-        
-        bags_added++;
-        pre_order.push_back(po_bag(index, true_parent));
-        pre_order[true_parent].num_children++;
+        pre_order[true_parent].right_child = index;
         true_parent = index;
     }
 
     // create the child
-    int use_parent = true_parent;
-    
-    // add introduce bags
-    for(int x : parbag_tracker) {
-        // only look at vertices to be added
-        if (bag.contains(x)) {                
-            continue;
-        }
-        
-        int index = pre_order.size();
-        
-        bags_added++;
-        pre_order.push_back(po_bag(index, use_parent));
-        pre_order[index].type=1;
-        pre_order[index].vertex=x;
-        
-        pre_order[use_parent].num_children++;
-        use_parent = index;
+    int index = pre_order.size();
+    std::vector<int> temp_bag;
+    for (int b : bag) {
+        temp_bag.push_back(b);
     }
-    
-    // add forget bags
-    for (int x : bag) {                           
-        // only look at vertices to be removed        
-        bool cont=false;
-        for(auto i : parbag_tracker) {
-            if (i==x) { 
-                cont=true; break;
-            }
-        }   
-        if (cont) {
-            continue;
-        }
-                
-        int index = pre_order.size();
-        
-        bags_added++;
-        pre_order.push_back(po_bag(index, use_parent));
-        pre_order[index].type=-1;
-        pre_order[index].vertex=x;
-        
-        pre_order[use_parent].num_children++;
-        use_parent = index;
+    pre_order.push_back(po_bag(index, std::move(temp_bag)));
+
+    if (pre_order[true_parent].left_child != -1) {
+        pre_order[true_parent].left_child = index;
+    }
+    else {
+        pre_order[true_parent].right_child = index;
     }
 
     // return index of final bag
-    return pre_order.size()-1;
+    return index;
 }
 
 void Decomposition::build_decomposition(const Graph& graph) {
@@ -195,7 +88,7 @@ void Decomposition::build_decomposition(const Graph& graph, int limit) {
 
     while (first_bag.size() < graph.size()) {
         // early out for decision variant
-        if (tw > limit) {
+        if (width > limit + 1) {
             return;
         }
 
@@ -236,7 +129,7 @@ void Decomposition::build_decomposition(const Graph& graph, int limit) {
             continue;
         }
 
-        if (subgraph.size() <= tw) {
+        if (subgraph.size() <= width) {
             Set S;
             Map<Set>::const_iterator iu = subgraph.begin();
             for ( ; iu != subgraph.end(); ++iu) {
@@ -276,8 +169,6 @@ void Decomposition::tree_decomp_ordering(Graph& graph, int n, std::vector<int> o
     Set x_vn;
     int vn = ordering[n-1];
     x_vn.insert(vn);
-    for (int w : g.neighbors(vn))
-        g.remove_edge(vn,w);
     g.remove_vertex(vn);
     bags[n-1] = x_vn;
     add_bag(0, false, x_vn);
@@ -291,7 +182,6 @@ void Decomposition::tree_decomp_ordering(Graph& graph, int n, std::vector<int> o
         /* add vi's forward neighbors */
         for (int w : g.neighbors(vi)) {
             x_vi.insert(w);
-            g.remove_edge(vi,w);
         }
         g.remove_vertex(vi);
 
@@ -315,7 +205,7 @@ void Decomposition::tree_decomp(Graph& graph, Set& Z, Set& W, int parent, bool l
     Set Z_union_W = Z;
     Z_union_W.insert(W.begin(), W.end());
 
-    if (Z_union_W.size() <= tw) {
+    if (Z_union_W.size() <= width) {
         add_bag(parent, last_child, Z_union_W);
         return;
     }
@@ -333,7 +223,7 @@ void Decomposition::tree_decomp(Graph& graph, Set& Z, Set& W, int parent, bool l
             graph.remove_edge(s, w);
         }
     }
-    
+
     int x = add_bag(parent, last_child, W);
 
     if (Z.empty()) {
@@ -408,7 +298,9 @@ Set vertex_delete(const Graph& graph, int w) {
     }
 
     Graph sub_g = graph.subgraph(V_minus_S);
-    return vertex_delete(sub_g, w);
+    Set res = vertex_delete(sub_g, w);
+    res.insert(S.begin(), S.end());
+    return res;
 }
 
 Set balanced_separator(const Graph& graph, const Set& W) {
