@@ -278,9 +278,12 @@ void Decomposition::build_gd_decomposition(const Graph& graph) {
     }
 
     /* iterate over h */
+    int limit = n+1;
     int min_degree = 1;
     std::vector<int> ordering;
     for (int i = 0; i < n; i++) {
+        if (tw > limit) return; /* early out for decision variant */
+
         int v = min_vertex(h, deg_sets, min_degree); /* choose v as a vertex of smallest degree in h */
 	min_degree = h.degree(v);
 	if (min_degree < 1) min_degree = 1;
