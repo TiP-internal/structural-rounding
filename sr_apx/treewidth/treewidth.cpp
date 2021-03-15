@@ -257,6 +257,12 @@ void Decomposition::tree_decomp(Graph& graph, Set& Z, Set& W, int parent, bool l
     tree_decomp(graph, components[nc - 1], Wi, x, true);
 }
 
+void Decomposition::sort_bags() {
+    for (po_bag& bag : pre_order) {
+        std::sort(bag.bag.begin(), bag.bag.end());
+    }
+}
+
 // end of Decomposition object //////////////////////////
 
 Set vertex_delete(const Graph& graph, int w) {

@@ -43,6 +43,8 @@ public:
     void build_decomposition(const Graph&, int);
     void build_decomposition(const Graph&, std::vector<int>);
 
+    void sort_bags();
+
     int treewidth();
 };
 
