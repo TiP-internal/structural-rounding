@@ -52,7 +52,7 @@ int Decomposition::add_bag(int parent, bool last_child, const Set& bag) {
     }
     pre_order.push_back(po_bag(index, std::move(temp_bag)));
 
-    if (pre_order[true_parent].left_child != -1) {
+    if (pre_order[true_parent].left_child == -1) {
         pre_order[true_parent].left_child = index;
     }
     else {
