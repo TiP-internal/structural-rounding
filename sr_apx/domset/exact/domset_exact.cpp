@@ -343,6 +343,35 @@ Set tw_exact(const Graph& graph, treewidth::Decomposition& decomp, const Set& op
     }
 
     Set res;
+    std::vector<std::pair<int,int>> stack;
+    stack.push_back({0,0});
+    while (!stack.empty()) {
+        int t;
+        int ref;
+        std::tie(t, ref) = stack.back();
+        stack.pop_back();
+
+        int key = ref >> 16;
+        std::vector<int>& bag = decomp.pre_order[t].bag;
+        int i = 0;
+        while (key > 0) {
+            if (key & 1 == 1) {
+                res.insert(bag[i]);
+            }
+
+            key >>= 1;
+            i += 1;
+        }
+
+        if (decomp.pre_order[t].left_child != -1) {
+            stack.push_back({decomp.pre_order[t].left_child, tables[t][ref].left_ref});
+        }
+
+        if (decomp.pre_order[t].right_child != -1) {
+            stack.push_back({decomp.pre_order[t].right_child, tables[t][ref].right_ref});
+        }
+    }
+
     return res;
 }
 
