@@ -137,16 +137,16 @@ int main(int argc, char* argv[]) {
 
 			start = clock();
             sr_apx::treewidth::Decomposition decomp(sub_g);
-            sr_apx::Set partial;
-			sr_apx::domset::exact::calculate(sub_g, decomp, partial, opt, sr_apx::domset::exact::Variant::Dom_Set, true);
+            sr_apx::Set partial = sr_apx::domset::exact::tw_exact(sub_g, decomp, opt);
 			end = clock();
 			double time2 = (double)(end-start)/1000000;
 			printf(",%d,%d,%.4f", decomp.treewidth(), partial.size(), time2);
+            // check_ds(sub_g, partial);
 
-            sr_apx::Set domset = sr_apx::domset::lift::greedy_lift(graph, edit, partial);
-
-            printf(",%d,%.4f", domset.size(), time1 + time2);
-            check_ds(graph, domset);
+            // sr_apx::Set domset = sr_apx::domset::lift::greedy_lift(graph, edit, partial);
+            //
+            // printf(",%d,%.4f", domset.size(), time1 + time2);
+            // check_ds(graph, domset);
 		}
 
 		printf("\n");
