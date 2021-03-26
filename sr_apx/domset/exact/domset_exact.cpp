@@ -22,6 +22,7 @@ struct table_entry {
     int right_ref = -1;
 };
 
+// using table = std::vector<table_entry>;
 using table = Map<table_entry>;
 
 // key format:
@@ -42,6 +43,7 @@ using table = Map<table_entry>;
 // width wrt parent
 table forget(const table& child, int index, int width, int default_size, bool copy_ref, bool opt) {
     table parent;
+    // parent.resize(1 << (2 * width));
 
     int mask = (1 << index) - 1;
 
@@ -69,14 +71,14 @@ table forget(const table& child, int index, int width, int default_size, bool co
             int child_lower = ((lower & ~mask) << 1) + (lower & mask);
 
             int temp = child_upper + (1 << index);
-            const table_entry& in_ds = child.at((temp << 16) + child_lower);
+            const table_entry& in_ds = child.at((temp << (width + 1)) + child_lower);
             if (in_ds.size_below + 1 < parent_entry.size_below) {
                 parent_entry.size_below = in_ds.size_below + 1;
                 if (copy_ref) {
                     parent_entry.left_ref = in_ds.left_ref;
                 }
                 else {
-                    parent_entry.left_ref = (temp << 16) + child_lower;
+                    parent_entry.left_ref = (temp << (width + 1)) + child_lower;
                 }
             }
 
@@ -84,18 +86,18 @@ table forget(const table& child, int index, int width, int default_size, bool co
             if (opt) {
                 temp = child_lower;
             }
-            const table_entry& covered = child.at((child_upper << 16) + temp);
+            const table_entry& covered = child.at((child_upper << (width + 1)) + temp);
             if (covered.size_below < parent_entry.size_below) {
                 parent_entry.size_below = covered.size_below;
                 if (copy_ref) {
                     parent_entry.left_ref = covered.left_ref;
                 }
                 else {
-                    parent_entry.left_ref = (child_upper << 16) + temp;
+                    parent_entry.left_ref = (child_upper << (width + 1)) + temp;
                 }
             }
 
-            parent[(start.get_code() << 16) + lower] = parent_entry;
+            parent[(start.get_code() << width) + lower] = parent_entry;
 
             ++ls;
             if (ls == le) {
@@ -139,6 +141,9 @@ table forget(const table& child, int index, int width, int default_size, bool co
 // bag wrt to child
 table introduce(const table& child, const std::vector<int>& bag, const Set& neighbors, int index, int default_size) {
     table parent;
+    // parent.resize(1 << (2 * (bag.size() + 1)));
+
+    int width = bag.size();
 
     int mask = (1 << index) - 1;
 
@@ -161,17 +166,17 @@ table introduce(const table& child, const std::vector<int>& bag, const Set& neig
         int lower_alt = 0;
 
         while (ls != le) {
-            const table_entry& child_entry = child.at((start.get_code() << 16) + lower);
+            const table_entry& child_entry = child.at((start.get_code() << width) + lower);
 
             int parent_upper = ((start.get_code() & ~mask) << 1) + (start.get_code() & mask);
             int parent_lower = ((lower & ~mask) << 1) + (lower & mask);
 
-            const table_entry& child_entry_alt = child.at((start.get_code() << 16) + lower_alt);
+            const table_entry& child_entry_alt = child.at((start.get_code() << width) + lower_alt);
             int temp = parent_upper + (1 << index);
             table_entry in_ds;
             in_ds.size_below = child_entry_alt.size_below;
             in_ds.left_ref = child_entry_alt.left_ref;
-            parent[(temp << 16) + parent_lower] = in_ds;
+            parent[(temp << (width + 1)) + parent_lower] = in_ds;
 
             temp = parent_lower + (1 << index);
             table_entry covered;
@@ -180,12 +185,12 @@ table introduce(const table& child, const std::vector<int>& bag, const Set& neig
                 covered.size_below = child_entry.size_below;
                 covered.left_ref = child_entry.left_ref;
             }
-            parent[(parent_upper << 16) + temp] = covered;
+            parent[(parent_upper << (width + 1)) + temp] = covered;
 
             table_entry maybe;
             maybe.size_below = child_entry.size_below;
             maybe.left_ref = child_entry.left_ref;
-            parent[(parent_upper << 16) + parent_lower] = maybe;
+            parent[(parent_upper << (width + 1)) + parent_lower] = maybe;
 
             ++ls;
             if (ls == le) {
@@ -234,9 +239,25 @@ table introduce(const table& child, const std::vector<int>& bag, const Set& neig
 // done without graycodes to improve memory access pattern
 table join(const table& left, const table& right, int width, int default_size) {
     table parent;
-    for (int upper = 0; upper < (1 << width); ++upper) {
-        for (int lower = 0; lower < (1 << width); ++lower) {
-            int parent_index = (((~upper) & lower) << 16) + upper;
+    // parent.resize(1 << (2 * width));
+    // for (table_entry& x : parent) {
+    //     x.size_below = default_size;
+    // }
+
+    util::GrayCode start;
+    util::GrayCode end;
+    std::tie(start, end) = util::graycode(width);
+
+    while (start != end) {
+        util::GrayCode ls;
+        util::GrayCode le;
+        std::tie(ls, le) = util::graycode(width);
+
+        while(ls != le) {
+            int lower = start.get_code();
+            int upper = ls.get_code();
+
+            int parent_index = (((~upper) & lower) << width) + upper;
             if (!parent.contains(parent_index)) {
                 table_entry entry;
                 entry.size_below = default_size;
@@ -245,10 +266,10 @@ table join(const table& left, const table& right, int width, int default_size) {
 
             table_entry& parent_entry = parent[parent_index];
 
-            int left_index = (((~upper) & lower) << 16) + (upper & lower);
+            int left_index = (((~upper) & lower) << width) + (upper & lower);
             const table_entry& left_entry = left.at(left_index);
 
-            int right_index = (((~upper) & lower) << 16) + (upper & (~lower));
+            int right_index = (((~upper) & lower) << width) + (upper & (~lower));
             const table_entry& right_entry = right.at(right_index);
 
             if (left_entry.size_below + right_entry.size_below < parent_entry.size_below) {
@@ -256,7 +277,11 @@ table join(const table& left, const table& right, int width, int default_size) {
                 parent_entry.left_ref = left_entry.left_ref;
                 parent_entry.right_ref = right_index;
             }
+
+            ++ls;
         }
+
+        ++start;
     }
 
     return parent;
@@ -277,6 +302,7 @@ Set tw_exact(const Graph& graph, treewidth::Decomposition& decomp, const Set& op
 
         table default_table;
         default_table[0] = table_entry();
+        // default_table.resize(1);
         table& child_table = default_table;
 
         if (child_index != -1) {
@@ -351,7 +377,9 @@ Set tw_exact(const Graph& graph, treewidth::Decomposition& decomp, const Set& op
         std::tie(t, ref) = stack.back();
         stack.pop_back();
 
-        int key = ref >> 16;
+        int w = decomp.pre_order[t].bag.size();
+
+        int key = ref >> w;
         std::vector<int>& bag = decomp.pre_order[t].bag;
         int i = 0;
         while (key > 0) {
