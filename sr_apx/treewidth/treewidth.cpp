@@ -165,7 +165,6 @@ void Decomposition::build_gd_decomposition(const Graph& graph, int limit) {
 
     Graph h = graph; /* h = graph */
     int n = h.size();
-    Set bags [n];
 
     /* initialize deg_sets */
     std::vector<Set> deg_sets(n, Set());
@@ -178,6 +177,9 @@ void Decomposition::build_gd_decomposition(const Graph& graph, int limit) {
     int early_out = 0;
     int min_degree = 1;
     std::vector<int> ordering;
+    std::vector<Set> bags;
+    ordering.reserve(n);
+    bags.reserve(n);
     for (int i = 0; i < n; i++) {
         if (early_out > limit + 1) {
             width = early_out;
@@ -185,65 +187,78 @@ void Decomposition::build_gd_decomposition(const Graph& graph, int limit) {
         }
 
         int v = min_vertex(h, deg_sets, min_degree); /* choose v as a vertex of smallest degree in h */
-	min_degree = h.degree(v);
-    early_out = min_degree + 1 > early_out ? min_degree + 1 : early_out;
-	if (min_degree < 1) min_degree = 1;
-	if (!h.contains_vertex(v)) { /* hotfix for graphs with self-loop nodes */
-	  i--;
-	  continue;
-	}
+        min_degree = h.degree(v);
+        early_out = min_degree + 1 > early_out ? min_degree + 1 : early_out;
+        if (min_degree < 1) min_degree = 1;
+        if (!h.contains_vertex(v)) { /* hotfix for graphs with self-loop nodes */
+            i--;
+            continue;
+        }
 
-	/* make a clique of v's neighbors in h */
-	std::vector<int> neighbors;
-	for (int w : h.neighbors(v))
-	    neighbors.push_back(w);
-	for (int j = 0; j+1 < neighbors.size(); j++) {
-	    int w = neighbors[j];
-	    int w_deg = h.degree(w);
-	    int count = 0;
-	    for (int k = j+1; k < neighbors.size(); k++) {
-	        int x = neighbors[k];
-		int x_deg = h.degree(x);
-		if (!h.adjacent(w,x)) {
-		    h.add_edge(w,x);
-		    /* increase degree of x */
-		    deg_sets[x_deg].erase(x);
-		    deg_sets[x_deg+1].insert(x);
-		    count++;
-		}
-	    }
-	    /* increase degree of w */
-	    if (count > 0) {
-	        deg_sets[w_deg].erase(w);
-		deg_sets[w_deg+count].insert(w);
-	    }
-	}
+        /* make a clique of v's neighbors in h */
+        std::vector<int> neighbors;
+        for (int w : h.neighbors(v))
+            neighbors.push_back(w);
 
-	/* add bags */
-	Set x_vi;
-	if (i == 0) {
-            x_vi.insert(v);
-	    bags[n-(i+1)] = x_vi;
-	    add_bag(0, false, x_vi);
-	} else {
-	    x_vi.insert(v);
-	    /* add vi's forward neighbors */
-	    for (int w : h.neighbors(v))
-	        x_vi.insert(w);
-	    bags[n-(i+1)] = x_vi;
-	    if (i == n-1) add_bag(ordering.back(), true, x_vi);
-	    else add_bag(ordering.back(), false, x_vi);
-	}
+        for (int j = 0; j+1 < neighbors.size(); j++) {
+            int w = neighbors[j];
+            int w_deg = h.degree(w);
+            int count = 0;
+            for (int k = j+1; k < neighbors.size(); k++) {
+                int x = neighbors[k];
+                int x_deg = h.degree(x);
+                if (!h.adjacent(w,x)) {
+                    h.add_edge(w,x);
+                    /* increase degree of x */
+                    deg_sets[x_deg].erase(x);
+                    deg_sets[x_deg+1].insert(x);
+                    count++;
+                }
+            }
+            /* increase degree of w */
+            if (count > 0) {
+                deg_sets[w_deg].erase(w);
+                deg_sets[w_deg+count].insert(w);
+            }
+        }
 
-	/* remove v and all its edges */
-	for (int w : h.neighbors(v)) {
-	    int degree = h.degree(w);
-	    deg_sets[degree].erase(w);
-	    deg_sets[degree-1].insert(w);
-	}
-	h.remove_vertex(v);
+        Set b = h.neighbors(v);
+        b.insert(v);
+        bags.push_back(b);
 
-	ordering.push_back(v); /* let v be the last vertex in the ordering */
+        /* remove v and all its edges */
+        for (int w : h.neighbors(v)) {
+            int degree = h.degree(w);
+            deg_sets[degree].erase(w);
+            deg_sets[degree-1].insert(w);
+        }
+        h.remove_vertex(v);
+
+        ordering.push_back(v); /* let v be the last vertex in the ordering */
+    }
+
+    Map<int> bag_index;
+
+    int index = add_bag(0, false, bags[n-1]);
+    bag_index[ordering[n-1]] = index;
+
+    for (int i = n - 2; i >= 0; --i) {
+        int parent = pre_order.size();
+        for (int nbr : bags[i]) {
+            if (nbr == ordering[i]) {
+                continue;
+            }
+
+            int x = bag_index[nbr];
+            parent = x < parent ? x : parent;
+        }
+
+        if (parent == pre_order.size()) {
+            parent = 0;
+        }
+
+        index = add_bag(parent, false, bags[i]);
+        bag_index[ordering[i]] = index;
     }
 }
 
