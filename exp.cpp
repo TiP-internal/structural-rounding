@@ -48,7 +48,7 @@ int main(int argc, char* argv[]) {
 
   for (std::vector<std::string>::iterator graph_files_it = graph_files.begin(); graph_files_it != graph_files.end(); graph_files_it++) {
     std::string filename = *graph_files_it;
-    
+
     /* verify name */
     if (filename.find(".txt") == std::string::npos)
       continue;
@@ -140,7 +140,7 @@ int main(int argc, char* argv[]) {
     check_ds(graph, domset);
 
 
-    for (int i = 2; i <= 2; i++) {      
+    for (int i = 2; i <= 2; i++) {
       /* edit */
       start = clock();
       sr_apx::Set edit = sr_apx::treewidth::vertex_delete(graph, i);
@@ -168,7 +168,7 @@ int main(int argc, char* argv[]) {
       end = clock();
       double edit_time = (double)(end-start)/1000000;
       printf(",%d,%.4f,", edit.size(), edit_time); // edit2 size, edit2 time
-      
+
       /* edit decomp */
       // separator-based
       start = clock();
@@ -218,7 +218,7 @@ int main(int argc, char* argv[]) {
       printf("%.2fs,", sep_partial); // sep time
       printf("%.2fs,", gd_partial); // gd time
       printf("%.2f,", sep_partial/gd_partial); // speedup
-      
+
       /* lift */
       // separator-based
       start = clock();
