@@ -157,6 +157,10 @@ void Decomposition::build_decomposition(const Graph& graph, int limit) {
 }
 
 void Decomposition::build_gd_decomposition(const Graph& graph) {
+    build_gd_decomposition(graph, graph.size() + 1);
+}
+
+void Decomposition::build_gd_decomposition(const Graph& graph, int limit) {
     /* Algorithm 3 from Treewidth computations I. Upper bounds */
 
     Graph h = graph; /* h = graph */
@@ -171,14 +175,18 @@ void Decomposition::build_gd_decomposition(const Graph& graph) {
     }
 
     /* iterate over h */
-    int limit = n+1;
+    int early_out = 0;
     int min_degree = 1;
     std::vector<int> ordering;
     for (int i = 0; i < n; i++) {
-        if (width > limit) return; /* early out for decision variant */
+        if (early_out > limit + 1) {
+            width = early_out;
+            return; /* early out for decision variant */
+        }
 
         int v = min_vertex(h, deg_sets, min_degree); /* choose v as a vertex of smallest degree in h */
 	min_degree = h.degree(v);
+    early_out = min_degree + 1 > early_out ? min_degree + 1 : early_out;
 	if (min_degree < 1) min_degree = 1;
 	if (!h.contains_vertex(v)) { /* hotfix for graphs with self-loop nodes */
 	  i--;

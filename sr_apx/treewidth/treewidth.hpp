@@ -42,7 +42,9 @@ public:
     void build_decomposition(const Graph&);
     void build_decomposition(const Graph&, int);
     void build_decomposition(const Graph&, std::vector<int>);
-  void build_gd_decomposition(const Graph&);
+
+    void build_gd_decomposition(const Graph&);
+    void build_gd_decomposition(const Graph&, int);
 
     void sort_bags();
 
