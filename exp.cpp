@@ -74,13 +74,13 @@ int main(int argc, char* argv[]) {
     for (std::vector<std::string>::iterator graph_files_it = graph_files.begin();
 		graph_files_it != graph_files.end(); graph_files_it++) {
 		std::string filename = *graph_files_it;
-		if (filename.find(".s6") == std::string::npos)
+		if (filename.find(".txt") == std::string::npos)
 			continue;
 
 		printf("%s", (filename.substr(0, filename.length()-3)).c_str());
 
 		clock_t start = clock();
-		sr_apx::Graph graph = sr_apx::read_sparse6((filepath + filename).c_str());
+		sr_apx::Graph graph = sr_apx::read_edge_list((filepath + filename).c_str());
 		clock_t end = clock();
 		printf(",%d", graph.size());
 		int deg = 0;
@@ -137,8 +137,7 @@ int main(int argc, char* argv[]) {
 
 			start = clock();
             sr_apx::treewidth::Decomposition decomp(sub_g);
-            sr_apx::Set partial;
-			sr_apx::domset::exact::calculate(sub_g, decomp, partial, opt, sr_apx::domset::exact::Variant::Dom_Set, true);
+            sr_apx::Set partial = sr_apx::domset::exact::tw_exact(sub_g, decomp, opt);
 			end = clock();
 			double time2 = (double)(end-start)/1000000;
 			printf(",%d,%d,%.4f", decomp.treewidth(), partial.size(), time2);

@@ -10,40 +10,31 @@
 namespace sr_apx {
 namespace treewidth {
 
-struct po_bag {  //for postorder bag.
-    int vertex=-1;  //vertex in decomp bag
-    int type=-2;    //vertex type, -1:forget, 1:intro
-    int bag_index;
+struct po_bag {
+    int left_child = -1;
+    int right_child = -1;
+    int current_join_child = 0;
 
-    //leaf if num_children==0
-    //forget if num_children==-1
-    //intro if num_children==1
-    //join if num_children==2
-    int num_children = 0;
-    int parent_bag_index;
-    int current_join_child;
+    std::vector<int> bag;
 
     po_bag() = default;
-    po_bag(int index, int parent): bag_index(index), parent_bag_index(parent), current_join_child(index) {}
+    po_bag(int index, const std::vector<int>& b): current_join_child(index), bag(b) {}
+    po_bag(int index, std::vector<int>&& b): current_join_child(index), bag(std::move(b)) {}
 };
 
 class Decomposition {
 private:
-    std::vector<po_bag> pre_order;
-    int tw;
     bool build;
+    int width;
 
-    int add_bag(int parent, bool last_child, Set& bag);
+    int add_bag(int parent, bool last_child, const Set& bag);
+
     void tree_decomp(Graph&, Set&, Set&, int, bool);
     void tree_decomp_ordering(Graph&, int, std::vector<int>);
 
 
 public:
-    //NOTE not being used, but necessary for domset compilation
-    std::vector<Set> components_bags;
-
-    int bags_added=0;
-    std::vector<int> parbag_tracker;
+    std::vector<po_bag> pre_order;
 
     explicit Decomposition(bool b);
     Decomposition(const Graph&);
@@ -52,8 +43,9 @@ public:
     void build_decomposition(const Graph&, int);
     void build_decomposition(const Graph&, std::vector<int>);
 
+    void sort_bags();
+
     int treewidth();
-    std::vector<po_bag> get_post_order();
 };
 
 Set vertex_delete(const Graph&, int);
