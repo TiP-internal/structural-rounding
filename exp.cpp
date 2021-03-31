@@ -101,29 +101,22 @@ int main(int argc, char* argv[]) {
     /* initial decompositions */
     // separator-based
     start = clock();
-    sr_apx::treewidth::Decomposition init_decomp(graph);
+    sr_apx::treewidth::Decomposition init_decomp(false);
+    init_decomp.build_decomposition(graph);
     end = clock();
     double sep = (double)(end-start)/1000000;
     int sep_tw = init_decomp.treewidth();
     printf("%d,", sep_tw);
+
     // greedy degree
     start = clock();
-    //sr_apx::treewidth::Decomposition gd_decomp(false);
-    //gd_decomp.build_gd_decompisition(graph);
-    init_decomp.build_gd_decomposition(graph);
+    sr_apx::treewidth::Decomposition gd_decomp(false);
+    gd_decomp.build_gd_decomposition(graph);
     end = clock();
     double gd = (double)(end-start)/1000000;
-    int gd_tw = init_decomp.treewidth();
-    //printf("%d,", gd_tw);
-    // greedy degree old
-    start = clock();
-    std::vector<int> gd_order = sr_apx::treewidth::greedy_degree(graph, graph.size());
-    sr_apx::Graph gd_plus = sr_apx::treewidth::fill(graph, graph.size(), gd_order);
-    init_decomp.build_decomposition(gd_plus, gd_order);
-    end = clock();
-    double gd_old = (double)(end-start)/1000000;
-    gd_tw = init_decomp.treewidth();
+    int gd_tw = gd_decomp.treewidth();
     printf("%d,", gd_tw);
+
     printf("%.3f,", (double)gd_tw/sep_tw);
     // comparisons
     printf("%.2fs,", sep);
@@ -146,104 +139,54 @@ int main(int argc, char* argv[]) {
       sr_apx::Set edit = sr_apx::treewidth::vertex_delete(graph, i);
       sr_apx::Graph sub_g(graph.size() - edit.size());
       sr_apx::Set opt;
-      for (sr_apx::Map<sr_apx::Set>::const_iterator iu = graph.begin(); iu != graph.end(); ++iu) {
-	if (edit.contains(iu->first))
-	  continue;
+        for (sr_apx::Map<sr_apx::Set>::const_iterator iu = graph.begin(); iu != graph.end(); ++iu) {
+            if (edit.contains(iu->first))
+                continue;
 
-	for (int v : iu->second) {
-	  if (!edit.contains(v))
-	    sub_g.add_edge(iu->first, v);
-	}
-      }
+            for (int v : iu->second) {
+                if (!edit.contains(v))
+                    sub_g.add_edge(iu->first, v);
+            }
+        }
 
-      for (sr_apx::Map<sr_apx::Set>::const_iterator iu = graph.begin(); iu != graph.end(); ++iu) {
-	if (!edit.contains(iu->first))
-	  continue;
+        for (sr_apx::Map<sr_apx::Set>::const_iterator iu = graph.begin(); iu != graph.end(); ++iu) {
+            if (!edit.contains(iu->first))
+                continue;
 
-	for (int v : iu->second) {
-	  if (!edit.contains(v))
-	    opt.insert(v);
-	}
-      }
-      end = clock();
+            for (int v : iu->second) {
+                if (!edit.contains(v))
+                    opt.insert(v);
+            }
+        }
+        end = clock();
       double edit_time = (double)(end-start)/1000000;
       printf(",%d,%.4f,", edit.size(), edit_time); // edit2 size, edit2 time
 
+      sr_apx::treewidth::Decomposition decomp(true);
+      decomp.build_gd_decomposition(sub_g);
+      // decomp.build_decomposition(sub_g);
+
       /* edit decomp */
-      // separator-based
-      start = clock();
-      sr_apx::treewidth::Decomposition edit_decomp(sub_g);
-      end = clock();
-      double sep_edit = (double)(end-start)/1000000;
-      int sep_edit_tw = edit_decomp.treewidth();
-      printf("%d,", sep_edit_tw); // edit2 tw (sep)
-      // greedy degree
-      sr_apx::treewidth::Decomposition edit_decomp2(sub_g); // remove later
-      start = clock();
-      edit_decomp2.build_gd_decomposition(sub_g);
-      end = clock();
-      double gd_edit = (double)(end-start)/1000000;
-      int gd_edit_tw = edit_decomp.treewidth();
-      // greedy degree old (for accurate tw - remove after the above line works correctly)
-      std::vector<int> gd_edit_order = sr_apx::treewidth::greedy_degree(graph, graph.size());
-      sr_apx::Graph gd_edit_plus = sr_apx::treewidth::fill(graph, graph.size(), gd_order);
-      edit_decomp2.build_decomposition(gd_edit_plus, gd_edit_order);
-      gd_edit_tw = edit_decomp2.treewidth();
-      printf("%d,", gd_edit_tw); // edit2 tw (gd)
-      // comparisons
-      printf("%.3f,", (double)gd_edit_tw/sep_edit_tw); // tw dif (<= better)
-      printf("%.2fs,", sep_edit); // sep time
-      printf("%.2fs,", gd_edit); // gd time
-      printf("%.2f,", sep_edit/gd_edit); // speedup
+      int edit_tw = decomp.treewidth();
+      printf("%d,", edit_tw); // edit2 tw (sep)
 
       /* solve */
-      // separator-based
       start = clock();
-      sr_apx::Set partial;
-      //sr_apx::domset::exact::calculate(sub_g, edit_decomp, partial, opt, sr_apx::domset::exact::Variant::Dom_Set, true);
+      sr_apx::Set partial = sr_apx::domset::exact::tw_exact(sub_g, decomp, opt);
       end = clock();
       double sep_partial = (double)(end-start)/1000000;
       int sep_partial_sz = partial.size();
       printf("%d,", sep_partial_sz); // partial2 size (sep)
-      // greedy degree
-      start = clock();
-      sr_apx::Set partial2;
-      //sr_apx::domset::exact::calculate(sub_g, edit_decomp2, partial2, opt, sr_apx::domset::exact::Variant::Dom_Set, true);
-      end = clock();
-      double gd_partial = (double)(end-start)/1000000;
-      int gd_partial_sz = partial2.size();
-      printf("%d,", gd_partial_sz); // partial2 size (gd)
-      // comparisons
-      printf("%.3f,", (double)gd_partial_sz/sep_partial_sz); // size dif (>= better?)
-      printf("%.2fs,", sep_partial); // sep time
-      printf("%.2fs,", gd_partial); // gd time
-      printf("%.2f,", sep_partial/gd_partial); // speedup
 
       /* lift */
       // separator-based
       start = clock();
-      //sr_apx::Set domset = sr_apx::domset::lift::greedy_lift(graph, edit, partial);
+      sr_apx::Set domset = sr_apx::domset::lift::greedy_lift(graph, edit, partial);
       end = clock();
       double sep_lift = (double)(end-start)/1000000;
       printf("%.2fs,", sep_lift); // lift time (sep)
-      // greedy degree
-      start = clock();
-      //sr_apx::Set domset2 = sr_apx::domset::lift::greedy_lift(graph, edit, partial2);
-      end = clock();
-      double gd_lift = (double)(end-start)/1000000;
-      printf("%.2fs,", gd_lift); // lift time (gd)
-      // comparisons
-      //printf("%d,", domset.size()); // total2 size (sep)
-      //printf("%d,", domset2.size()); // total2 size (gd)
-      //printf("%.3f,", (double)domset2.size()/domset.size()); // size dif (>= better?)
-      double total_sep = edit_time + sep_edit + sep_partial + sep_lift;
-      double total_gd = edit_time + gd_edit + gd_partial + gd_lift;
-      printf("%.2fs,", total_sep); // sep time
-      printf("%.2fs,", total_gd); // gd time
-      printf("%.2f", total_sep/total_gd); // speedup
 
-      //check_ds(graph, domset);
-      //check_ds(graph, domset2);
+      check_ds(graph, domset);
     }
 
     printf("\n");
