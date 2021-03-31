@@ -6,7 +6,8 @@
 #include <iostream>
 #include <fstream>
 
-namespace sr_apx::bipartite {
+namespace sr_apx {
+namespace bipartite {
 
 Set prescribed_octset(const Graph& graph, const char* filename) {
 	std::ifstream f;
@@ -80,7 +81,7 @@ std::tuple<Set, Set, Set> verify_bipartite(const Graph& graph, const Set& os) {
 		}
 	}
 
-	return {std::move(octset), std::move(left), std::move(right)};
+	return std::make_tuple(std::move(octset), std::move(left), std::move(right));
 }
 
 void remove_indset(const Graph& graph, Set& available) {
@@ -145,4 +146,4 @@ Set vertex_delete(const Graph& graph) {
 	return octset;
 }
 
-} // end of sr_apx namepsace
+}}

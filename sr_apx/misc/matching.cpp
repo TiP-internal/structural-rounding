@@ -4,7 +4,8 @@
 #include <vector>
 #include <deque>
 
-namespace sr_apx::misc {
+namespace sr_apx {
+namespace misc {
 
 Map<int> bipartite_matching(const Graph& graph, const Set& left, const Set& right) {
 	Map<int> match;
@@ -96,4 +97,4 @@ Map<int> bipartite_matching(const Graph& graph, const Set& left, const Set& righ
 	return match;
 }
 
-}
+}}

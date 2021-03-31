@@ -31,14 +31,40 @@ build/vc_kernel.o: sr_apx/vc/kernel/lp_kernel.cpp sr_apx/vc/kernel/lp_kernel.hpp
 build/bipartite.o: sr_apx/bipartite/bipartite.cpp sr_apx/bipartite/bipartite.hpp
 	$(CC) $(CCFLAGS) -c -o build/bipartite.o sr_apx/bipartite/bipartite.cpp
 
-lib_sr_apx.so: build/util.o build/matching.o build/graph.o build/vc_apx.o build/vc_exact.o build/vc_lift.o build/vc_kernel.o build/bipartite.o sr_apx/setmap/setmap.hpp
-	$(CC) -shared -o lib_sr_apx.so build/util.o build/matching.o build/graph.o build/vc_apx.o build/vc_exact.o build/vc_lift.o build/vc_kernel.o build/bipartite.o
+build/treewidth.o: sr_apx/treewidth/treewidth.cpp sr_apx/treewidth/treewidth.hpp
+	$(CC) $(CCFLAGS) -c -o build/treewidth.o sr_apx/treewidth/treewidth.cpp
+
+build/domset_apx.o: sr_apx/domset/apx/domset_apx.cpp sr_apx/domset/apx/domset_apx.hpp
+	$(CC) $(CCFLAGS) -c -o build/domset_apx.o sr_apx/domset/apx/domset_apx.cpp
+
+build/domset_lift.o: sr_apx/domset/lift/domset_lift.cpp sr_apx/domset/lift/domset_lift.hpp
+	$(CC) $(CCFLAGS) -c -o build/domset_lift.o sr_apx/domset/lift/domset_lift.cpp
+
+build/domset_exact.o: sr_apx/domset/exact/domset_exact.cpp sr_apx/domset/exact/domset_exact.hpp
+	$(CC) $(CCFLAGS) -c -o build/domset_exact.o sr_apx/domset/exact/domset_exact.cpp
+
+lib_sr_apx.so: build/util.o build/matching.o build/graph.o build/vc_apx.o build/vc_exact.o build/vc_lift.o build/vc_kernel.o build/bipartite.o build/treewidth.o build/domset_apx.o build/domset_lift.o build/domset_exact.o sr_apx/setmap/setmap.hpp
+	$(CC) -shared -o lib_sr_apx.so build/util.o build/matching.o build/graph.o build/vc_apx.o build/vc_exact.o build/vc_lift.o build/vc_kernel.o build/bipartite.o build/treewidth.o build/domset_apx.o build/domset_lift.o build/domset_exact.o
 
 build/main.o: main.cpp
 	$(CC) -O3 -std=c++11 -I./ -c -o build/main.o main.cpp
 
 cpp: build/main.o lib_sr_apx.so
 	$(CC) -o main -L. -Wl,-rpath,. build/main.o -l_sr_apx
+
+
+build/exp.o: exp.cpp
+	$(CC) -O3 -std=c++11 -I./ -c -o build/exp.o exp.cpp
+
+exp: build/exp.o lib_sr_apx.so
+	$(CC) -o exp -L. -Wl,-rpath,. build/exp.o -l_sr_apx
+
+build/exp1.o: exp1.cpp
+	$(CC) -O3 -std=c++11 -I./ -c -o build/exp1.o exp1.cpp
+
+exp1: build/exp1.o lib_sr_apx.so
+	$(CC) -o exp1 -L. -Wl,-rpath,. build/exp1.o -l_sr_apx
+
 
 # python ###########################################################################################################
 
@@ -104,6 +130,8 @@ generator/generator.out: generator/OCTgenerator.c
 clean:
 	rm -f -r build
 	rm -f main
+	rm -f exp
+	rm -f exp1
 	rm -f lib_sr_apx.so
 	rm -f generator/generator.out
 	rm -f sr_apx/util/lib_util.so

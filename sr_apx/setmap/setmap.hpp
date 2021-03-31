@@ -298,7 +298,7 @@ public:
 		Hash::operator=(other);
 		Equal::operator=(other);
 		clear();
-		
+
 		if (other.load > 0) {
 			rehash_impl(other.capacity);
 			insert_nocheck(other.begin(), other.end());
