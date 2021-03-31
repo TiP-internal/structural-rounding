@@ -376,7 +376,8 @@ Set vertex_delete(const Graph& graph, int w) {
     }
 
     Decomposition decomp(false);
-    decomp.build_decomposition(graph, w);
+    // decomp.build_decomposition(graph, w);
+    decomp.build_gd_decomposition(graph, w);
     int t = decomp.treewidth();
 
     if (t <= w) {
