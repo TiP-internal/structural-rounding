@@ -277,37 +277,134 @@ Graph read_edge_list(const char* filename) {
 
 Graph read_dimacs(const char* filename) {
     /* Reads graphs in the DIMACS graph format.
-     * 
+     *
      * Example:
         c comment 1
         c comment 2
         c ...
-        p nodes edges 
+        p nodes edges
         e 1 2
         e 2 3
         ....
     */
-    
+
     std::ifstream f;
     f.open(filename, std::ios::in);
-    
+
     Graph g;
 
     char s[100];
     while (f.getline(s, 100)) {
-        
+
         char type[2];
         int u, v;
         sscanf(s, "%s %d %d", type, &u, &v);
-        
+
         char edge_type[] = "e";
         if (strcmp(type, edge_type) == 0) {
             g.add_edge(u, v);
-        } 
+        }
     }
 
     f.close();
     return g;
+}
+
+void writebits(long& bitbuffer, int& used, int k, int value, std::ofstream& f) {
+    used += k;
+    bitbuffer = (bitbuffer << k) + value;
+
+    while (used >= 6) {
+        used -= 6;
+		f << (char) ((bitbuffer >> used) + 63);
+        bitbuffer &= (1 << used) - 1;
+    }
+}
+
+void write_sparse6(const Graph& graph, const char* filename) {
+	std::vector<int> vertices;
+	vertices.reserve(graph.size());
+	Map<Set>::const_iterator iu = graph.begin();
+	for ( ; iu != graph.end(); ++iu) {
+		vertices.push_back(iu->first);
+	}
+
+	std::sort(vertices.begin(), vertices.end());
+	int n = vertices[vertices.size() - 1] + 1;
+	int k = util::log2(n);
+	int mask = (1 << 6) - 1;
+
+	std::ofstream f(filename, std::ios::out | std::ios::binary);
+
+	f << ':';
+	if (n <= 62) {
+		f << (char) (63 + n);
+	}
+	else if (n <= 258047) {
+		f << (char) 126;
+		f << (char) (((n >> 12) & mask) + 63);
+		f << (char) (((n >> 6) & mask) + 63);
+		f << (char) ((n & mask) + 63);
+	}
+	else {
+		f << (char) 126 << (char) 126;
+		f << (char) (((n >> 30) & mask) + 63);
+		f << (char) (((n >> 24) & mask) + 63);
+		f << (char) (((n >> 18) & mask) + 63);
+		f << (char) (((n >> 12) & mask) + 63);
+		f << (char) (((n >> 6) & mask) + 63);
+		f << (char) ((n & mask) + 63);
+	}
+
+	long bitbuffer = 0;
+	int used = 0;
+	int prev = 0;
+
+	for (int v : vertices) {
+		for (int nbr : graph.neighbors(v)) {
+			if (nbr < v) {
+				if (v == prev + 1) {
+					writebits(bitbuffer, used, 1, 1, f);
+				}
+				else if (v > prev + 1) {
+					writebits(bitbuffer, used, 1, 0, f);
+					writebits(bitbuffer, used, k, v, f);
+					writebits(bitbuffer, used, 1, 0, f);
+				}
+				else {
+					writebits(bitbuffer, used, 1, 0, f);
+				}
+
+				writebits(bitbuffer, used, k, nbr, f);
+				prev = v;
+			}
+		}
+	}
+
+	writebits(bitbuffer, used, 1, 1, f);
+	writebits(bitbuffer, used, 6 - (used % 6), 0, f);
+
+	f << '\n';
+
+	f.close();
+}
+
+void write_edge_list(const Graph& graph, const char* filename) {
+	std::ofstream f(filename, std::ios::out);
+
+	f << graph.size() << '\n';
+
+	Map<Set>::const_iterator iu = graph.begin();
+	for ( ; iu != graph.end(); ++iu) {
+		int u = iu->first;
+		for (int nbr : iu->second) {
+			if (nbr > u) {
+				f << u << ' ' << nbr << '\n';
+			}
+		}
+	}
+
+	f.close();
 }
 
 }

@@ -41,6 +41,9 @@ Graph read_sparse6(const char*);
 Graph read_edge_list(const char*);
 Graph read_dimacs(const char*);
 
+void write_sparse6(const Graph&, const char*);
+void write_edge_list(const Graph&, const char*);
+
 }
 
 #endif
