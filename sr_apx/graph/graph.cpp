@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <fstream>
+#include <random>
 
 #include <cstring>  // for strcmp in read_dimacs
 
@@ -382,7 +383,7 @@ void write_sparse6(const Graph& graph, const char* filename) {
 	}
 
 	writebits(bitbuffer, used, 1, 1, f);
-	writebits(bitbuffer, used, 6 - (used % 6), 0, f);
+	writebits(bitbuffer, used, 6 - used, 0, f);
 
 	f << '\n';
 
@@ -405,6 +406,37 @@ void write_edge_list(const Graph& graph, const char* filename) {
 	}
 
 	f.close();
+}
+
+Graph shuffle_vertices(const Graph& graph) {
+	std::vector<int> vertices;
+	vertices.reserve(graph.size());
+
+	Map<Set>::const_iterator iu = graph.begin();
+	for (iu = graph.begin(); iu != graph.end(); ++iu) {
+		vertices.push_back(iu->first);
+	}
+
+	std::mt19937 gen(70801032);
+	std::shuffle(vertices.begin(), vertices.end(), gen);
+
+	Map<int> labels;
+	labels.reserve(graph.size());
+
+	for (int i = 0; i < vertices.size(); ++i) {
+		labels[vertices[i]] = i;
+	}
+
+	Graph g;
+	for (iu = graph.begin(); iu != graph.end(); ++iu) {
+		for (int nbr : iu->second) {
+			if (nbr < iu->first) {
+				g.add_edge(labels[nbr], labels[iu->first]);
+			}
+		}
+	}
+
+	return g;
 }
 
 }
