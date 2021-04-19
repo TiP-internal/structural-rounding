@@ -65,6 +65,12 @@ build/exp1.o: exp1.cpp
 exp1: build/exp1.o lib_sr_apx.so
 	$(CC) -o exp1 -L. -Wl,-rpath,. build/exp1.o -l_sr_apx
 
+build/convert.o: convert.cpp
+	$(CC) -O3 -std=c++11 -I./ -c -o build/convert.o convert.cpp
+
+convert: build/convert.o lib_sr_apx.so
+	$(CC) -o convert -L. -Wl,-rpath,. build/convert.o -l_sr_apx
+
 
 # python ###########################################################################################################
 
@@ -132,6 +138,7 @@ clean:
 	rm -f main
 	rm -f exp
 	rm -f exp1
+	rm -f convert
 	rm -f lib_sr_apx.so
 	rm -f generator/generator.out
 	rm -f sr_apx/util/lib_util.so
