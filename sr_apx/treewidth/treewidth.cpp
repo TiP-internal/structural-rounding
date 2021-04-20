@@ -391,6 +391,51 @@ Set vertex_delete(const Graph& graph, int w) {
     }
 
     Decomposition decomp(false);
+    decomp.build_decomposition(graph, w);
+    // decomp.build_gd_decomposition(graph, w);
+    int t = decomp.treewidth();
+
+    if (t <= w) {
+        return Set();
+    }
+
+    Set S = balanced_separator(graph, Set());
+
+    Set V_minus_S;
+    Map<Set>::const_iterator iu = graph.begin();
+    for ( ; iu != graph.end(); ++iu) {
+        if (!S.contains(iu->first)) {
+            V_minus_S.insert(iu->first);
+        }
+    }
+
+    Graph sub_g = graph.subgraph(V_minus_S);
+    Set res = vertex_delete(sub_g, w);
+    res.insert(S.begin(), S.end());
+    return res;
+}
+
+Set vertex_gd_delete(const Graph& graph, int w) {
+    /*
+     * TreeWidthNodeEdit() from SR paper.
+     *
+     */
+
+    std::vector<Set> comps = graph.connected_components();
+    int nc = comps.size();
+
+    if (nc > 1) {
+        Set res;
+        for (int i = 0; i < nc; i++) {
+            Graph component = graph.subgraph(comps[i]);
+            Set part = vertex_gd_delete(component, w);
+            res.insert(part.begin(), part.end());
+        }
+
+        return res;
+    }
+
+    Decomposition decomp(false);
     // decomp.build_decomposition(graph, w);
     decomp.build_gd_decomposition(graph, w);
     int t = decomp.treewidth();
@@ -410,7 +455,7 @@ Set vertex_delete(const Graph& graph, int w) {
     }
 
     Graph sub_g = graph.subgraph(V_minus_S);
-    Set res = vertex_delete(sub_g, w);
+    Set res = vertex_gd_delete(sub_g, w);
     res.insert(S.begin(), S.end());
     return res;
 }

@@ -52,6 +52,7 @@ public:
 };
 
 Set vertex_delete(const Graph&, int);
+Set vertex_gd_delete(const Graph&, int);
 Set balanced_separator(const Graph&, const Set&);
 Set close_balanced_separator(const Graph&, const Set&);
 
