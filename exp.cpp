@@ -36,7 +36,7 @@ int main(int argc, char* argv[]) {
 
     printf("graph,read time,tw,n,m,drop,ess,esd,bd,");
     printf("log,log time,");
-    printf("ed8,ed8 time,par8,par8 time,tot8,tot8 time,");
+    //printf("ed8,ed8 time,par8,par8 time,tot8,tot8 time,");
     printf("ed7,ed7 time,par7,par7 time,tot7,tot7 time,");
     printf("ed6,ed6 time,par6,par6 time,tot6,tot6 time,");
     printf("ed5,ed5 time,par5,par5 time,tot5,tot5 time,");
@@ -102,7 +102,7 @@ int main(int argc, char* argv[]) {
         check_ds(graph, domset);
 
 	// fill tw vals we don't edit to
-	for (int i = tw; i < 8; i++)
+	for (int i = tw; i < 7; i++)
 	  printf(",,,,,,");
 
         for (int i = tw; i > 1; i--) {      
