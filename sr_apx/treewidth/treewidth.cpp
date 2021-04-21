@@ -243,18 +243,14 @@ void Decomposition::build_gd_decomposition(const Graph& graph, int limit) {
     bag_index[ordering[n-1]] = index;
 
     for (int i = n - 2; i >= 0; --i) {
-        int parent = pre_order.size();
+        int parent = 0;
         for (int nbr : bags[i]) {
             if (nbr == ordering[i]) {
                 continue;
             }
 
             int x = bag_index[nbr];
-            parent = x < parent ? x : parent;
-        }
-
-        if (parent == pre_order.size()) {
-            parent = 0;
+            parent = x > parent ? x : parent;
         }
 
         index = add_bag(parent, false, bags[i]);
