@@ -65,6 +65,12 @@ build/exp1.o: exp1.cpp
 exp1: build/exp1.o lib_sr_apx.so
 	$(CC) -o exp1 -L. -Wl,-rpath,. build/exp1.o -l_sr_apx
 
+build/exp2.o: exp2.cpp
+	$(CC) -O3 -std=c++11 -I./ -c -o build/exp2.o exp2.cpp
+
+exp2: build/exp2.o lib_sr_apx.so
+	$(CC) -o exp2 -L. -Wl,-rpath,. build/exp2.o -l_sr_apx
+
 build/convert.o: convert.cpp
 	$(CC) -O3 -std=c++11 -I./ -c -o build/convert.o convert.cpp
 

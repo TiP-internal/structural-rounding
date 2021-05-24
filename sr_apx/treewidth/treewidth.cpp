@@ -258,6 +258,119 @@ void Decomposition::build_gd_decomposition(const Graph& graph, int limit) {
     }
 }
 
+void Decomposition::build_gfi_decomposition(const Graph& graph) {
+    build_gfi_decomposition(graph, graph.size()+1);
+}
+
+void Decomposition::build_gfi_decomposition(const Graph& graph, int limit) {
+    /* Algorithm 3 from Treewidth Computations I. Upper bounds */
+  
+    Graph h = graph;
+    int n = h.size();
+
+    /* calculate max possible fill for any v */
+    int max_fill = 1;
+    for (int i = n-1; i > 0; i--)
+        max_fill += i;
+
+    /* initialize fill_sets */
+    Map<int> fill(h.size());
+    std::vector<Set> fill_sets(max_fill, Set());
+    for (Map<Set>::const_iterator it = h.begin(); it != h.end(); ++it) {
+        int f = fill_edges(h, it->first);
+        fill_sets[f].insert(it->first);
+        fill[it->first] = f;
+    }
+
+    /* iterator over h */
+    int early_out = 0;
+    int min_fill = 1;
+    std::vector<int> ordering;
+    std::vector<Set> bags;
+    ordering.reserve(n);
+    bags.reserve(n);
+    for (int i = 0; i < n; i++) {
+      //if (early_out > limit + 1) {
+          //width = early_out;
+          //return; /* early out for decision variant */
+      //}
+
+        int v = min_vertex(h, fill_sets, min_fill); /* choose v as a vertex that causes the smallest number of fill edges */
+        //min_fill =;
+        //early_out =;
+        if (min_fill < 0) min_fill = 0;
+        if (!h.contains_vertex(v)) { /* hotfix for graphs with self-loop nodes */
+            i--;
+            continue;
+        }
+
+        /* make a clique of v's neighbors in h */
+        std::vector<int> neighbors;
+        for (int w : h.neighbors(v))
+            neighbors.push_back(w);
+
+        for (int j = 0; j+1 < neighbors.size(); j++) {
+            int w = neighbors[j];
+            int count = 0;
+            for (int k = j+1; k < neighbors.size(); k++) {
+	        int x = neighbors[k];
+	        if (!h.adjacent(w,x)) {
+	            h.add_edge(w,x);
+	            /* decrease the fill of shared neighbors */  
+		    Set w_neighbors = h.neighbors(w);
+		    Set x_neighbors = h.neighbors(x);
+		    for (int y : w_neighbors) {
+		        if (x_neighbors.contains(y) && y != v) {
+			    fill_sets[fill[y]].erase(y);
+			    int new_fill = fill[y]-1;
+			    fill_sets[new_fill].insert(y);
+			    fill[y] = new_fill;
+			}
+		    }
+		}
+            }
+	}
+
+        Set b = h.neighbors(v);
+        b.insert(v);
+        bags.push_back(b);
+
+        /* remove v and all its edges */
+        h.remove_vertex(v);
+	for (int w : neighbors) {
+	    fill_sets[fill[w]].erase(w);
+	    int new_fill = fill_edges(h, w);
+	    //printf("\nold fill[w] = %d\n", fill[w]);
+	    //printf("new fill[w] = %d\n", new_fill);
+	    fill_sets[new_fill].insert(w);
+	    fill[w] = new_fill;
+        }
+        h.remove_vertex(v);
+
+        ordering.push_back(v); /* let v be the last vertex in the ordering */
+    }
+
+    Map<int> bag_index;
+
+    int index = add_bag(0, false, bags[n-1]);
+    bag_index[ordering[n-1]] = index;
+
+    for (int i = n - 2; i >= 0; --i) {
+        int parent = 0;
+        for (int nbr : bags[i]) {
+            if (nbr == ordering[i]) {
+	        continue;
+            }
+
+            int x = bag_index[nbr];
+            parent = x > parent ? x : parent;
+        }
+    
+        index = add_bag(parent, false, bags[i]);
+        bag_index[ordering[i]] = index;
+    }
+}
+
 void Decomposition::build_decomposition(const Graph& graph, std::vector<int> ordering) {
     Graph h = graph;
     tree_decomp_ordering(h, ordering.size(), ordering);
@@ -452,6 +565,45 @@ Set vertex_gd_delete(const Graph& graph, int w) {
 
     Graph sub_g = graph.subgraph(V_minus_S);
     Set res = vertex_gd_delete(sub_g, w);
+    res.insert(S.begin(), S.end());
+    return res;
+}
+
+Set vertex_gfi_delete(const Graph& graph, int w) {
+    std::vector<Set> comps = graph.connected_components();
+    int nc = comps.size();
+
+    if (nc > 1) {
+        Set res;
+        for (int i = 0; i < nc; i++) {
+            Graph component = graph.subgraph(comps[i]);
+            Set part = vertex_gfi_delete(component, w);
+            res.insert(part.begin(), part.end());
+        }
+
+        return res;
+    }
+
+    Decomposition decomp(false);
+    decomp.build_gfi_decomposition(graph, w);
+    int t = decomp.treewidth();
+
+    if (t <= w) {
+        return Set();
+    }
+
+    Set S = balanced_separator(graph, Set());
+
+    Set V_minus_S;
+    Map<Set>::const_iterator iu = graph.begin();
+    for ( ; iu != graph.end(); ++iu) {
+        if (!S.contains(iu->first)) {
+            V_minus_S.insert(iu->first);
+        }
+    }
+
+    Graph sub_g = graph.subgraph(V_minus_S);
+    Set res = vertex_gfi_delete(sub_g, w);
     res.insert(S.begin(), S.end());
     return res;
 }
@@ -708,8 +860,7 @@ int chordal(Graph&, std::vector<Set>&);
 // int chordal(const Graph&, std::vector<Set>&);
 bool clique(const Graph&, int);
 int lowest_neighbor(const Graph&, int, std::vector<int>);
-  int min_vertex(const Graph&, std::vector<Set>&, int);
-int fill_edges(const Graph&, int);
+int min_vertex(const Graph&, std::vector<Set>&, int);
 int min_degree_vertex1(const Graph&);
 int min_fill_edges_vertex1(const Graph&);
 

@@ -45,6 +45,8 @@ public:
 
     void build_gd_decomposition(const Graph&);
     void build_gd_decomposition(const Graph&, int);
+    void build_gfi_decomposition(const Graph&);
+    void build_gfi_decomposition(const Graph&, int);
 
     void sort_bags();
 
@@ -53,9 +55,11 @@ public:
 
 Set vertex_delete(const Graph&, int);
 Set vertex_gd_delete(const Graph&, int);
+Set vertex_gfi_delete(const Graph&, int);
 Set balanced_separator(const Graph&, const Set&);
 Set close_balanced_separator(const Graph&, const Set&);
 
+int fill_edges(const Graph&, int);
 int min_vertex(const Graph&, std::vector<Set>&, int);
 std::vector<int> greedy_fill_in(const Graph&, int);
 std::vector<int> greedy_degree(const Graph&, int);
